@@ -65,20 +65,20 @@ const CalculationBreakdown = ({ breakdown, onClose }) => {
   // Helper function to get received amount from localStorage for a specific month
   const getReceivedAmount = (month, year) => {
     if (typeof window === 'undefined') return 0;
-    
+
     const { collections: storageKey } = getStorageKeys();
     console.log("[v0] Looking for collections with month:", month + 1, "year:", year);
     console.log("[v0] Collections key found:", storageKey);
-    
+
     if (!storageKey) return 0;
-    
+
     const stored = localStorage.getItem(storageKey);
     if (!stored) return 0;
-    
+
     try {
       const collections = JSON.parse(stored);
       console.log("[v0] All collections data:", collections);
-      
+
       const monthCollections = collections.filter(c => {
         // Date format is YYYY-MM-DD
         const [collYear, collMonth, collDay] = c.date.split('-');
@@ -86,7 +86,7 @@ const CalculationBreakdown = ({ breakdown, onClose }) => {
         console.log("[v0] Checking collection:", c.date, "parsed to month:", collMonth, "year:", collYear, "matches:", matches);
         return matches;
       });
-      
+
       const total = monthCollections.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0);
       console.log("[v0] Found amount for month", month + 1, '/', year, ':', total);
       return total;
@@ -99,13 +99,13 @@ const CalculationBreakdown = ({ breakdown, onClose }) => {
   // Helper function to get invoice number from localStorage for a specific month
   const getInvoiceNumber = (month, year) => {
     if (typeof window === 'undefined') return '-';
-    
+
     const { accounts: storageKey } = getStorageKeys();
     if (!storageKey) return '-';
-    
+
     const stored = localStorage.getItem(storageKey);
     if (!stored) return '-';
-    
+
     try {
       const accounts = JSON.parse(stored);
       const monthAccounts = accounts.filter(a => {
@@ -121,49 +121,43 @@ const CalculationBreakdown = ({ breakdown, onClose }) => {
   };
 
   // Calculate cumulative balance with received amount consideration
-const getMonthlyBreakdownData = () => {
-  const data = [];
+  const getMonthlyBreakdownData = () => {
+    let totalBilledTillNow = 0;
+    let totalReceivedTillNow = 0;
 
-  // Step 1: collect all received amounts month-wise
-  const receivedMap = {};
-  breakdown.months.forEach(m => {
-    const key = `${m.year}-${m.month}`;
-    receivedMap[key] = getReceivedAmount(m.month, m.year);
-  });
+    return breakdown.months.map((monthData) => {
+      const monthlyBillingWithGst = monthData.amount;
+      const receivedAmount = getReceivedAmount(monthData.month, monthData.year);
 
-  // Step 2: total received pool (FIFO source)
-  let remainingReceivedPool = Object.values(receivedMap).reduce(
-    (sum, v) => sum + v,
-    0
-  );
+      totalBilledTillNow += monthlyBillingWithGst;
+      totalReceivedTillNow += receivedAmount;
 
-  let runningBalance = 0;
+      const totalBalance = totalBilledTillNow - totalReceivedTillNow;
 
-  breakdown.months.forEach((monthData) => {
-    const monthlyBillingWithGst = monthData.amount;
+      // ✅ Remaining only for THIS month
+      const previousBilled =
+        totalBilledTillNow - monthlyBillingWithGst;
 
-    // add current month billing
-    runningBalance += monthlyBillingWithGst;
+      const previousRemaining =
+        Math.max(previousBilled - (totalReceivedTillNow - receivedAmount), 0);
 
-    // apply received amount FIFO (oldest first)
-    let appliedAmount = 0;
-    if (remainingReceivedPool > 0) {
-      appliedAmount = Math.min(remainingReceivedPool, runningBalance);
-      runningBalance -= appliedAmount;
-      remainingReceivedPool -= appliedAmount;
-    }
+      const totalRemaining =
+        Math.max(
+          monthlyBillingWithGst -
+          Math.max(receivedAmount - previousRemaining, 0),
+          0
+        );
 
-    data.push({
-      ...monthData,
-      monthlyBillingWithGst,
-      receivedAmount: receivedMap[`${monthData.year}-${monthData.month}`] || 0,
-      cumulativeBalance: runningBalance,
-      invoiceNumber: getInvoiceNumber(monthData.month, monthData.year),
+      return {
+        ...monthData,
+        monthlyBillingWithGst,
+        receivedAmount,
+        totalBalance,
+        totalRemaining,
+        invoiceNumber: getInvoiceNumber(monthData.month, monthData.year),
+      };
     });
-  });
-
-  return data;
-};
+  };
 
 
   const monthlyData = getMonthlyBreakdownData();
@@ -202,7 +196,7 @@ const getMonthlyBreakdownData = () => {
 
             {/* Order Details and Calculation Formula Side by Side */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              
+
               {/* Order Details */}
               <div>
                 <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -281,94 +275,106 @@ const getMonthlyBreakdownData = () => {
                   <table className="w-full">
                     <thead>
                       <tr className="bg-slate-100 border-b-2 border-slate-200">
-                        <th className="px-4 py-3.5 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Month</th>
-                        <th className="px-4 py-3.5 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Start Date</th>
-                        <th className="px-4 py-3.5 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">End Date</th>
-                        <th className="px-4 py-3.5 text-center text-xs font-bold text-slate-700 uppercase tracking-wider">Billing Days</th>
-                        <th className="px-4 py-3.5 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">Per Day</th>
-                        <th className="px-4 py-3.5 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">Received Amount</th>
-                        <th className="px-4 py-3.5 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">Monthly Billing (+GST)</th>
-                        <th className="px-4 py-3.5 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">Total Balance Remaining</th>
-                        <th className="px-4 py-3.5 text-center text-xs font-bold text-slate-700 uppercase tracking-wider">Invoice Number</th>
+                        <th className="px-4 py-3.5 text-left text-xs font-bold text-slate-700 uppercase">Month</th>
+                        <th className="px-4 py-3.5 text-left text-xs font-bold text-slate-700 uppercase">Start Date</th>
+                        <th className="px-4 py-3.5 text-left text-xs font-bold text-slate-700 uppercase">End Date</th>
+                        <th className="px-4 py-3.5 text-center text-xs font-bold text-slate-700 uppercase">Billing Days</th>
+                        <th className="px-4 py-3.5 text-right text-xs font-bold text-slate-700 uppercase">Per Day</th>
+                        <th className="px-4 py-3.5 text-right text-xs font-bold text-slate-700 uppercase">Received Amount</th>
+                        <th className="px-4 py-3.5 text-right text-xs font-bold text-slate-700 uppercase">Monthly Billing (+GST)</th>
+
+                        {/* NEW */}
+                        <th className="px-4 py-3.5 text-right text-xs font-bold text-slate-700 uppercase">
+                          Total Balance
+                        </th>
+
+                        <th className="px-4 py-3.5 text-right text-xs font-bold text-slate-700 uppercase">
+                          Total Remaining
+                        </th>
+
+                        <th className="px-4 py-3.5 text-center text-xs font-bold text-slate-700 uppercase">
+                          Invoice Number
+                        </th>
                       </tr>
                     </thead>
+
                     <tbody className="bg-white divide-y divide-slate-100">
-                      {monthlyData.map((monthData, index) => {
-                        const balanceIsOverdue = monthData.cumulativeBalance > 0 && monthData.receivedAmount < monthData.monthlyBillingWithGst;
-                        const balanceColor = balanceIsOverdue ? 'bg-orange-50' : 'bg-white';
-                        
-                        return (
-                          <tr
-                            key={index}
-                            className={`transition-colors ${monthData.isPcdMonth || monthData.isTerminateMonth
-                                      ? 'bg-blue-50/50'
-                                      : balanceColor
-                                  } hover:bg-slate-50`}
+                      {monthlyData.map((monthData, index) => (
+                        <tr key={index} className="hover:bg-slate-50">
+
+                          {/* Month */}
+                          <td className="px-4 py-4 font-semibold text-slate-900">
+                            {monthData.monthYear}
+                          </td>
+
+                          {/* Start Date */}
+                          <td className="px-4 py-4 text-sm text-slate-700">
+                            {monthData.startDay}-{String(monthData.month + 1).padStart(2, '0')}-{monthData.year}
+                          </td>
+
+                          {/* End Date */}
+                          <td className="px-4 py-4 text-sm text-slate-700">
+                            {monthData.endDay}-{String(monthData.month + 1).padStart(2, '0')}-{monthData.year}
+                          </td>
+
+                          {/* Billing Days */}
+                          <td className="px-4 py-4 text-center font-bold">
+                            {monthData.billingDays}
+                          </td>
+
+                          {/* Per Day */}
+                          <td className="px-4 py-4 text-right">
+                            ₹{monthData.perDayRate.toLocaleString('en-IN', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </td>
+
+                          {/* Received */}
+                          <td className="px-4 py-4 text-right font-bold text-blue-600">
+                            ₹{monthData.receivedAmount.toLocaleString('en-IN', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </td>
+
+                          {/* Monthly Billing */}
+                          <td className="px-4 py-4 text-right font-bold text-emerald-600">
+                            ₹{monthData.monthlyBillingWithGst.toLocaleString('en-IN', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </td>
+
+                          {/* 🔥 TOTAL BALANCE (NEW) */}
+                          <td className="px-4 py-4 text-right font-bold text-slate-800">
+                            ₹{monthData.totalBalance.toLocaleString('en-IN', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </td>
+
+                          {/* TOTAL REMAINING */}
+                          <td
+                            className={`px-4 py-4 text-right font-bold ${monthData.totalRemaining > 0
+                              ? 'text-orange-600 bg-orange-100'
+                              : 'text-green-600'
+                              }`}
                           >
-                            {/* Month */}
-                            <td className="px-4 py-4">
-                              <div className="flex items-center gap-2">
-                                <span className="font-semibold text-slate-900 text-sm">
-                                  {monthData.monthYear}
-                                </span>
-                                {monthData.isPcdMonth && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-700">
-                                    PCD
-                                  </span>
-                                )}
-                                {monthData.isTerminateMonth && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-rose-100 text-rose-700">
-                                    Terminated
-                                  </span>
-                                )}
-                              </div>
-                            </td>
+                            ₹{monthData.totalRemaining.toLocaleString('en-IN', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </td>
 
-                            {/* Start Date */}
-                            <td className="px-4 py-4 text-sm font-medium text-slate-700">
-                              {monthData.startDay}-{String(monthData.month + 1).padStart(2, '0')}-{monthData.year}
-                            </td>
-
-                            {/* End Date */}
-                            <td className="px-4 py-4 text-sm font-medium text-slate-700">
-                              {monthData.endDay}-{String(monthData.month + 1).padStart(2, '0')}-{monthData.year}
-                            </td>
-
-                            {/* Billing Days */}
-                            <td className="px-4 py-4 text-center text-sm font-bold text-slate-900">
-                              {monthData.billingDays}
-                            </td>
-
-                            {/* Per Day Rate */}
-                            <td className="px-4 py-4 text-right text-sm font-medium text-slate-700">
-                              ₹{monthData.perDayRate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </td>
-
-                            {/* Received Amount - Rule 2 */}
-                            <td className="px-4 py-4 text-right text-sm font-bold text-blue-600">
-                              ₹{monthData.receivedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </td>
-
-                            {/* Monthly Billing Amount (+GST) - Rule 1 */}
-                            <td className="px-4 py-4 text-right text-sm font-bold text-emerald-600">
-                              ₹{monthData.monthlyBillingWithGst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </td>
-
-                            {/* Total Balance Remaining - Rule 3 */}
-                            <td className={`px-4 py-4 text-right text-sm font-bold ${
-                              monthData.cumulativeBalance <= 0 ? 'text-green-600' : 'text-orange-600 bg-orange-100'
-                            }`}>
-                              ₹{Math.max(0, monthData.cumulativeBalance).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </td>
-
-                            {/* Invoice Number - Rule 4 */}
-                            <td className="px-4 py-4 text-center text-sm font-semibold text-slate-900">
-                              {monthData.invoiceNumber}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                          {/* Invoice */}
+                          <td className="px-4 py-4 text-center font-semibold">
+                            {monthData.invoiceNumber}
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
+
                     <tfoot>
                       <tr className="bg-emerald-50 border-t-2 border-emerald-300">
                         <td colSpan="5" className="px-4 py-4 text-right font-bold text-slate-900">

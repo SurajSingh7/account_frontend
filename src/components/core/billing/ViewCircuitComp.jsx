@@ -18,9 +18,9 @@ const INDIAN_STATES = [
 const ALL_MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 
 // Get current year and month
-const getCurrentYear = () => 2026;
-const getCurrentMonth = () => 0;
-const getCurrentDay = () => 29;
+const getCurrentYear = () => new Date().getFullYear();
+const getCurrentMonth = () => new Date().getMonth();
+const getCurrentDay = () => new Date().getDate();
 
 // Generate year options (current year + 5 previous years)
 const YEAR_OPTIONS = ["All", ...Array.from({ length: 6 }, (_, i) => getCurrentYear() - i)];
@@ -185,361 +185,6 @@ const CompanyNamePopup = ({ companyName, onClose }) => {
   );
 };
 
-// ✅ UPDATED Collection Popup Component - WITH SPLIT SUPPORT
-const CollectionPopup = ({ order, onClose, splitInfo }) => {
-  // Create unique storage key based on order ID, state, and split key
-  const storageKey = splitInfo 
-    ? `collections_${order.id}_${splitInfo.state}_${splitInfo.splitKey}`
-    : `collections_${order.id}`;
-  
-  const [collections, setCollections] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(storageKey);
-      return stored ? JSON.parse(stored) : [];
-    }
-    return [];
-  });
-  
-  const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({
-    amount: '',
-    date: '',
-    state: splitInfo?.state || '',
-    splitKey: splitInfo?.splitKey || '100'
-  });
-
-  // Save to localStorage whenever collections change
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(storageKey, JSON.stringify(collections));
-    }
-  }, [collections, storageKey]);
-
-  const pcdDate = parseStoredDate(order.pcdDate);
-  const terminateDate = parseStoredDate(order.terminateDate);
-  const maxDate = terminateDate || new Date();
-
-  const handleSubmit = () => {
-    if (!formData.amount || !formData.date) {
-      alert("Please fill in all fields");
-      return;
-    }
-
-    const collectionData = {
-      amount: formData.amount,
-      date: formData.date,
-      state: splitInfo?.state || '',
-      splitKey: splitInfo?.splitKey || '100',
-      invoiceNumber: '', // Will be linked later if needed
-    };
-
-    if (editingId !== null) {
-      setCollections(collections.map(c => c.id === editingId ? { ...collectionData, id: editingId } : c));
-      setEditingId(null);
-    } else {
-      setCollections([...collections, { ...collectionData, id: Date.now() }]);
-    }
-    setFormData({ amount: '', date: '', state: splitInfo?.state || '', splitKey: splitInfo?.splitKey || '100' });
-  };
-
-  const handleEdit = (collection) => {
-    setFormData({ 
-      amount: collection.amount, 
-      date: collection.date,
-      state: collection.state || '',
-      splitKey: collection.splitKey || '100'
-    });
-    setEditingId(collection.id);
-  };
-
-  const handleDelete = (id) => {
-    setCollections(collections.filter(c => c.id !== id));
-  };
-
-  const dateInputValue = formData.date ? convertDateForInput(formData.date) : '';
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl m-4 border border-gray-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-between items-center p-5 border-b border-gray-200 bg-gray-50 sticky top-0">
-          <div>
-            <h3 className="text-xl font-semibold text-gray-900">Collection Details</h3>
-            {splitInfo && (
-              <p className="text-sm font-semibold text-blue-600 mt-1">
-                Split: {splitInfo.splitKey}% • State: {splitInfo.state}
-              </p>
-            )}
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-gray-600" />
-          </button>
-        </div>
-        
-        <div className="p-6 space-y-6">
-          {/* Input Form */}
-          <div className="bg-gray-50 p-5 rounded-lg border border-gray-200 space-y-4">
-            <h4 className="font-semibold text-gray-900">Add Collection</h4>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <InputGroup label="Amount">
-                <input
-                  type="number"
-                  placeholder="Enter amount"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  className="input-field"
-                />
-              </InputGroup>
-              
-              <InputGroup label="Date">
-                <input
-                  type="date"
-                  value={dateInputValue}
-                  min={pcdDate ? pcdDate.toISOString().split('T')[0] : ''}
-                  max={maxDate.toISOString().split('T')[0]}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  className="input-field"
-                />
-              </InputGroup>
-            </div>
-
-            <button
-              onClick={handleSubmit}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition-colors"
-            >
-              {editingId !== null ? 'Update Collection' : 'Add Collection'}
-            </button>
-          </div>
-
-          {/* Collections List */}
-          {collections.length > 0 && (
-            <div className="space-y-3">
-              <h4 className="font-semibold text-gray-900">Collections</h4>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">Amount</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">Date</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">State</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">Split</th>
-                      <th className="px-4 py-2 text-center font-semibold text-gray-700">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {collections.map(collection => (
-                      <tr key={collection.id} className="border-b border-gray-200 hover:bg-gray-50">
-                        <td className="px-4 py-3 font-semibold text-gray-900">₹{collection.amount}</td>
-                        <td className="px-4 py-3 font-semibold text-gray-900">{collection.date}</td>
-                        <td className="px-4 py-3 font-semibold text-gray-900">{collection.state || '-'}</td>
-                        <td className="px-4 py-3 font-semibold text-gray-900">{collection.splitKey}%</td>
-                        <td className="px-4 py-3 text-center">
-                          <div className="flex justify-center gap-2">
-                            <button
-                              onClick={() => handleEdit(collection)}
-                              className="p-1 hover:bg-blue-50 rounded transition-colors"
-                            >
-                              <Edit2 className="w-4 h-4 text-blue-600" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(collection.id)}
-                              className="p-1 hover:bg-red-50 rounded transition-colors"
-                            >
-                              <Trash2 className="w-4 h-4 text-red-600" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ✅ UPDATED Account Popup Component - WITH SPLIT SUPPORT
-const AccountPopup = ({ order, onClose, splitInfo }) => {
-  // Create unique storage key based on order ID, state, and split key
-  const storageKey = splitInfo 
-    ? `accounts_${order.id}_${splitInfo.state}_${splitInfo.splitKey}`
-    : `accounts_${order.id}`;
-  
-  const [accounts, setAccounts] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(storageKey);
-      return stored ? JSON.parse(stored) : [];
-    }
-    return [];
-  });
-  
-  const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({
-    invoiceNumber: '',
-    date: '',
-    state: splitInfo?.state || '',
-    splitKey: splitInfo?.splitKey || '100'
-  });
-
-  // Save to localStorage whenever accounts change
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(storageKey, JSON.stringify(accounts));
-    }
-  }, [accounts, storageKey]);
-
-  const pcdDate = parseStoredDate(order.pcdDate);
-  const terminateDate = parseStoredDate(order.terminateDate);
-  const maxDate = terminateDate || new Date();
-
-  const dateInputValue = formData.date ? convertDateForInput(formData.date) : '';
-  const minDateString = pcdDate ? pcdDate.toISOString().split('T')[0] : '';
-  const maxDateString = maxDate.toISOString().split('T')[0];
-
-  const handleSubmit = () => {
-    if (!formData.invoiceNumber || !formData.date) {
-      alert("Please fill in all fields");
-      return;
-    }
-
-    const accountData = {
-      invoiceNumber: formData.invoiceNumber,
-      date: formData.date,
-      state: splitInfo?.state || '',
-      splitKey: splitInfo?.splitKey || '100',
-    };
-
-    if (editingId !== null) {
-      setAccounts(accounts.map(a => a.id === editingId ? { ...accountData, id: editingId } : a));
-      setEditingId(null);
-    } else {
-      setAccounts([...accounts, { ...accountData, id: Date.now() }]);
-    }
-    setFormData({ invoiceNumber: '', date: '', state: splitInfo?.state || '', splitKey: splitInfo?.splitKey || '100' });
-  };
-
-  const handleEdit = (account) => {
-    setFormData({ 
-      invoiceNumber: account.invoiceNumber, 
-      date: account.date,
-      state: account.state || '',
-      splitKey: account.splitKey || '100'
-    });
-    setEditingId(account.id);
-  };
-
-  const handleDelete = (id) => {
-    setAccounts(accounts.filter(a => a.id !== id));
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl m-4 border border-gray-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-between items-center p-5 border-b border-gray-200 bg-gray-50 sticky top-0">
-          <div>
-            <h3 className="text-xl font-semibold text-gray-900">Invoice Details</h3>
-            {splitInfo && (
-              <p className="text-sm font-semibold text-purple-600 mt-1">
-                Split: {splitInfo.splitKey}% • State: {splitInfo.state}
-              </p>
-            )}
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-gray-600" />
-          </button>
-        </div>
-        
-        <div className="p-6 space-y-6">
-          {/* Input Form */}
-          <div className="bg-gray-50 p-5 rounded-lg border border-gray-200 space-y-4">
-            <h4 className="font-semibold text-gray-900">Add Invoice</h4>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <InputGroup label="Invoice Number">
-                <input
-                  type="text"
-                  placeholder="Enter invoice number"
-                  value={formData.invoiceNumber}
-                  onChange={(e) => setFormData({ ...formData, invoiceNumber: e.target.value })}
-                  className="input-field"
-                />
-              </InputGroup>
-              
-              <InputGroup label="Date">
-                <input
-                  type="date"
-                  value={dateInputValue}
-                  min={minDateString}
-                  max={maxDateString}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  className="input-field"
-                />
-              </InputGroup>
-            </div>
-
-            <button
-              onClick={handleSubmit}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition-colors"
-            >
-              {editingId !== null ? 'Update Invoice' : 'Add Invoice'}
-            </button>
-          </div>
-
-          {/* Accounts List */}
-          {accounts.length > 0 && (
-            <div className="space-y-3">
-              <h4 className="font-semibold text-gray-900">Invoices</h4>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">Invoice Number</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">Date</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">State</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">Split</th>
-                      <th className="px-4 py-2 text-center font-semibold text-gray-700">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {accounts.map(account => (
-                      <tr key={account.id} className="border-b border-gray-200 hover:bg-gray-50">
-                        <td className="px-4 py-3 font-semibold text-gray-900">{account.invoiceNumber}</td>
-                        <td className="px-4 py-3 font-semibold text-gray-900">{account.date}</td>
-                        <td className="px-4 py-3 font-semibold text-gray-900">{account.state || '-'}</td>
-                        <td className="px-4 py-3 font-semibold text-gray-900">{account.splitKey}%</td>
-                        <td className="px-4 py-3 text-center">
-                          <div className="flex justify-center gap-2">
-                            <button
-                              onClick={() => handleEdit(account)}
-                              className="p-1 hover:bg-blue-50 rounded transition-colors"
-                            >
-                              <Edit2 className="w-4 h-4 text-blue-600" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(account.id)}
-                              className="p-1 hover:bg-red-50 rounded transition-colors"
-                            >
-                              <Trash2 className="w-4 h-4 text-red-600" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // --- SUB-COMPONENTS ---
 const ViewDetailsModal = ({ order, onClose }) => {
   if (!order) return null;
@@ -680,12 +325,29 @@ const CreateOrderForm = ({ onAddOrder }) => {
     const orderData = {
       ...formData,
       pcdDate: convertDateForStorage(formData.pcdDate),
-      terminateDate: convertDateForStorage(formData.terminateDate),
-      id: Date.now()
+      terminateDate: convertDateForStorage(formData.terminateDate)
     };
 
     onAddOrder(orderData);
-    alert("Order Created Successfully!");
+
+    // Reset form
+    setFormData({
+      product: 'ILL',
+      endA: '',
+      endB: '',
+      billing1: { ...initialBilling },
+      billing2: { ...initialBilling },
+      orderId: '',
+      companyName: '',
+      entity: ENTITIES[0],
+      capacity: '',
+      lsiId: '',
+      amount: '',
+      status: STATUSES[0],
+      orderType: ORDER_TYPES[0],
+      pcdDate: '',
+      terminateDate: ''
+    });
   };
 
   const showEndB = ['ILL', 'NLD'].includes(formData.product);
@@ -854,7 +516,6 @@ const EditOrderModal = ({ order, onClose, onSave }) => {
       terminateDate: convertDateForStorage(formData.terminateDate)
     };
     onSave(updatedData);
-    onClose();
   };
 
   const isNLD = formData.product === 'NLD';
@@ -1022,6 +683,38 @@ const OrderList = ({ orders, onView, onEdit, onDelete }) => {
     return getAvailableMonths(parseInt(filters.selectedYear));
   }, [filters.selectedYear]);
 
+  // Check if any filter is active (different from default)
+  const isAnyFilterActive = () => {
+    const defaultRange = getDefaultDateRange();
+    return (
+      filters.company !== '' ||
+      filters.state !== '' ||
+      filters.entity !== '' ||
+      filters.statusFilter !== 'active' ||
+      filters.selectedYear !== getCurrentYear() ||
+      filters.selectedMonth !== ALL_MONTHS[getCurrentMonth()] ||
+      filters.periodType !== 'period' ||
+      filters.fromDate !== defaultRange.fromDate ||
+      filters.toDate !== defaultRange.toDate
+    );
+  };
+
+  // Clear all filters
+  const handleClearFilters = () => {
+    const defaultRange = getDefaultDateRange();
+    setFilters({
+      company: '',
+      state: '',
+      entity: '',
+      statusFilter: 'active',
+      periodType: 'period',
+      selectedYear: getCurrentYear(),
+      selectedMonth: ALL_MONTHS[getCurrentMonth()],
+      fromDate: defaultRange.fromDate,
+      toDate: defaultRange.toDate
+    });
+  };
+
   const filteredOrders = useMemo(() => {
     return orders.filter(order => {
       const matchCompany = order.companyName.toLowerCase().includes(filters.company.toLowerCase());
@@ -1030,10 +723,11 @@ const OrderList = ({ orders, onView, onEdit, onDelete }) => {
         ? (order.billing1?.state?.includes(filters.state) || order.billing2?.state?.includes(filters.state))
         : true;
 
+      // FIX: Explicit status filter matching
       let matchStatus = true;
       if (filters.statusFilter === 'active') {
         matchStatus = order.status === 'PCD';
-      } else {
+      } else if (filters.statusFilter === 'inactive') {
         matchStatus = order.status === 'Terminate';
       }
 
@@ -1098,7 +792,11 @@ const OrderList = ({ orders, onView, onEdit, onDelete }) => {
             </select>
           </div>
 
-          <div className="flex items-center gap-2 flex-1 min-w-[200px] border border-gray-300 rounded-lg px-4 py-3 bg-white focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100">
+          <div className={`flex items-center gap-2 flex-1 min-w-[200px] border rounded-lg px-4 py-3 transition-all
+            ${filters.entity
+              ? 'bg-gradient-to-r from-orange-50 to-amber-50 border-orange-400 ring-2 ring-orange-200'
+              : 'bg-white border-gray-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100'
+            }`}>
             <ChevronDown className="w-5 h-5 text-gray-400" />
             <select
               className="bg-transparent outline-none text-base font-semibold w-full text-gray-700"
@@ -1121,6 +819,17 @@ const OrderList = ({ orders, onView, onEdit, onDelete }) => {
               <option value="inactive">Inactive (Terminate)</option>
             </select>
           </div>
+
+          {/* Clear Filter Button - Shows only when filters are active */}
+          {isAnyFilterActive() && (
+            <button
+              onClick={handleClearFilters}
+              className="flex items-center gap-2 px-4 py-3 bg-red-50 border-2 border-red-500 text-red-600 font-semibold rounded-lg hover:bg-red-100 transition-all shadow-sm"
+            >
+              <X className="w-5 h-5" />
+              Clear Filter
+            </button>
+          )}
         </div>
 
         {/* Second Row: Period Filters - Tab Style */}
@@ -1270,7 +979,7 @@ const OrderList = ({ orders, onView, onEdit, onDelete }) => {
           </div>
         ) : (
           filteredOrders.map(order => (
-            <OrderCard key={order.id} order={order} onView={onView} onEdit={onEdit} onDelete={onDelete} />
+            <OrderCard key={order.id || order._id} order={order} onView={onView} onEdit={onEdit} onDelete={onDelete} />
           ))
         )}
       </div>
@@ -1278,14 +987,11 @@ const OrderList = ({ orders, onView, onEdit, onDelete }) => {
   );
 };
 
-// ✅ UPDATED OrderCard Component - WITH SPLIT-AWARE BUTTONS
+// OrderCard Component - WITHOUT Collection and Invoice buttons
 const OrderCard = ({ order, onView, onEdit, onDelete }) => {
   const [showBillingPopup, setShowBillingPopup] = useState(null);
   const [showEndPopup, setShowEndPopup] = useState(null);
   const [showCompanyPopup, setShowCompanyPopup] = useState(false);
-  const [showCollectionPopup, setShowCollectionPopup] = useState(false);
-  const [showAccountPopup, setShowAccountPopup] = useState(false);
-  const [activeSplitInfo, setActiveSplitInfo] = useState(null);
 
   const isNLD = order.product === "NLD";
   const state1 = order.billing1?.state || "";
@@ -1313,19 +1019,12 @@ const OrderCard = ({ order, onView, onEdit, onDelete }) => {
     );
   };
 
-  // ✅ FIXED renderRow - Always includes state information
   const renderRow = (billingObj, splitFactor = 1, billingLabel) => {
     const splitAmount = baseRate / splitFactor;
     const rowTotalAmount = totalAmountLink / splitFactor;
     const gstAmount = rowTotalAmount * 0.18;
     const finalTotal = rowTotalAmount + gstAmount;
     const arcTotal = finalTotal * 12;
-
-    // ✅ FIXED: Always include state information, even for 100% split
-    const splitInfo = {
-      state: billingObj.state || '',
-      splitKey: splitFactor === 2 ? '50' : '100'
-    };
 
     return (
       <tr className="border-t border-gray-200 text-base hover:bg-gray-50 transition-colors">
@@ -1363,31 +1062,11 @@ const OrderCard = ({ order, onView, onEdit, onDelete }) => {
               <Edit2 className="w-5 h-5 text-amber-600" />
             </button>
             <button
-              onClick={() => onDelete(order.id)}
+              onClick={() => onDelete(order.id || order._id)}
               className="p-2 hover:bg-red-50 rounded-lg transition-colors"
               title="Delete Order"
             >
               <Trash2 className="w-5 h-5 text-red-600" />
-            </button>
-            <button
-              onClick={() => {
-                setActiveSplitInfo(splitInfo);
-                setShowCollectionPopup(true);
-              }}
-              className="p-2 hover:bg-green-50 rounded-lg transition-colors font-semibold text-green-600"
-              title={`Collection Details - ${splitInfo.state} (${splitInfo.splitKey}%)`}
-            >
-              C
-            </button>
-            <button
-              onClick={() => {
-                setActiveSplitInfo(splitInfo);
-                setShowAccountPopup(true);
-              }}
-              className="p-2 hover:bg-purple-50 rounded-lg transition-colors font-semibold text-purple-600"
-              title={`Invoice Details - ${splitInfo.state} (${splitInfo.splitKey}%)`}
-            >
-              A
             </button>
           </div>
         </td>
@@ -1438,6 +1117,7 @@ const OrderCard = ({ order, onView, onEdit, onDelete }) => {
             </div>
 
             <div className="flex flex-wrap gap-2 justify-end">
+              <Badge color="orange">{order.entity}</Badge>
               <Badge color="blue">{order.orderType}</Badge>
               <Badge color="purple">{order.product}</Badge>
               <Badge color={order.status === 'PCD' ? 'green' : 'red'}>{order.status}</Badge>
@@ -1504,34 +1184,9 @@ const OrderCard = ({ order, onView, onEdit, onDelete }) => {
           onClose={() => setShowCompanyPopup(false)}
         />
       )}
-
-      {/* Collection Popup with Split Info */}
-      {showCollectionPopup && (
-        <CollectionPopup
-          order={order}
-          splitInfo={activeSplitInfo}
-          onClose={() => {
-            setShowCollectionPopup(false);
-            setActiveSplitInfo(null);
-          }}
-        />
-      )}
-
-      {/* Account Popup with Split Info */}
-      {showAccountPopup && (
-        <AccountPopup
-          order={order}
-          splitInfo={activeSplitInfo}
-          onClose={() => {
-            setShowAccountPopup(false);
-            setActiveSplitInfo(null);
-          }}
-        />
-      )}
     </>
   );
 };
-
 
 const Badge = ({ children, color }) => {
   const colors = {
@@ -1540,6 +1195,7 @@ const Badge = ({ children, color }) => {
     red: "bg-red-100 text-red-800 border border-red-200",
     purple: "bg-purple-100 text-purple-800 border border-purple-200",
     gray: "bg-gray-100 text-gray-800 border border-gray-200",
+    orange: "bg-orange-200 text-gray-800 border border-gray-200",
   };
   return <span className={`px-3 py-1 rounded-lg text-sm font-semibold ${colors[color] || colors.gray}`}>{children}</span>;
 };
@@ -1549,49 +1205,130 @@ export default function BillingManagementSystem() {
   const [viewOrder, setViewOrder] = useState(null);
   const [editOrder, setEditOrder] = useState(null);
   const [activeTab, setActiveTab] = useState('list');
-
   const [orders, setOrders] = useState([]);
-  const [hydrated, setHydrated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
+  // ✅ REPLACED: Load from API instead of localStorage
   useEffect(() => {
-    const stored = localStorage.getItem("app_orders");
-    if (stored) {
-      setOrders(JSON.parse(stored));
-    }
-    setHydrated(true);
+    fetchOrders();
   }, []);
 
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem("app_orders", JSON.stringify(orders));
-  }, [orders, hydrated]);
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/billing/orders');
+      const result = await res.json();
+      if (result.success) {
+        const ordersWithId = result.data.map(order => ({
+          ...order,
+          id: order._id
+        }));
+        setOrders(ordersWithId);
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      alert('Failed to fetch orders');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const addOrder = (newOrder) => {
-    setOrders(prev => [newOrder, ...prev]);
-    setActiveTab('list');
+  // ✅ REPLACED: Create via API instead of localStorage
+  const addOrder = async (newOrder) => {
+    try {
+      const res = await fetch('/api/billing/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newOrder)
+      });
+      const result = await res.json();
+      if (result.success) {
+        await fetchOrders();
+        setActiveTab('list');
+        alert("Order Created Successfully!");
+      } else {
+        alert('Failed to create order: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error creating order:', error);
+      alert('Failed to create order');
+    }
   };
 
   const handleEditOrder = (order) => {
     setEditOrder(order);
   };
 
-  const handleSaveEdit = (updatedOrder) => {
-    setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
-    setEditOrder(null);
+  // ✅ REPLACED: Update via API instead of localStorage
+  const handleSaveEdit = async (updatedOrder) => {
+    try {
+      const { id, _id, ...orderData } = updatedOrder;
+      const orderId = id || _id;
+
+      const res = await fetch(`/api/billing/orders/${orderId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      });
+      const result = await res.json();
+      if (result.success) {
+        await fetchOrders();
+        setEditOrder(null);
+        alert('Order updated successfully!');
+      } else {
+        alert('Failed to update order: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error updating order:', error);
+      alert('Failed to update order');
+    }
   };
 
-  const handleDeleteOrder = (orderId) => {
+  // ✅ REPLACED: Delete via API instead of localStorage
+  const handleDeleteOrder = async (orderId) => {
     if (confirm("Are you sure you want to delete this order?")) {
-      setOrders(prev => prev.filter(o => o.id !== orderId));
+      try {
+        const res = await fetch(`/api/billing/orders/${orderId}`, {
+          method: 'DELETE'
+        });
+        const result = await res.json();
+        if (result.success) {
+          await fetchOrders();
+          alert('Order deleted successfully!');
+        } else {
+          alert('Failed to delete order: ' + result.error);
+        }
+      } catch (error) {
+        console.error('Error deleting order:', error);
+        alert('Failed to delete order');
+      }
     }
   };
 
-  const handleClearAll = () => {
+  // ✅ REPLACED: Clear all via API instead of localStorage
+  const handleClearAll = async () => {
     if (confirm("Are you sure you want to delete all data?")) {
-      setOrders([]);
-      localStorage.removeItem('app_orders');
+      try {
+        const res = await fetch('/api/billing/orders', {
+          method: 'DELETE'
+        });
+        const result = await res.json();
+        if (result.success) {
+          setOrders([]);
+          alert('All orders deleted successfully!');
+        } else {
+          alert('Failed to delete all orders: ' + result.error);
+        }
+      } catch (error) {
+        console.error('Error deleting all orders:', error);
+        alert('Failed to delete all orders');
+      }
     }
   };
+
+  if (loading) {
+    return <Loading />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-5 md:p-6" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
@@ -1649,11 +1386,6 @@ export default function BillingManagementSystem() {
         <EditOrderModal order={editOrder} onClose={() => setEditOrder(null)} onSave={handleSaveEdit} />
       )}
 
-      <style jsx global>{`
-        .input-field {
-          @apply w-full px-4 py-2.5 border border-gray-300 rounded-lg text-base font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all;
-        }
-      `}</style>
     </div>
   );
 }
