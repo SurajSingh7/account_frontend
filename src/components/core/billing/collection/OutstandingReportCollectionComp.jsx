@@ -304,19 +304,14 @@ const MonthlyBillingBreakdownTable = ({ breakdown }) => {
     );
   }
 
-  // ✅ CORRECT CALCULATION: Matching Monthly Bill Generator's FIFO logic exactly
   const getMonthlyBreakdownData = () => {
     let runningBalance = 0;
-    let cumulativeUnpaid = 0; // Track cumulative unpaid amount
+    let cumulativeUnpaid = 0;
 
-    console.log('=== BILLING CALCULATION START (Breakdown Table) ===');
-
-    // Sort billings chronologically
     const sortedMonths = [...breakdown.months].sort((a, b) => {
       return new Date(a.year, a.month) - new Date(b.year, b.month);
     });
 
-    // Calculate TOTAL credit pool from ALL months (INCLUDING CREDIT NOTES)
     const totalCreditPool = sortedMonths.reduce((sum, monthData) => {
       const received = monthData.receivedAmount;
       const creditNotes = monthData.creditNotes;
@@ -325,13 +320,9 @@ const MonthlyBillingBreakdownTable = ({ breakdown }) => {
       return sum + received + creditNotes + tdsProv + tdsConf;
     }, 0);
 
-    console.log(`💰 TOTAL CREDIT POOL (All Payments + Credit Notes): ₹${totalCreditPool.toFixed(2)}`);
-
     let creditPool = totalCreditPool;
 
     return sortedMonths.map((monthData, index) => {
-      console.log(`\n📅 ${monthData.monthYear}`);
-
       const monthlyBillingBasic = monthData.monthlyBilling;
       const gst = monthData.gst;
       const monthlyBillingWithGst = monthData.amount;
@@ -341,40 +332,21 @@ const MonthlyBillingBreakdownTable = ({ breakdown }) => {
       const tdsProvision = monthData.tdsProvision;
       const tdsConfirm = monthData.tdsConfirm;
 
-      // Calculate monthly totals (INCLUDING CREDIT NOTES)
       const monthlyCredits = receivedAmount + creditNotes + tdsProvision + tdsConfirm;
-
-      // Calculate charges for this month
       const monthlyCharges = monthlyBillingWithGst + miscSell;
-
-      console.log(`📋 Charges needed: ₹${monthlyCharges.toFixed(2)}`);
-      console.log(`💳 Credit Pool available: ₹${creditPool.toFixed(2)}`);
-
-      // Standard running balance calculation
       const monthlyNet = monthlyCharges - monthlyCredits;
       runningBalance += monthlyNet;
 
-      console.log(`📊 Total Balance (Running): ₹${runningBalance.toFixed(2)}`);
-
-      // ✅ FIFO Allocation with proper unpaid tracking
       let totalRemainingAdjustment = 0;
 
       if (creditPool >= monthlyCharges) {
-        // Fully covered by credit pool
         creditPool -= monthlyCharges;
-        totalRemainingAdjustment = cumulativeUnpaid; // No new unpaid, keep previous
-        console.log(`✅ SETTLED | Pool after: ₹${creditPool.toFixed(2)} | Remaining: ₹${totalRemainingAdjustment.toFixed(2)}`);
-      } else {
-        // Partial payment
-        const unpaidThisMonth = monthlyCharges - creditPool;
-        creditPool = 0; // Pool exhausted
-
-        cumulativeUnpaid += unpaidThisMonth; // Add to cumulative
         totalRemainingAdjustment = cumulativeUnpaid;
-
-        console.log(`⚠️ PARTIAL | Unpaid this month: ₹${unpaidThisMonth.toFixed(2)}`);
-        console.log(`📍 Cumulative Unpaid: ₹${cumulativeUnpaid.toFixed(2)}`);
-        console.log(`📍 Total Remaining Adjustment: ₹${totalRemainingAdjustment.toFixed(2)}`);
+      } else {
+        const unpaidThisMonth = monthlyCharges - creditPool;
+        creditPool = 0;
+        cumulativeUnpaid += unpaidThisMonth;
+        totalRemainingAdjustment = cumulativeUnpaid;
       }
 
       return {
@@ -578,7 +550,7 @@ const MonthlyBillingBreakdownTable = ({ breakdown }) => {
   );
 };
 
-// ========== CALCULATION BREAKDOWN COMPONENT (UPDATED) ==========
+// ========== CALCULATION BREAKDOWN COMPONENT ==========
 const CalculationBreakdown = ({ breakdown, onClose }) => {
   if (!breakdown) return null;
 
@@ -586,10 +558,8 @@ const CalculationBreakdown = ({ breakdown, onClose }) => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 py-8">
       <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* Main Card */}
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
 
-          {/* Header */}
           <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-8 py-6">
             <div className="flex items-center justify-between mb-4">
               <button
@@ -612,7 +582,6 @@ const CalculationBreakdown = ({ breakdown, onClose }) => {
           </div>
 
           <div className="p-8 space-y-8">
-            {/* Order Details and Calculation Formula */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div>
                 <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -679,7 +648,6 @@ const CalculationBreakdown = ({ breakdown, onClose }) => {
               </div>
             </div>
 
-            {/* Monthly Billing Breakdown Table */}
             <MonthlyBillingBreakdownTable breakdown={breakdown} />
 
           </div>
@@ -781,24 +749,12 @@ const TableRow = React.memo(({
   useEffect(() => {
     const fetchBreakdown = async () => {
       setLoading(true);
-      console.log('⏳ Calculating balance for:', {
-        orderId: order.orderId,
-        state: stateToShow || 'main',
-        splitFactor: splitFactor
-      });
       const result = await calculateBalanceWithBreakdownAPI(order, fromDateFormatted, toDateFormatted, splitFactor, stateToShow);
       setBreakdown(result);
       setLoading(false);
 
-      console.log('✅ Balance calculated:', {
-        orderId: order.orderId,
-        state: stateToShow || 'main',
-        balance: result.totalBalance
-      });
-
-      // ✅ Report balance back to parent with unique key
+      // ✅ FIX: Report balance immediately after calculation
       if (onBalanceCalculated && result) {
-        console.log('📤 Reporting balance to parent:', { rowKey, balance: result.totalBalance });
         onBalanceCalculated(rowKey, result.totalBalance);
       }
     };
@@ -896,12 +852,12 @@ const TableRow = React.memo(({
 
 TableRow.displayName = 'TableRow';
 
-const OutstandingReportCollectionComp = () => {
+const OutstandingReportComp = () => {
   const [orders, setOrders] = useState([]);
   const [hideLsiColumn, setHideLsiColumn] = useState(true);
   const [selectedBreakdown, setSelectedBreakdown] = useState(null);
   
-  // ✅ NEW: State to track balances by row
+  // ✅ FIX: Track balances by row
   const [rowBalances, setRowBalances] = useState({});
 
   const currentDate = new Date();
@@ -941,28 +897,29 @@ const OutstandingReportCollectionComp = () => {
     }
   };
 
-  // ✅ NEW: Callback to receive balance from child TableRow
+  // ✅ FIX: Callback to receive balance from child TableRow
   const handleBalanceCalculated = useCallback((rowKey, balance) => {
-    console.log('📥 Parent received balance:', { rowKey, balance });
-    setRowBalances(prev => {
-      const updated = { ...prev, [rowKey]: balance };
-      console.log('💾 Updated rowBalances:', updated);
-      return updated;
-    });
+    setRowBalances(prev => ({
+      ...prev,
+      [rowKey]: balance
+    }));
   }, []);
 
-  // ✅ NEW: Calculate total balance from all row balances
-  const totalBalance = useMemo(() => {
-    const total = Object.values(rowBalances).reduce((sum, balance) => sum + balance, 0);
-    console.log('🧮 Total Balance Calculated:', total, 'from', Object.keys(rowBalances).length, 'rows');
-    return total;
-  }, [rowBalances]);
-
-  // ✅ Reset balances when filters change
-  useEffect(() => {
-    console.log('🔄 Filters changed, resetting balances');
-    setRowBalances({});
+  // ✅ Generate unique key for current filter state
+  const filterKey = useMemo(() => {
+    return JSON.stringify({
+      filters,
+      statusFilter,
+      activeTab,
+      selectedYear,
+      selectedMonth
+    });
   }, [filters, statusFilter, activeTab, selectedYear, selectedMonth]);
+
+  // ✅ Reset balances only when filter key changes
+  useEffect(() => {
+    setRowBalances({});
+  }, [filterKey]);
 
   const yearOptions = useMemo(() => getYearOptions(), []);
 
@@ -1081,6 +1038,29 @@ const OutstandingReportCollectionComp = () => {
       return matchSearch && matchCompany && matchEntity && matchState && matchStatus && matchDateFilter;
     });
   }, [orders, filters, statusFilter, activeTab, selectedYear, selectedMonth]);
+
+  // ✅ FIX: Calculate expected number of rows (after filteredOrders is defined)
+  const expectedRowCount = useMemo(() => {
+    let count = 0;
+    filteredOrders.forEach(order => {
+      const splitBilling = shouldSplitBilling(order);
+      count += splitBilling ? 2 : 1;
+    });
+    return count;
+  }, [filteredOrders]);
+
+  // ✅ FIX: Only calculate total when all rows are loaded
+  const totalBalance = useMemo(() => {
+    // Always calculate sum of available balances
+    const total = Object.values(rowBalances).reduce((sum, balance) => sum + balance, 0);
+    return total;
+  }, [rowBalances]);
+
+  // ✅ FIX: Check if still calculating
+  const isCalculating = useMemo(() => {
+    if (expectedRowCount === 0) return false;
+    return Object.keys(rowBalances).length < expectedRowCount;
+  }, [rowBalances, expectedRowCount]);
 
   const uniqueCompanies = useMemo(() => {
     return [...new Set(orders.map(o => o.companyName))].filter(Boolean);
@@ -1231,14 +1211,21 @@ const OutstandingReportCollectionComp = () => {
                 <p className="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">
                   Total Balance
                 </p>
-                <div className="flex items-end gap-2 mt-1">
-                  <p className="text-2xl font-extrabold text-emerald-700 tracking-tight">
-                    ₹{totalBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                  <span className="text-xs text-emerald-600 font-medium pb-1">
-                    INR
-                  </span>
-                </div>
+                {isCalculating ? (
+                  <div className="flex items-center gap-3 mt-1">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-600"></div>
+                    <span className="text-sm font-semibold text-emerald-600">Calculating...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-end gap-2 mt-1">
+                    <p className="text-2xl font-extrabold text-emerald-700 tracking-tight">
+                      ₹{totalBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                    <span className="text-xs text-emerald-600 font-medium pb-1">
+                      INR
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1499,4 +1486,4 @@ const OutstandingReportCollectionComp = () => {
   );
 };
 
-export default OutstandingReportCollectionComp;
+export default OutstandingReportComp;
