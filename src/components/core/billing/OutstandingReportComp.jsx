@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Search, Filter, Download, X, Eye, EyeOff, Info, ArrowLeft, FileText, TrendingUp } from 'lucide-react'
+import { Search, Filter, Download, X, Eye, EyeOff, Info, ArrowLeft, FileText, TrendingUp, FileSpreadsheet } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 const INDIAN_STATES = [
   "Delhi", "Maharashtra", "Karnataka", "Tamil Nadu", "Uttar Pradesh",
@@ -256,7 +257,7 @@ const calculateBalanceWithBreakdownAPI = async (order, fromDate, toDate, splitFa
   breakdown.totalBilled = totalBilledAmount;
   breakdown.totalReceived = totalReceivedAmount;
   breakdown.totalBalance = totalBilledAmount - totalReceivedAmount;
-  
+
   return breakdown;
 };
 
@@ -556,7 +557,7 @@ const CalculationBreakdown = ({ breakdown, onClose }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 py-8">
-      <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8">
+      <div className=" mx-auto px-4 sm:px-6 lg:px-8">
 
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
 
@@ -732,7 +733,7 @@ const TruncatedText = React.memo(({ text, limit, className = "" }) => {
 
 TruncatedText.displayName = 'TruncatedText';
 
-const TableRow = React.memo(({
+const TableRow = React.memo((({
   order,
   hideLsiColumn,
   fromDateFormatted,
@@ -743,6 +744,7 @@ const TableRow = React.memo(({
   onBalanceCalculated,
   rowKey
 }) => {
+  const router = useRouter();
   const [breakdown, setBreakdown] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -765,7 +767,7 @@ const TableRow = React.memo(({
   if (loading || !breakdown) {
     return (
       <tr key={rowKey} className="hover:bg-blue-50/40 transition-colors duration-150 border-b border-slate-100">
-        <td colSpan="9" className="px-4 py-4 text-center text-slate-500">
+        <td colSpan={hideLsiColumn ? "10" : "11"} className="px-4 py-4 text-center text-slate-500">
           Loading...
         </td>
       </tr>
@@ -773,6 +775,10 @@ const TableRow = React.memo(({
   }
 
   const servicePeriod = getServicePeriod(order, toDateFormatted);
+
+  const handleGenerateClick = () => {
+    router.push(`/billing/generator?orderId=${order.orderId}`);
+  };
 
   return (
     <tr key={rowKey} className="hover:bg-blue-50/40 transition-colors duration-150 border-b border-slate-100 last:border-0">
@@ -846,9 +852,19 @@ const TableRow = React.memo(({
           </span>
         </div>
       </td>
+      <td className="px-4 py-4 text-center">
+        <button
+          onClick={handleGenerateClick}
+          className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-semibold rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+          title="Generate bill for this order"
+        >
+          <FileSpreadsheet className="w-4 h-4" />
+          G
+        </button>
+      </td>
     </tr>
   );
-});
+}));
 
 TableRow.displayName = 'TableRow';
 
@@ -856,7 +872,7 @@ const OutstandingReportComp = () => {
   const [orders, setOrders] = useState([]);
   const [hideLsiColumn, setHideLsiColumn] = useState(true);
   const [selectedBreakdown, setSelectedBreakdown] = useState(null);
-  
+
   // ✅ FIX: Track balances by row
   const [rowBalances, setRowBalances] = useState({});
 
@@ -1029,7 +1045,7 @@ const OutstandingReportComp = () => {
 
             const orderStartedBeforeRangeEnds = pcdDate <= toDate;
             const orderActiveAfterRangeStarts = !terminateDate || terminateDate >= fromDate;
-            
+
             matchDateFilter = orderStartedBeforeRangeEnds && orderActiveAfterRangeStarts;
           }
         }
@@ -1411,6 +1427,7 @@ const OutstandingReportComp = () => {
                   <th className="px-4 py-3.5 text-right text-xs font-bold text-slate-700 uppercase">Balance</th>
                   <th className="px-4 py-3.5 text-center text-xs font-bold text-slate-700 uppercase">Split</th>
                   <th className="px-4 py-3.5 text-left text-xs font-bold text-slate-700 uppercase">Service Period</th>
+                  <th className="px-4 py-3.5 text-center text-xs font-bold text-slate-700 uppercase">Action</th>
                 </tr>
               </thead>
 
@@ -1425,7 +1442,7 @@ const OutstandingReportComp = () => {
                   if (splitBilling) {
                     const rowKey1 = `${order.id}-${order.billing1?.state}-2-${orderIndex}`;
                     const rowKey2 = `${order.id}-${order.billing2?.state}-2-${orderIndex}`;
-                    
+
                     return (
                       <React.Fragment key={`order-${order.id}-${orderIndex}`}>
                         <TableRow

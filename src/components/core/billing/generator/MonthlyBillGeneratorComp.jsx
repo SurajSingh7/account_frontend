@@ -873,7 +873,7 @@ const MonthlyBillGeneratorComp = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link 
-              href="/billing/orders"
+              href="/billing/account/outstanding-report"
               className="p-2.5 hover:bg-white rounded-xl border border-gray-200 transition-all hover:shadow-md group"
             >
               <ArrowLeft className="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors" />

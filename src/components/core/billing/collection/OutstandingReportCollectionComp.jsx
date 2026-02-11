@@ -556,7 +556,7 @@ const CalculationBreakdown = ({ breakdown, onClose }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 py-8">
-      <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8">
+      <div className=" mx-auto px-4 sm:px-6 lg:px-8">
 
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
 
