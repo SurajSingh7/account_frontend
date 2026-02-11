@@ -3,16 +3,51 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Trash2, Eye, Plus, Search, Filter, X, ChevronDown, Edit2, Info } from 'lucide-react';
 import { Suspense } from 'react';
-import Loading from './loading';
 
 // --- CONSTANTS & CONFIG ---
 const ENTITIES = ["WIBRO", "GTEL", "GISPL"];
 const PRODUCTS = ["ILL", "NLD", "DIA"];
 const STATUSES = ["PCD", "Terminate"];
 const ORDER_TYPES = ["NEW-ORDER", "UPGRADE", "DOWNGRADE"];
-const INDIAN_STATES = [
-  "Delhi", "Maharashtra", "Karnataka", "Tamil Nadu", "Uttar Pradesh",
-  "Haryana", "Punjab", "Gujarat", "West Bengal", "Rajasthan", "Other"
+
+// ✅ UPDATED: New INDIAN_STATES structure with key, name, and code
+export const INDIAN_STATES = [
+  { key: "AP", name: "Andhra Pradesh", code: "28" },
+  { key: "AR", name: "Arunachal Pradesh", code: "12" },
+  { key: "AS", name: "Assam", code: "18" },
+  { key: "BR", name: "Bihar", code: "10" },
+  { key: "CG", name: "Chhattisgarh", code: "22" },
+  { key: "GA", name: "Goa", code: "30" },
+  { key: "GJ", name: "Gujarat", code: "24" },
+  { key: "HR", name: "Haryana", code: "06" },
+  { key: "HP", name: "Himachal Pradesh", code: "02" },
+  { key: "JH", name: "Jharkhand", code: "20" },
+  { key: "KA", name: "Karnataka", code: "29" },
+  { key: "KL", name: "Kerala", code: "32" },
+  { key: "MP", name: "Madhya Pradesh", code: "23" },
+  { key: "MH", name: "Maharashtra", code: "27" },
+  { key: "MN", name: "Manipur", code: "14" },
+  { key: "ML", name: "Meghalaya", code: "17" },
+  { key: "MZ", name: "Mizoram", code: "15" },
+  { key: "NL", name: "Nagaland", code: "13" },
+  { key: "OD", name: "Odisha", code: "21" },
+  { key: "PB", name: "Punjab", code: "03" },
+  { key: "RJ", name: "Rajasthan", code: "08" },
+  { key: "SK", name: "Sikkim", code: "11" },
+  { key: "TN", name: "Tamil Nadu", code: "33" },
+  { key: "TS", name: "Telangana", code: "36" },
+  { key: "TR", name: "Tripura", code: "16" },
+  { key: "UP", name: "Uttar Pradesh", code: "09" },
+  { key: "UK", name: "Uttarakhand", code: "05" },
+  { key: "WB", name: "West Bengal", code: "19" },
+  { key: "DL", name: "Delhi", code: "07" },
+  { key: "JK", name: "Jammu & Kashmir", code: "01" },
+  { key: "LA", name: "Ladakh", code: "38" },
+  { key: "CH", name: "Chandigarh", code: "04" },
+  { key: "DN", name: "Dadra & Nagar Haveli and Daman & Diu", code: "26" },
+  { key: "LD", name: "Lakshadweep", code: "31" },
+  { key: "AN", name: "Andaman & Nicobar Islands", code: "35" },
+  { key: "PY", name: "Puducherry", code: "34" }
 ];
 
 const ALL_MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
@@ -137,6 +172,10 @@ const BillingPopup = ({ billing, onClose }) => {
             <p className="text-sm font-semibold text-gray-500 uppercase mb-1">State</p>
             <p className="text-base font-semibold text-gray-900">{billing.state || '-'}</p>
           </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-500 uppercase mb-1">State Code</p>
+            <p className="text-base font-semibold text-gray-900">{billing.stateCode || '-'}</p>
+          </div>
         </div>
       </div>
     </div>
@@ -202,6 +241,7 @@ const ViewDetailsModal = ({ order, onClose }) => {
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
           <Section title="Basic Info">
             <Detail label="Company" value={order.companyName} />
+            <Detail label="Company Group" value={order.companyGroup} />
             <Detail label="Entity" value={order.entity} />
             <Detail label="Product" value={order.product} />
             <Detail label="Order Type" value={order.orderType} />
@@ -275,11 +315,13 @@ const BillingBlock = ({ title, data }) => (
     <p className="font-semibold text-sm text-blue-600 mb-2 uppercase">{title}</p>
     <p className="text-base font-semibold text-gray-700 leading-relaxed">{data?.address}, {data?.area}</p>
     <p className="text-base font-semibold text-gray-600 mt-1">{data?.city}, {data?.state} - {data?.pincode}</p>
+    <p className="text-base font-semibold text-gray-600 mt-1">State Code: {data?.stateCode || '-'}</p>
   </div>
 );
 
+// ✅ UPDATED: CreateOrderForm with companyGroup field and auto state code selection
 const CreateOrderForm = ({ onAddOrder }) => {
-  const initialBilling = { address: '', area: '', city: '', pincode: '', state: '' };
+  const initialBilling = { address: '', area: '', city: '', pincode: '', state: '', stateCode: '' };
 
   const [formData, setFormData] = useState({
     product: 'ILL',
@@ -289,6 +331,7 @@ const CreateOrderForm = ({ onAddOrder }) => {
     billing2: { ...initialBilling },
     orderId: '',
     companyName: '',
+    companyGroup: '', // ✅ NEW FIELD
     entity: ENTITIES[0],
     capacity: '',
     lsiId: '',
@@ -299,12 +342,31 @@ const CreateOrderForm = ({ onAddOrder }) => {
     terminateDate: ''
   });
 
-  const handleInputChange = (e, section = null, field = null) => {
-    if (section) {
+  // ✅ UPDATED: Handle billing state change with automatic stateCode population
+  const handleBillingChange = (e, section, field) => {
+    const value = e.target.value;
+    
+    if (field === 'state') {
+      const selectedState = INDIAN_STATES.find(s => s.name === value);
       setFormData(prev => ({
         ...prev,
-        [section]: { ...prev[section], [field]: e.target.value }
+        [section]: { 
+          ...prev[section], 
+          state: value,
+          stateCode: selectedState ? selectedState.code : ''
+        }
       }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [section]: { ...prev[section], [field]: value }
+      }));
+    }
+  };
+
+  const handleInputChange = (e, section = null, field = null) => {
+    if (section) {
+      handleBillingChange(e, section, field);
     } else {
       setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
     }
@@ -339,6 +401,7 @@ const CreateOrderForm = ({ onAddOrder }) => {
       billing2: { ...initialBilling },
       orderId: '',
       companyName: '',
+      companyGroup: '',
       entity: ENTITIES[0],
       capacity: '',
       lsiId: '',
@@ -387,13 +450,16 @@ const CreateOrderForm = ({ onAddOrder }) => {
           </InputGroup>
         </div>
 
-        {/* Row 2: Basic Info */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Row 2: Basic Info - ✅ ADDED companyGroup field */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <InputGroup label="Order ID">
             <input type="text" name="orderId" value={formData.orderId} onChange={handleInputChange} className="input-field" required />
           </InputGroup>
           <InputGroup label="Company Name">
             <input type="text" name="companyName" value={formData.companyName} onChange={handleInputChange} className="input-field" required />
+          </InputGroup>
+          <InputGroup label="Company Group">
+            <input type="text" name="companyGroup" value={formData.companyGroup} onChange={handleInputChange} className="input-field" />
           </InputGroup>
           <InputGroup label="LSI ID">
             <input type="text" name="lsiId" value={formData.lsiId} onChange={handleInputChange} className="input-field" />
@@ -457,6 +523,7 @@ const CreateOrderForm = ({ onAddOrder }) => {
   );
 };
 
+// ✅ UPDATED: BillingForm with read-only stateCode field
 const BillingForm = ({ title, data, onChange }) => (
   <div className="border border-gray-200 p-5 rounded-lg bg-gray-50">
     <h3 className="font-semibold text-gray-900 mb-4 text-base uppercase">{title}</h3>
@@ -467,8 +534,16 @@ const BillingForm = ({ title, data, onChange }) => (
       <input placeholder="Pincode" value={data.pincode} onChange={(e) => onChange(e, 'pincode')} className="input-field" />
       <select value={data.state} onChange={(e) => onChange(e, 'state')} className="input-field">
         <option value="">Select State</option>
-        {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+        {INDIAN_STATES.map(s => <option key={s.key} value={s.name}>{s.name}</option>)}
       </select>
+      {/* ✅ READ-ONLY State Code field */}
+      <input 
+        placeholder="State Code" 
+        value={data.stateCode} 
+        readOnly 
+        className="input-field bg-gray-100 cursor-not-allowed" 
+        title="Auto-populated based on selected state"
+      />
     </div>
   </div>
 );
@@ -480,6 +555,7 @@ const InputGroup = ({ label, children }) => (
   </div>
 );
 
+// ✅ UPDATED: EditOrderModal with companyGroup and automatic stateCode
 const EditOrderModal = ({ order, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     ...order,
@@ -489,9 +565,21 @@ const EditOrderModal = ({ order, onClose, onSave }) => {
 
   if (!order) return null;
 
+  // ✅ UPDATED: Handle billing state change with automatic stateCode population
   const handleInputChange = (e, billingKey = null, billingField = null) => {
     const { name, value } = e.target;
-    if (billingKey) {
+    
+    if (billingKey && billingField === 'state') {
+      const selectedState = INDIAN_STATES.find(s => s.name === value);
+      setFormData(prev => ({
+        ...prev,
+        [billingKey]: { 
+          ...prev[billingKey], 
+          state: value,
+          stateCode: selectedState ? selectedState.code : ''
+        }
+      }));
+    } else if (billingKey) {
       setFormData(prev => ({
         ...prev,
         [billingKey]: { ...prev[billingKey], [billingField]: value }
@@ -556,13 +644,16 @@ const EditOrderModal = ({ order, onClose, onSave }) => {
             </InputGroup>
           </div>
 
-          {/* Basic Info */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Basic Info - ✅ ADDED companyGroup field */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <InputGroup label="Order ID">
               <input type="text" name="orderId" value={formData.orderId} onChange={handleInputChange} className="input-field" required />
             </InputGroup>
             <InputGroup label="Company Name">
               <input type="text" name="companyName" value={formData.companyName} onChange={handleInputChange} className="input-field" required />
+            </InputGroup>
+            <InputGroup label="Company Group">
+              <input type="text" name="companyGroup" value={formData.companyGroup || ''} onChange={handleInputChange} className="input-field" />
             </InputGroup>
             <InputGroup label="LSI ID">
               <input type="text" name="lsiId" value={formData.lsiId} onChange={handleInputChange} className="input-field" />
@@ -788,7 +879,7 @@ const OrderList = ({ orders, onView, onEdit, onDelete }) => {
               onChange={(e) => setFilters(prev => ({ ...prev, state: e.target.value }))}
             >
               <option value="">Filter by State</option>
-              {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+              {INDIAN_STATES.map(s => <option key={s.key} value={s.name}>{s.name}</option>)}
             </select>
           </div>
 
@@ -1091,6 +1182,15 @@ const OrderCard = ({ order, onView, onEdit, onDelete }) => {
                 <span className="px-2.5 py-0.5 bg-blue-100 text-blue-900 rounded-lg text-base font-semibold border border-blue-200">
                   {truncateEndText(order.companyName, 50)}
                 </span>
+                {order.companyGroup && (
+                  <>
+                    <span className="text-gray-400 text-base">•</span>
+                    <span className="text-gray-600 font-semibold text-base">Group:</span>
+                    <span className="px-2.5 py-0.5 bg-green-100 text-green-900 rounded-lg text-base font-semibold border border-green-200">
+                      {truncateEndText(order.companyGroup, 30)}
+                    </span>
+                  </>
+                )}
               </h3>
 
               <p className="text-sm font-semibold text-gray-600 mt-3 flex items-center gap-2 flex-wrap">
@@ -1327,7 +1427,7 @@ export default function BillingManagementSystem() {
   };
 
   if (loading) {
-    return <Loading />;
+    return <div>loading...</div>;
   }
 
   return (
@@ -1367,7 +1467,7 @@ export default function BillingManagementSystem() {
         {activeTab === 'create' ? (
           <CreateOrderForm onAddOrder={addOrder} />
         ) : (
-          <Suspense fallback={<Loading />}>
+          <Suspense fallback={<div>Loading...</div>}>
             <OrderList
               orders={orders}
               onView={setViewOrder}

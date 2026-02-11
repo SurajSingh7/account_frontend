@@ -59,7 +59,7 @@ const getCurrentMonth = () => new Date().getMonth();
 
 const getYearOptions = () => {
   const currentYear = getCurrentYear();
-  return Array.from({ length: 10 }, (_, i) => currentYear - i);
+  return ["All", ...Array.from({ length: 6 }, (_, i) => currentYear - i)];
 };
 
 const getAvailableMonths = (selectedYear) => {
@@ -73,42 +73,24 @@ const getAvailableMonths = (selectedYear) => {
   }
 };
 
+const getDefaultDateRange = () => {
+  const year = getCurrentYear();
+  const month = getCurrentMonth() + 1;
+  const day = new Date().getDate();
+  return {
+    fromDate: `${year}-01-01`,
+    toDate: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  };
+};
+
+// Helper function to calculate totals from array (matching Monthly Bill Generator)
 const calculateTotal = (arr) => {
   if (!arr || arr.length === 0) return 0;
   return arr.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 };
 
-const shouldSplitBilling = (order) => {
-  const isNLD = order.product === "NLD";
-  const state1 = order.billing1?.state || "";
-  const state2 = order.billing2?.state || "";
-  return isNLD && state1 !== state2 && state2 !== "";
-};
-
-const getServicePeriod = (order, toDate) => {
-  const pcdDate = order.pcdDate;
-  const terminateDate = order.terminateDate;
-  const endDateParsed = parseDate(toDate);
-
-  if (terminateDate) {
-    return { start: pcdDate, end: terminateDate, status: 'terminated' };
-  }
-
-  const endMonth = endDateParsed.getMonth();
-  const endYear = endDateParsed.getFullYear();
-  const lastDayOfMonth = getLastDayOfMonth(endMonth, endYear);
-
-  return { start: pcdDate, end: lastDayOfMonth, status: 'active' };
-};
-
-const truncateText = (text, maxLength) => {
-  if (!text) return '';
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + '...';
-};
-
-// Calculate billing with breakdown
-const calculateBillingWithBreakdown = async (order, fromDate, toDate, splitFactor = 1, stateToShow = '') => {
+// Calculate balance with breakdown using API data
+const calculateBalanceWithBreakdownAPI = async (order, fromDate, toDate, splitFactor = 1, stateToShow = '') => {
   const pcdDate = parseDate(order.pcdDate);
   const terminateDate = order.terminateDate ? parseDate(order.terminateDate) : null;
   const startDate = parseDate(fromDate);
@@ -116,9 +98,9 @@ const calculateBillingWithBreakdown = async (order, fromDate, toDate, splitFacto
 
   const breakdown = {
     months: [],
-    totalBilling: 0,
-    totalMisc: 0,
-    totalBillingWithMisc: 0,
+    totalBalance: 0,
+    totalBilled: 0,
+    totalReceived: 0,
     orderDetails: {
       orderId: order.orderId,
       lsiId: order.lsiId,
@@ -139,7 +121,7 @@ const calculateBillingWithBreakdown = async (order, fromDate, toDate, splitFacto
   const baseRate = Number(order.amount) || 0;
   const totalAmount = baseRate * capacityMbps;
   const gstAmount = totalAmount * 0.18;
-  const grandTotal = totalAmount + gstAmount;
+  const grandTotal = (totalAmount + gstAmount) / splitFactor;
 
   breakdown.orderDetails.totalAmount = totalAmount;
   breakdown.orderDetails.gstAmount = gstAmount;
@@ -161,10 +143,11 @@ const calculateBillingWithBreakdown = async (order, fromDate, toDate, splitFacto
     return breakdown;
   }
 
-  let totalBillingAmount = 0;
-  let totalMiscAmount = 0;
+  let totalBilledAmount = 0;
+  let totalReceivedAmount = 0;
   let currentDate = new Date(Math.max(pcdDate, startDate));
 
+  // Fetch all billing data for this order
   let billingData = [];
   try {
     const res = await fetch(`/api/billing/monthly?orderId=${order.orderId}`);
@@ -188,7 +171,7 @@ const calculateBillingWithBreakdown = async (order, fromDate, toDate, splitFacto
       (currentDate.getFullYear() === serviceEndDate.getFullYear() &&
         currentDate.getMonth() === serviceEndDate.getMonth());
 
-    let monthBilling = 0;
+    let monthBalance = 0;
     let billingDays = 0;
     let startDay = 1;
     let endDay = daysInMonth;
@@ -198,42 +181,49 @@ const calculateBillingWithBreakdown = async (order, fromDate, toDate, splitFacto
       endDay = serviceEndDate.getDate();
       billingDays = endDay - startDay + 1;
       const perDayRate = grandTotal / daysInMonth;
-      monthBilling = perDayRate * billingDays;
+      monthBalance = perDayRate * billingDays;
     } else if (isPcdMonth) {
       startDay = pcdDate.getDate();
       endDay = daysInMonth;
       billingDays = endDay - startDay + 1;
       const perDayRate = grandTotal / daysInMonth;
-      monthBilling = perDayRate * billingDays;
+      monthBalance = perDayRate * billingDays;
     } else if (isTerminateMonth) {
       startDay = 1;
       endDay = serviceEndDate.getDate();
       billingDays = endDay - startDay + 1;
       const perDayRate = grandTotal / daysInMonth;
-      monthBilling = perDayRate * billingDays;
+      monthBalance = perDayRate * billingDays;
     } else {
       billingDays = daysInMonth;
-      monthBilling = grandTotal;
+      monthBalance = grandTotal;
     }
 
+    // Get received amount and other details from API
     const monthName = formatMonthYear(month, year);
     const billing = billingData.find(b => 
       b.month === monthName && 
       b.state === breakdown.orderDetails.state
     );
 
+    let receivedAmount = 0;
+    let creditNotes = 0;
     let miscSell = 0;
+    let tdsProvision = 0;
+    let tdsConfirm = 0;
+    let invoiceNumber = '-';
+
     if (billing) {
+      receivedAmount = calculateTotal(billing.receivedDetails || []);
+      creditNotes = calculateTotal(billing.creditNotes || []);
       miscSell = calculateTotal(billing.miscellaneousSell || []);
+      tdsProvision = calculateTotal(billing.tdsProvision || []);
+      tdsConfirm = calculateTotal(billing.tdsConfirm || []);
+      invoiceNumber = billing.invoiceNumber || '-';
     }
 
-    if (splitFactor === 2) {
-      monthBilling = monthBilling / 2;
-      miscSell = miscSell / 2;
-    }
-
-    totalBillingAmount += monthBilling;
-    totalMiscAmount += miscSell;
+    totalBilledAmount += monthBalance;
+    totalReceivedAmount += receivedAmount;
 
     breakdown.months.push({
       monthYear: monthName,
@@ -245,9 +235,15 @@ const calculateBillingWithBreakdown = async (order, fromDate, toDate, splitFacto
       endDay: endDay,
       perDayRate: grandTotal / daysInMonth,
       monthlyCharge: grandTotal,
-      billing: monthBilling,
-      misc: miscSell,
-      total: monthBilling + miscSell,
+      monthlyBilling: monthBalance / 1.18, // Base amount
+      gst: monthBalance - (monthBalance / 1.18), // GST amount
+      amount: monthBalance,
+      receivedAmount: receivedAmount,
+      creditNotes: creditNotes,
+      miscSell: miscSell,
+      tdsProvision: tdsProvision,
+      tdsConfirm: tdsConfirm,
+      invoiceNumber: invoiceNumber,
       isPcdMonth: isPcdMonth,
       isTerminateMonth: isTerminateMonth
     });
@@ -257,11 +253,45 @@ const calculateBillingWithBreakdown = async (order, fromDate, toDate, splitFacto
     currentDate = new Date(year, month + 1, 1);
   }
 
-  breakdown.totalBilling = totalBillingAmount;
-  breakdown.totalMisc = totalMiscAmount;
-  breakdown.totalBillingWithMisc = totalBillingAmount + totalMiscAmount;
+  breakdown.totalBilled = totalBilledAmount;
+  breakdown.totalReceived = totalReceivedAmount;
+  breakdown.totalBalance = totalBilledAmount - totalReceivedAmount;
   
   return breakdown;
+};
+
+const calculateBalance = async (order, fromDate, toDate, splitFactor = 1, stateToShow = '') => {
+  const breakdown = await calculateBalanceWithBreakdownAPI(order, fromDate, toDate, splitFactor, stateToShow);
+  return breakdown.totalBalance;
+};
+
+const getServicePeriod = (order, toDate) => {
+  const pcdDate = order.pcdDate;
+  const terminateDate = order.terminateDate;
+  const endDateParsed = parseDate(toDate);
+
+  if (terminateDate) {
+    return { start: pcdDate, end: terminateDate, status: 'terminated' };
+  }
+
+  const endMonth = endDateParsed.getMonth();
+  const endYear = endDateParsed.getFullYear();
+  const lastDayOfMonth = getLastDayOfMonth(endMonth, endYear);
+
+  return { start: pcdDate, end: lastDayOfMonth, status: 'active' };
+};
+
+const shouldSplitBilling = (order) => {
+  const isNLD = order.product === "NLD";
+  const state1 = order.billing1?.state || "";
+  const state2 = order.billing2?.state || "";
+  return isNLD && state1 !== state2 && state2 !== "";
+};
+
+const truncateText = (text, maxLength) => {
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + '...';
 };
 
 // ========== MONTHLY BILLING BREAKDOWN TABLE COMPONENT ==========
@@ -274,19 +304,112 @@ const MonthlyBillingBreakdownTable = ({ breakdown }) => {
     );
   }
 
+  // ✅ CORRECT CALCULATION: Matching Monthly Bill Generator's FIFO logic exactly
+  const getMonthlyBreakdownData = () => {
+    let runningBalance = 0;
+    let cumulativeUnpaid = 0; // Track cumulative unpaid amount
+
+    console.log('=== BILLING CALCULATION START (Breakdown Table) ===');
+
+    // Sort billings chronologically
+    const sortedMonths = [...breakdown.months].sort((a, b) => {
+      return new Date(a.year, a.month) - new Date(b.year, b.month);
+    });
+
+    // Calculate TOTAL credit pool from ALL months (INCLUDING CREDIT NOTES)
+    const totalCreditPool = sortedMonths.reduce((sum, monthData) => {
+      const received = monthData.receivedAmount;
+      const creditNotes = monthData.creditNotes;
+      const tdsProv = monthData.tdsProvision;
+      const tdsConf = monthData.tdsConfirm;
+      return sum + received + creditNotes + tdsProv + tdsConf;
+    }, 0);
+
+    console.log(`💰 TOTAL CREDIT POOL (All Payments + Credit Notes): ₹${totalCreditPool.toFixed(2)}`);
+
+    let creditPool = totalCreditPool;
+
+    return sortedMonths.map((monthData, index) => {
+      console.log(`\n📅 ${monthData.monthYear}`);
+
+      const monthlyBillingBasic = monthData.monthlyBilling;
+      const gst = monthData.gst;
+      const monthlyBillingWithGst = monthData.amount;
+      const receivedAmount = monthData.receivedAmount;
+      const creditNotes = monthData.creditNotes;
+      const miscSell = monthData.miscSell;
+      const tdsProvision = monthData.tdsProvision;
+      const tdsConfirm = monthData.tdsConfirm;
+
+      // Calculate monthly totals (INCLUDING CREDIT NOTES)
+      const monthlyCredits = receivedAmount + creditNotes + tdsProvision + tdsConfirm;
+
+      // Calculate charges for this month
+      const monthlyCharges = monthlyBillingWithGst + miscSell;
+
+      console.log(`📋 Charges needed: ₹${monthlyCharges.toFixed(2)}`);
+      console.log(`💳 Credit Pool available: ₹${creditPool.toFixed(2)}`);
+
+      // Standard running balance calculation
+      const monthlyNet = monthlyCharges - monthlyCredits;
+      runningBalance += monthlyNet;
+
+      console.log(`📊 Total Balance (Running): ₹${runningBalance.toFixed(2)}`);
+
+      // ✅ FIFO Allocation with proper unpaid tracking
+      let totalRemainingAdjustment = 0;
+
+      if (creditPool >= monthlyCharges) {
+        // Fully covered by credit pool
+        creditPool -= monthlyCharges;
+        totalRemainingAdjustment = cumulativeUnpaid; // No new unpaid, keep previous
+        console.log(`✅ SETTLED | Pool after: ₹${creditPool.toFixed(2)} | Remaining: ₹${totalRemainingAdjustment.toFixed(2)}`);
+      } else {
+        // Partial payment
+        const unpaidThisMonth = monthlyCharges - creditPool;
+        creditPool = 0; // Pool exhausted
+
+        cumulativeUnpaid += unpaidThisMonth; // Add to cumulative
+        totalRemainingAdjustment = cumulativeUnpaid;
+
+        console.log(`⚠️ PARTIAL | Unpaid this month: ₹${unpaidThisMonth.toFixed(2)}`);
+        console.log(`📍 Cumulative Unpaid: ₹${cumulativeUnpaid.toFixed(2)}`);
+        console.log(`📍 Total Remaining Adjustment: ₹${totalRemainingAdjustment.toFixed(2)}`);
+      }
+
+      return {
+        ...monthData,
+        monthlyBillingBasic,
+        gst,
+        monthlyBillingWithGst,
+        receivedAmount,
+        creditNotes,
+        miscSell,
+        tdsProvision,
+        tdsConfirm,
+        totalBalance: runningBalance,
+        totalRemainingAdjustment: Math.max(0, totalRemainingAdjustment),
+        creditPoolRemaining: creditPool
+      };
+    });
+  };
+
+  const monthlyData = getMonthlyBreakdownData();
+
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
-      <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-4">
+      <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
         <h2 className="text-xl font-bold text-white flex items-center gap-2">
           <FileText className="w-6 h-6" />
-          Monthly Billing Breakdown
+          Monthly Billing Breakdown Table
         </h2>
-        <p className="text-emerald-100 text-sm mt-1">
+        <p className="text-blue-100 text-sm mt-1">
           Detailed month-by-month calculation for {breakdown.orderDetails.orderId}
         </p>
       </div>
 
       <div className="p-6">
+        {/* Order Summary */}
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6 bg-slate-50 rounded-lg p-4 border border-slate-200">
           <div>
             <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Order ID</p>
@@ -314,6 +437,7 @@ const MonthlyBillingBreakdownTable = ({ breakdown }) => {
           </div>
         </div>
 
+        {/* Detailed Table */}
         <div className="overflow-x-auto rounded-xl border border-slate-200">
           <table className="w-full">
             <thead>
@@ -321,14 +445,21 @@ const MonthlyBillingBreakdownTable = ({ breakdown }) => {
                 <th className="px-3 py-3 text-left text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Month</th>
                 <th className="px-3 py-3 text-center text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Days</th>
                 <th className="px-3 py-3 text-left text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Period</th>
-                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Billing</th>
-                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Misc</th>
-                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Total</th>
+                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Received Amount</th>
+                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Credit Notes</th>
+                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Misc Sell</th>
+                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">TDS Provision</th>
+                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">TDS Confirm</th>
+                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Monthly Billing (Basic)</th>
+                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">GST</th>
+                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Monthly Billing + GST</th>
+                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Total Balance (Running)</th>
+                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Total Remaining Adjustment</th>
               </tr>
             </thead>
 
             <tbody className="bg-white divide-y divide-slate-100">
-              {breakdown.months.map((monthData, index) => (
+              {monthlyData.map((monthData, index) => (
                 <tr key={`month-${monthData.year}-${monthData.month}-${index}`} className="hover:bg-slate-50">
                   <td className="px-3 py-3 font-semibold text-slate-900 text-sm whitespace-nowrap">
                     {monthData.monthYear}
@@ -339,20 +470,62 @@ const MonthlyBillingBreakdownTable = ({ breakdown }) => {
                   <td className="px-3 py-3 text-sm text-slate-700 whitespace-nowrap">
                     {monthData.startDay}-{String(monthData.month + 1).padStart(2, '0')}-{monthData.year} to {monthData.endDay}-{String(monthData.month + 1).padStart(2, '0')}-{monthData.year}
                   </td>
-                  <td className="px-3 py-3 text-right font-bold text-emerald-600 text-sm whitespace-nowrap">
-                    ₹{monthData.billing.toLocaleString('en-IN', {
+                  <td className="px-3 py-3 text-right font-bold text-green-600 text-sm whitespace-nowrap">
+                    ₹{monthData.receivedAmount.toLocaleString('en-IN', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                  <td className="px-3 py-3 text-right font-bold text-cyan-600 text-sm whitespace-nowrap">
+                    ₹{monthData.creditNotes.toLocaleString('en-IN', {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}
                   </td>
                   <td className="px-3 py-3 text-right font-bold text-purple-600 text-sm whitespace-nowrap">
-                    ₹{monthData.misc.toLocaleString('en-IN', {
+                    ₹{monthData.miscSell.toLocaleString('en-IN', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                  <td className="px-3 py-3 text-right font-bold text-orange-600 text-sm whitespace-nowrap">
+                    ₹{monthData.tdsProvision.toLocaleString('en-IN', {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}
                   </td>
                   <td className="px-3 py-3 text-right font-bold text-blue-600 text-sm whitespace-nowrap">
-                    ₹{monthData.total.toLocaleString('en-IN', {
+                    ₹{monthData.tdsConfirm.toLocaleString('en-IN', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                  <td className="px-3 py-3 text-right font-bold text-slate-900 text-sm whitespace-nowrap">
+                    ₹{monthData.monthlyBillingBasic.toLocaleString('en-IN', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                  <td className="px-3 py-3 text-right font-semibold text-slate-700 text-sm whitespace-nowrap">
+                    ₹{monthData.gst.toLocaleString('en-IN', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                  <td className="px-3 py-3 text-right font-bold text-emerald-600 text-sm whitespace-nowrap">
+                    ₹{monthData.monthlyBillingWithGst.toLocaleString('en-IN', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                  <td className="px-3 py-3 text-right font-bold text-slate-800 text-sm whitespace-nowrap">
+                    ₹{monthData.totalBalance.toLocaleString('en-IN', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                  <td className={`px-3 py-3 text-right font-bold text-sm whitespace-nowrap ${monthData.totalRemainingAdjustment > 0 ? 'text-rose-700 bg-rose-50' : 'text-emerald-700 bg-emerald-50'}`}>
+                    ₹{monthData.totalRemainingAdjustment.toLocaleString('en-IN', {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}
@@ -366,14 +539,35 @@ const MonthlyBillingBreakdownTable = ({ breakdown }) => {
                 <td colSpan="3" className="px-3 py-4 text-right font-bold text-slate-900">
                   Total:
                 </td>
-                <td className="px-3 py-4 text-right font-bold text-emerald-700">
-                  ₹{breakdown.totalBilling.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <td className="px-3 py-4 text-right font-bold text-green-700">
+                  ₹{monthlyData.reduce((sum, m) => sum + m.receivedAmount, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="px-3 py-4 text-right font-bold text-cyan-700">
+                  ₹{monthlyData.reduce((sum, m) => sum + m.creditNotes, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
                 <td className="px-3 py-4 text-right font-bold text-purple-700">
-                  ₹{breakdown.totalMisc.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₹{monthlyData.reduce((sum, m) => sum + m.miscSell, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
-                <td className="px-3 py-4 text-right font-extrabold text-blue-700 text-lg">
-                  ₹{breakdown.totalBillingWithMisc.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <td className="px-3 py-4 text-right font-bold text-orange-700">
+                  ₹{monthlyData.reduce((sum, m) => sum + m.tdsProvision, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="px-3 py-4 text-right font-bold text-blue-700">
+                  ₹{monthlyData.reduce((sum, m) => sum + m.tdsConfirm, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="px-3 py-4 text-right font-bold text-slate-900">
+                  ₹{monthlyData.reduce((sum, m) => sum + m.monthlyBillingBasic, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="px-3 py-4 text-right font-bold text-slate-700">
+                  ₹{monthlyData.reduce((sum, m) => sum + m.gst, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="px-3 py-4 text-right font-extrabold text-emerald-700 text-lg">
+                  ₹{monthlyData.reduce((sum, m) => sum + m.monthlyBillingWithGst, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="px-3 py-4 text-right font-extrabold text-slate-900 text-lg">
+                  ₹{monthlyData[monthlyData.length - 1].totalBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className={`px-3 py-4 text-right font-extrabold text-lg ${monthlyData[monthlyData.length - 1].totalRemainingAdjustment > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
+                  ₹{monthlyData[monthlyData.length - 1].totalRemainingAdjustment.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
               </tr>
             </tfoot>
@@ -384,31 +578,33 @@ const MonthlyBillingBreakdownTable = ({ breakdown }) => {
   );
 };
 
-// ========== CALCULATION BREAKDOWN COMPONENT ==========
-const BillingCalculationBreakdown = ({ breakdown, onClose }) => {
+// ========== CALCULATION BREAKDOWN COMPONENT (UPDATED) ==========
+const CalculationBreakdown = ({ breakdown, onClose }) => {
   if (!breakdown) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/30 to-slate-50 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 py-8">
       <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8">
 
+        {/* Main Card */}
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
 
-          <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 px-8 py-6">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-8 py-6">
             <div className="flex items-center justify-between mb-4">
               <button
                 onClick={onClose}
                 className="group flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold rounded-lg shadow-sm border border-slate-200 transition-all duration-200 hover:shadow-md hover:border-slate-300"
               >
-                <ArrowLeft className="w-5 h-5 text-slate-600 group-hover:text-emerald-600 transition-colors" />
+                <ArrowLeft className="w-5 h-5 text-slate-600 group-hover:text-blue-600 transition-colors" />
                 <span>Back to Reports</span>
               </button>
 
               <div className="text-right">
                 <h1 className="text-2xl font-bold text-white mb-1">
-                  Billing Calculation Breakdown
+                  Balance Calculation Breakdown
                 </h1>
-                <p className="text-emerald-100 text-sm font-medium">
+                <p className="text-blue-100 text-sm font-medium">
                   Order ID: <span className="font-bold text-white">{breakdown.orderDetails.orderId}</span>
                 </p>
               </div>
@@ -416,10 +612,11 @@ const BillingCalculationBreakdown = ({ breakdown, onClose }) => {
           </div>
 
           <div className="p-8 space-y-8">
+            {/* Order Details and Calculation Formula */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div>
                 <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <div className="w-1 h-5 bg-emerald-600 rounded-full"></div>
+                  <div className="w-1 h-5 bg-blue-600 rounded-full"></div>
                   Order Details
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -456,25 +653,25 @@ const BillingCalculationBreakdown = ({ breakdown, onClose }) => {
 
               <div>
                 <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <div className="w-1 h-5 bg-emerald-600 rounded-full"></div>
+                  <div className="w-1 h-5 bg-blue-600 rounded-full"></div>
                   Calculation Formula
                 </h2>
-                <div className="bg-emerald-50 rounded-xl p-6 border border-emerald-200 space-y-3 h-full">
+                <div className="bg-blue-50 rounded-xl p-6 border border-blue-200 space-y-3 h-full">
                   <div className="flex justify-between items-center pb-3">
                     <span className="text-sm font-medium text-slate-700">Base Amount (Rate × Capacity)</span>
                     <span className="text-sm font-bold text-slate-900">
                       ₹{breakdown.orderDetails.baseRate.toLocaleString('en-IN')} × {breakdown.orderDetails.capacity} = ₹{breakdown.orderDetails.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center pb-3 border-t border-emerald-200 pt-3">
+                  <div className="flex justify-between items-center pb-3 border-t border-blue-200 pt-3">
                     <span className="text-sm font-medium text-slate-700">GST (18%)</span>
                     <span className="text-sm font-bold text-slate-900">
                       ₹{breakdown.orderDetails.gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center pt-3 border-t-2 border-emerald-300">
-                    <span className="text-base font-bold text-emerald-900">Monthly Charge (Full)</span>
-                    <span className="text-xl font-extrabold text-emerald-700">
+                  <div className="flex justify-between items-center pt-3 border-t-2 border-blue-300">
+                    <span className="text-base font-bold text-blue-900">Monthly Charge (After Split)</span>
+                    <span className="text-xl font-extrabold text-blue-700">
                       ₹{breakdown.orderDetails.monthlyCharge.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
@@ -482,6 +679,7 @@ const BillingCalculationBreakdown = ({ breakdown, onClose }) => {
               </div>
             </div>
 
+            {/* Monthly Billing Breakdown Table */}
             <MonthlyBillingBreakdownTable breakdown={breakdown} />
 
           </div>
@@ -548,10 +746,10 @@ const TruncatedText = React.memo(({ text, limit, className = "" }) => {
       <span className={className}>
         {text.substring(0, limit)}
         <span
-          className="text-emerald-600 cursor-pointer hover:underline ml-1 font-medium"
+          className="text-blue-600 cursor-pointer hover:underline ml-1 font-medium"
           onClick={() => setShowPopup(true)}
         >
-          ...more
+          ..more
         </span>
       </span>
       {showPopup && (
@@ -566,14 +764,15 @@ const TruncatedText = React.memo(({ text, limit, className = "" }) => {
 
 TruncatedText.displayName = 'TruncatedText';
 
-const BillingTableRow = React.memo((({
+const TableRow = React.memo(({
   order,
+  hideLsiColumn,
   fromDateFormatted,
   toDateFormatted,
   splitFactor = 1,
   stateToShow,
   onViewBreakdown,
-  onBillingCalculated,
+  onBalanceCalculated,
   rowKey
 }) => {
   const [breakdown, setBreakdown] = useState(null);
@@ -582,22 +781,35 @@ const BillingTableRow = React.memo((({
   useEffect(() => {
     const fetchBreakdown = async () => {
       setLoading(true);
-      const result = await calculateBillingWithBreakdown(order, fromDateFormatted, toDateFormatted, splitFactor, stateToShow);
+      console.log('⏳ Calculating balance for:', {
+        orderId: order.orderId,
+        state: stateToShow || 'main',
+        splitFactor: splitFactor
+      });
+      const result = await calculateBalanceWithBreakdownAPI(order, fromDateFormatted, toDateFormatted, splitFactor, stateToShow);
       setBreakdown(result);
       setLoading(false);
 
-      if (onBillingCalculated && result) {
-        onBillingCalculated(rowKey, result.totalBilling, result.totalBillingWithMisc);
+      console.log('✅ Balance calculated:', {
+        orderId: order.orderId,
+        state: stateToShow || 'main',
+        balance: result.totalBalance
+      });
+
+      // ✅ Report balance back to parent with unique key
+      if (onBalanceCalculated && result) {
+        console.log('📤 Reporting balance to parent:', { rowKey, balance: result.totalBalance });
+        onBalanceCalculated(rowKey, result.totalBalance);
       }
     };
 
     fetchBreakdown();
-  }, [order, fromDateFormatted, toDateFormatted, splitFactor, stateToShow, onBillingCalculated, rowKey]);
+  }, [order, fromDateFormatted, toDateFormatted, splitFactor, stateToShow, onBalanceCalculated, rowKey]);
 
   if (loading || !breakdown) {
     return (
-      <tr key={rowKey} className="hover:bg-emerald-50/40 transition-colors duration-150 border-b border-slate-100">
-        <td colSpan="8" className="px-4 py-4 text-center text-slate-500">
+      <tr key={rowKey} className="hover:bg-blue-50/40 transition-colors duration-150 border-b border-slate-100">
+        <td colSpan="9" className="px-4 py-4 text-center text-slate-500">
           Loading...
         </td>
       </tr>
@@ -607,10 +819,15 @@ const BillingTableRow = React.memo((({
   const servicePeriod = getServicePeriod(order, toDateFormatted);
 
   return (
-    <tr key={rowKey} className="hover:bg-emerald-50/40 transition-colors duration-150 border-b border-slate-100 last:border-0">
+    <tr key={rowKey} className="hover:bg-blue-50/40 transition-colors duration-150 border-b border-slate-100 last:border-0">
       <td className="px-4 py-4">
-        <span className="text-[16px] font-semibold text-emerald-600">{order.orderId}</span>
+        <span className="text-[16px] font-semibold text-blue-600">{order.orderId}</span>
       </td>
+      {!hideLsiColumn && (
+        <td className="px-4 py-4">
+          <span className="text-[16px] font-semibold text-orange-600">{order.lsiId || '-'}</span>
+        </td>
+      )}
       <td className="px-4 py-4">
         <TruncatedText
           text={order.endA}
@@ -638,21 +855,16 @@ const BillingTableRow = React.memo((({
         </span>
       </td>
       <td className="px-4 py-4 text-right">
-        <span className="text-[16px] font-bold text-emerald-600">
-          ₹{breakdown.totalBilling.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </span>
-      </td>
-      <td className="px-4 py-4 text-right">
         <div className="flex items-center justify-end gap-2">
-          <span className="text-[16px] font-bold text-blue-600">
-            ₹{breakdown.totalBillingWithMisc.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          <span className={`text-[16px] font-bold ${breakdown.totalBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+            ₹{breakdown.totalBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
           <button
             onClick={() => onViewBreakdown(breakdown)}
-            className="p-1.5 hover:bg-emerald-100 rounded-lg transition-colors duration-200 group"
+            className="p-1.5 hover:bg-blue-100 rounded-lg transition-colors duration-200 group"
             title="View calculation breakdown"
           >
-            <Info className="w-4 h-4 text-emerald-600 group-hover:text-emerald-700" />
+            <Info className="w-4 h-4 text-blue-600 group-hover:text-blue-700" />
           </button>
         </div>
       </td>
@@ -680,20 +892,23 @@ const BillingTableRow = React.memo((({
       </td>
     </tr>
   );
-}));
+});
 
-BillingTableRow.displayName = 'BillingTableRow';
+TableRow.displayName = 'TableRow';
 
-const BillingReportComp = () => {
+const OutstandingReportCollectionComp = () => {
   const [orders, setOrders] = useState([]);
+  const [hideLsiColumn, setHideLsiColumn] = useState(true);
   const [selectedBreakdown, setSelectedBreakdown] = useState(null);
   
-  const [rowBillings, setRowBillings] = useState({});
+  // ✅ NEW: State to track balances by row
+  const [rowBalances, setRowBalances] = useState({});
 
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth();
   const todayFormatted = getCurrentDate();
+  const defaultDateRange = getDefaultDateRange();
 
   const [activeTab, setActiveTab] = useState('period');
   const [statusFilter, setStatusFilter] = useState('active');
@@ -703,12 +918,12 @@ const BillingReportComp = () => {
     state: '',
     company: '',
     entity: '',
-    fromDate: '',
-    toDate: convertToInputFormat(todayFormatted),
+    fromDate: defaultDateRange.fromDate,
+    toDate: defaultDateRange.toDate,
   });
 
   const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedMonth, setSelectedMonth] = useState(ALL_MONTHS[currentMonth]);
+  const [selectedMonth, setSelectedMonth] = useState('All');
 
   useEffect(() => {
     fetchOrders();
@@ -726,75 +941,84 @@ const BillingReportComp = () => {
     }
   };
 
-  const handleBillingCalculated = useCallback((rowKey, billing, billingWithMisc) => {
-    setRowBillings(prev => ({
-      ...prev,
-      [rowKey]: { billing, billingWithMisc }
-    }));
+  // ✅ NEW: Callback to receive balance from child TableRow
+  const handleBalanceCalculated = useCallback((rowKey, balance) => {
+    console.log('📥 Parent received balance:', { rowKey, balance });
+    setRowBalances(prev => {
+      const updated = { ...prev, [rowKey]: balance };
+      console.log('💾 Updated rowBalances:', updated);
+      return updated;
+    });
   }, []);
 
-  const { totalBilling, totalBillingWithMisc } = useMemo(() => {
-    const billing = Object.values(rowBillings).reduce((sum, row) => sum + row.billing, 0);
-    const billingWithMisc = Object.values(rowBillings).reduce((sum, row) => sum + row.billingWithMisc, 0);
-    return { totalBilling: billing, totalBillingWithMisc: billingWithMisc };
-  }, [rowBillings]);
+  // ✅ NEW: Calculate total balance from all row balances
+  const totalBalance = useMemo(() => {
+    const total = Object.values(rowBalances).reduce((sum, balance) => sum + balance, 0);
+    console.log('🧮 Total Balance Calculated:', total, 'from', Object.keys(rowBalances).length, 'rows');
+    return total;
+  }, [rowBalances]);
 
+  // ✅ Reset balances when filters change
   useEffect(() => {
-    setRowBillings({});
+    console.log('🔄 Filters changed, resetting balances');
+    setRowBalances({});
   }, [filters, statusFilter, activeTab, selectedYear, selectedMonth]);
 
   const yearOptions = useMemo(() => getYearOptions(), []);
 
   const handleYearChange = (year) => {
-    const yearNum = parseInt(year);
-    setSelectedYear(yearNum);
-    setSelectedMonth(yearNum === getCurrentYear() ? ALL_MONTHS[getCurrentMonth()] : 'ALL');
+    if (year === 'All') {
+      setSelectedYear(year);
+      setSelectedMonth('All');
+    } else {
+      const yearNum = parseInt(year);
+      setSelectedYear(yearNum);
+      setSelectedMonth(yearNum === getCurrentYear() ? ALL_MONTHS[getCurrentMonth()] : 'All');
+    }
   };
 
   const availableMonths = useMemo(() => {
+    if (selectedYear === 'All') {
+      return [];
+    }
     return getAvailableMonths(parseInt(selectedYear));
   }, [selectedYear]);
 
   useEffect(() => {
     if (activeTab === 'period') {
-      const year = selectedYear;
-      
-      if (selectedMonth === 'ALL') {
-        const firstDay = `01-01-${year}`;
-        let lastDay;
-        
-        if (year === getCurrentYear()) {
-          const currentMonthIndex = getCurrentMonth();
-          lastDay = getLastDayOfMonth(currentMonthIndex, year);
-        } else {
-          lastDay = `31-12-${year}`;
-        }
-        
+      if (selectedYear === 'All') {
         setFilters(prev => ({
           ...prev,
-          fromDate: convertToInputFormat(firstDay),
-          toDate: convertToInputFormat(lastDay)
+          fromDate: '',
+          toDate: convertToInputFormat(todayFormatted)
         }));
       } else {
-        const monthIndex = ALL_MONTHS.indexOf(selectedMonth);
-        const firstDay = `01-${String(monthIndex + 1).padStart(2, '0')}-${year}`;
-        const lastDay = getLastDayOfMonth(monthIndex, year);
+        const year = selectedYear;
+        let lastDay;
+
+        if (selectedMonth === 'All') {
+          const monthIndex = year === getCurrentYear() ? getCurrentMonth() : 11;
+          lastDay = getLastDayOfMonth(monthIndex, year);
+        } else {
+          const monthIndex = ALL_MONTHS.indexOf(selectedMonth);
+          lastDay = getLastDayOfMonth(monthIndex, year);
+        }
 
         setFilters(prev => ({
           ...prev,
-          fromDate: convertToInputFormat(firstDay),
+          fromDate: '',
           toDate: convertToInputFormat(lastDay)
         }));
       }
     }
-  }, [selectedMonth, selectedYear, activeTab]);
+  }, [selectedMonth, selectedYear, activeTab, todayFormatted]);
 
   const maxDateForInput = useMemo(() => {
     return convertToInputFormat(todayFormatted);
   }, [todayFormatted]);
 
   const minDateForInput = useMemo(() => {
-    const minYear = currentYear - 10;
+    const minYear = currentYear - 5;
     return `${minYear}-01-01`;
   }, [currentYear]);
 
@@ -821,21 +1045,23 @@ const BillingReportComp = () => {
       }
 
       let matchDateFilter = true;
+
       const pcdDate = parseDate(order.pcdDate);
       const terminateDate = order.terminateDate ? parseDate(order.terminateDate) : null;
 
       if (pcdDate) {
         if (activeTab === 'period') {
-          if (filters.fromDate && filters.toDate) {
-            const fromDate = new Date(filters.fromDate);
-            fromDate.setHours(0, 0, 0, 0);
-            const toDate = new Date(filters.toDate);
-            toDate.setHours(23, 59, 59, 999);
+          if (selectedYear !== 'All') {
+            const selectedYearNum = parseInt(selectedYear);
 
-            const orderStartedBeforeRangeEnds = pcdDate <= toDate;
-            const orderActiveAfterRangeStarts = !terminateDate || terminateDate >= fromDate;
-            
-            matchDateFilter = orderStartedBeforeRangeEnds && orderActiveAfterRangeStarts;
+            if (selectedMonth === 'All') {
+              const yearEndDate = new Date(selectedYearNum, 11, 31, 23, 59, 59);
+              matchDateFilter = pcdDate <= yearEndDate;
+            } else {
+              const monthIndex = ALL_MONTHS.indexOf(selectedMonth);
+              const monthEndDate = new Date(selectedYearNum, monthIndex + 1, 0, 23, 59, 59);
+              matchDateFilter = pcdDate <= monthEndDate;
+            }
           }
         } else if (activeTab === 'dateRange') {
           if (filters.fromDate && filters.toDate) {
@@ -861,39 +1087,40 @@ const BillingReportComp = () => {
   }, [orders]);
 
   const clearAllFilters = useCallback(() => {
+    const defaultRange = getDefaultDateRange();
     setFilters({
       search: '',
       state: '',
       company: '',
       entity: '',
-      fromDate: '',
-      toDate: convertToInputFormat(todayFormatted),
+      fromDate: defaultRange.fromDate,
+      toDate: defaultRange.toDate,
     });
     setActiveTab('period');
     setSelectedYear(currentYear);
     setSelectedMonth(ALL_MONTHS[getCurrentMonth()]);
     setStatusFilter('active');
-  }, [currentYear, todayFormatted]);
+  }, [currentYear]);
 
-  const hasActiveFilters = filters.search || filters.state || filters.company || filters.entity;
+  const hasActiveFilters = filters.search || filters.state || filters.company || filters.entity || (activeTab === 'dateRange' && filters.fromDate);
 
   const handleExport = useCallback(() => {
     console.log('Export functionality to be implemented');
   }, []);
 
   const getPeriodLabel = () => {
-    if (selectedMonth === 'ALL') {
-      if (selectedYear === getCurrentYear()) {
-        return `JAN to ${ALL_MONTHS[getCurrentMonth()]} ${selectedYear}`;
-      }
-      return `All ${selectedYear}`;
+    if (selectedYear === 'All') {
+      return 'All Time';
     }
-    return `${selectedMonth} ${selectedYear}`;
+    if (selectedMonth === 'All') {
+      return `Up to Dec ${selectedYear}`;
+    }
+    return `Up to ${selectedMonth} ${selectedYear}`;
   };
 
   if (selectedBreakdown) {
     return (
-      <BillingCalculationBreakdown
+      <CalculationBreakdown
         breakdown={selectedBreakdown}
         onClose={() => setSelectedBreakdown(null)}
       />
@@ -901,17 +1128,19 @@ const BillingReportComp = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/20 to-slate-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50">
       <div className="max-w-[1800px] mx-auto p-6 lg:p-8">
 
         <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm mb-6">
 
           <div className="mb-5">
             <h1 className="text-2xl font-bold text-slate-900 mb-0.5">
-              Sell Billing Report
+              Outstanding Balance Report Summary
             </h1>
             <p className="text-[14px] text-slate-600">
-              Monthly billing report for selected period
+              {activeTab === 'period' 
+                ? 'Cumulative totals - includes all orders up to selected period' 
+                : 'Shows orders active during selected date range'}
             </p>
           </div>
 
@@ -921,14 +1150,14 @@ const BillingReportComp = () => {
               <input
                 type="text"
                 placeholder="Search Order/LSI..."
-                className="w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200"
+                className="w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 value={filters.search}
                 onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
               />
             </div>
 
             <select
-              className="px-3 py-2.5 border border-slate-300 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-white min-w-[140px]"
+              className="px-3 py-2.5 border border-slate-300 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white min-w-[140px]"
               value={filters.state}
               onChange={(e) => setFilters(prev => ({ ...prev, state: e.target.value }))}
             >
@@ -937,7 +1166,7 @@ const BillingReportComp = () => {
             </select>
 
             <select
-              className="px-3 py-2.5 border border-slate-300 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-white min-w-[160px]"
+              className="px-3 py-2.5 border border-slate-300 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white min-w-[160px]"
               value={filters.company}
               onChange={(e) => setFilters(prev => ({ ...prev, company: e.target.value }))}
             >
@@ -950,7 +1179,7 @@ const BillingReportComp = () => {
             </select>
 
             <select
-              className="px-3 py-2.5 border border-slate-300 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-white min-w-[140px]"
+              className="px-3 py-2.5 border border-slate-300 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white min-w-[140px]"
               value={filters.entity}
               onChange={(e) => setFilters(prev => ({ ...prev, entity: e.target.value }))}
             >
@@ -979,13 +1208,40 @@ const BillingReportComp = () => {
 
             <div className="flex-1"></div>
 
-            <button
-              onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all duration-200 shadow-sm hover:shadow-md font-medium text-[14px]"
-            >
-              <Download className="w-4 h-4" />
-              Export
-            </button>
+            <div className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-white to-slate-100 rounded-xl px-5 py-3 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="absolute -top-10 -right-10 w-24 h-24 bg-slate-200/40 rounded-full blur-2xl" />
+              <div className="relative">
+                <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+                  Total Orders
+                </p>
+                <div className="flex items-end gap-2 mt-1">
+                  <p className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                    {filteredOrders.length}
+                  </p>
+                  <span className="text-xs text-slate-500 font-medium pb-1">
+                    Orders
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-emerald-100 rounded-xl px-5 py-3 border border-emerald-200 shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="absolute -top-10 -right-10 w-24 h-24 bg-emerald-200/40 rounded-full blur-2xl" />
+              <div className="relative">
+                <p className="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">
+                  Total Balance
+                </p>
+                <div className="flex items-end gap-2 mt-1">
+                  <p className="text-2xl font-extrabold text-emerald-700 tracking-tight">
+                    ₹{totalBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <span className="text-xs text-emerald-600 font-medium pb-1">
+                    INR
+                  </span>
+                </div>
+              </div>
+            </div>
+
           </div>
 
           <div className="flex items-center justify-between border-b border-slate-200 mb-4">
@@ -993,14 +1249,15 @@ const BillingReportComp = () => {
               <button
                 onClick={() => {
                   setActiveTab('period');
+                  const defaultRange = getDefaultDateRange();
                   setFilters(prev => ({
                     ...prev,
-                    fromDate: '',
-                    toDate: convertToInputFormat(todayFormatted)
+                    fromDate: defaultRange.fromDate,
+                    toDate: defaultRange.toDate
                   }));
                 }}
                 className={`px-5 py-2.5 text-[14px] font-semibold transition-all duration-200 border-b-2 ${activeTab === 'period'
-                  ? 'text-emerald-600 border-emerald-600'
+                  ? 'text-teal-600 border-teal-600'
                   : 'text-slate-500 border-transparent hover:text-slate-700'
                   }`}
               >
@@ -1009,13 +1266,37 @@ const BillingReportComp = () => {
               <button
                 onClick={() => {
                   setActiveTab('dateRange');
+                  const defaultRange = getDefaultDateRange();
+                  setFilters(prev => ({
+                    ...prev,
+                    fromDate: defaultRange.fromDate,
+                    toDate: defaultRange.toDate
+                  }));
                 }}
                 className={`px-5 py-2.5 text-[14px] font-semibold transition-all duration-200 border-b-2 ${activeTab === 'dateRange'
-                  ? 'text-emerald-600 border-emerald-600'
+                  ? 'text-teal-600 border-teal-600'
                   : 'text-slate-500 border-transparent hover:text-slate-700'
                   }`}
               >
                 Date Range
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 mb-0.5">
+              <button
+                onClick={() => setHideLsiColumn(!hideLsiColumn)}
+                className="flex items-center gap-2 px-3.5 py-2 bg-slate-100 text-slate-700 text-[14px] font-medium rounded-lg hover:bg-slate-200 transition-colors duration-200"
+              >
+                {hideLsiColumn ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                {hideLsiColumn ? 'Show' : 'Hide'} LSI
+              </button>
+
+              <button
+                onClick={handleExport}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md font-medium text-[14px]"
+              >
+                <Download className="w-4 h-4" />
+                Export
               </button>
             </div>
           </div>
@@ -1027,7 +1308,7 @@ const BillingReportComp = () => {
                   Year
                 </label>
                 <select
-                  className="border border-gray-300 rounded-lg px-4 py-2 text-sm font-semibold text-gray-700 bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-emerald-400 min-w-[120px]"
+                  className="border border-gray-300 rounded-lg px-4 py-2 text-sm font-semibold text-gray-700 bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-teal-400 min-w-[120px]"
                   value={selectedYear}
                   onChange={(e) => handleYearChange(e.target.value)}
                 >
@@ -1037,45 +1318,47 @@ const BillingReportComp = () => {
                 </select>
               </div>
 
-              <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 shadow-sm flex-1 min-w-[520px]">
-                <label className="text-sm font-semibold text-gray-600 whitespace-nowrap">
-                  Month
-                </label>
+              {selectedYear !== 'All' && (
+                <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 shadow-sm flex-1 min-w-[420px]">
+                  <label className="text-sm font-semibold text-gray-600 whitespace-nowrap">
+                    Month
+                  </label>
 
-                <div className="flex gap-2 flex-wrap justify-center">
-                  <button
-                    onClick={() => setSelectedMonth('ALL')}
-                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${selectedMonth === 'ALL'
-                      ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md scale-105'
-                      : 'bg-white text-gray-700 border border-gray-200 hover:border-emerald-300 hover:shadow-sm'
-                      }`}
-                  >
-                    ALL
-                  </button>
+                  <div className="flex gap-2 flex-wrap justify-center">
+                    <button
+                      onClick={() => setSelectedMonth('All')}
+                      className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${selectedMonth === 'All'
+                        ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-md scale-105'
+                        : 'bg-white text-gray-700 border border-gray-200 hover:border-teal-300 hover:shadow-sm'
+                        }`}
+                    >
+                      All
+                    </button>
 
-                  {ALL_MONTHS.map(month => {
-                    const isAvailable = availableMonths.includes(month);
-                    return (
-                      <button
-                        key={month}
-                        onClick={() => isAvailable && setSelectedMonth(month)}
-                        disabled={!isAvailable}
-                        className={`px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${selectedMonth === month
-                          ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md scale-105'
-                          : isAvailable
-                            ? 'bg-white text-gray-700 border border-gray-200 hover:border-emerald-300 hover:shadow-sm'
-                            : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed opacity-50'
-                          }`}
-                      >
-                        {month}
-                      </button>
-                    );
-                  })}
+                    {ALL_MONTHS.map(month => {
+                      const isAvailable = availableMonths.includes(month);
+                      return (
+                        <button
+                          key={month}
+                          onClick={() => isAvailable && setSelectedMonth(month)}
+                          disabled={!isAvailable}
+                          className={`px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${selectedMonth === month
+                            ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-md scale-105'
+                            : isAvailable
+                              ? 'bg-white text-gray-700 border border-gray-200 hover:border-teal-300 hover:shadow-sm'
+                              : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed opacity-50'
+                            }`}
+                        >
+                          {month}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="bg-emerald-50 border-2 border-emerald-200 rounded-lg px-4 py-2">
-                <span className="text-sm font-bold text-emerald-700">
+              <div className="bg-teal-50 border-2 border-teal-200 rounded-lg px-4 py-2">
+                <span className="text-sm font-bold text-teal-700">
                   Showing: {getPeriodLabel()}
                 </span>
               </div>
@@ -1092,7 +1375,7 @@ const BillingReportComp = () => {
                   <input
                     type="date"
                     className="flex-1 px-3 py-2.5 border border-slate-300 rounded-lg text-[14px]
-                    focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200"
+                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     value={filters.fromDate}
                     min={minDateForInput}
                     max={maxDateForInput}
@@ -1109,7 +1392,7 @@ const BillingReportComp = () => {
                   <input
                     type="date"
                     className="flex-1 px-3 py-2.5 border border-slate-300 rounded-lg text-[14px]
-                    focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200"
+                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     value={filters.toDate}
                     min={filters.fromDate || minDateForInput}
                     max={maxDateForInput}
@@ -1124,71 +1407,21 @@ const BillingReportComp = () => {
 
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-white to-slate-100 rounded-xl px-6 py-4 border border-slate-200 shadow-lg hover:shadow-xl transition-all duration-300">
-            <div className="absolute -top-10 -right-10 w-24 h-24 bg-slate-200/40 rounded-full blur-2xl" />
-            <div className="relative">
-              <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-2">
-                Total Orders
-              </p>
-              <div className="flex items-end gap-2">
-                <p className="text-3xl font-extrabold text-slate-900 tracking-tight">
-                  {filteredOrders.length}
-                </p>
-                <span className="text-sm text-slate-500 font-medium pb-1">
-                  Orders
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-emerald-100 rounded-xl px-6 py-4 border border-emerald-200 shadow-lg hover:shadow-xl transition-all duration-300">
-            <div className="absolute -top-10 -right-10 w-24 h-24 bg-emerald-200/40 rounded-full blur-2xl" />
-            <div className="relative">
-              <p className="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider mb-2">
-                Total Billing
-              </p>
-              <div className="flex items-end gap-2">
-                <p className="text-3xl font-extrabold text-emerald-700 tracking-tight">
-                  ₹{totalBilling.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-                <span className="text-sm text-emerald-600 font-medium pb-1">
-                  INR
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-blue-100 rounded-xl px-6 py-4 border border-blue-200 shadow-lg hover:shadow-xl transition-all duration-300">
-            <div className="absolute -top-10 -right-10 w-24 h-24 bg-blue-200/40 rounded-full blur-2xl" />
-            <div className="relative">
-              <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wider mb-2">
-                Total Billing + Misc
-              </p>
-              <div className="flex items-end gap-2">
-                <p className="text-3xl font-extrabold text-blue-700 tracking-tight">
-                  ₹{totalBillingWithMisc.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-                <span className="text-sm text-blue-600 font-medium pb-1">
-                  INR
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
+        {/* Orders Table */}
         <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-slate-100 border-b-2 border-slate-200">
                   <th className="px-4 py-3.5 text-left text-xs font-bold text-slate-700 uppercase">Order ID</th>
+                  {!hideLsiColumn && (
+                    <th className="px-4 py-3.5 text-left text-xs font-bold text-slate-700 uppercase">LSI ID</th>
+                  )}
                   <th className="px-4 py-3.5 text-left text-xs font-bold text-slate-700 uppercase">End A</th>
                   <th className="px-4 py-3.5 text-left text-xs font-bold text-slate-700 uppercase">End B</th>
                   <th className="px-4 py-3.5 text-left text-xs font-bold text-slate-700 uppercase">Company</th>
                   <th className="px-4 py-3.5 text-left text-xs font-bold text-slate-700 uppercase">State</th>
-                  <th className="px-4 py-3.5 text-right text-xs font-bold text-slate-700 uppercase">Billing</th>
-                  <th className="px-4 py-3.5 text-right text-xs font-bold text-slate-700 uppercase">Billing + Misc</th>
+                  <th className="px-4 py-3.5 text-right text-xs font-bold text-slate-700 uppercase">Balance</th>
                   <th className="px-4 py-3.5 text-center text-xs font-bold text-slate-700 uppercase">Split</th>
                   <th className="px-4 py-3.5 text-left text-xs font-bold text-slate-700 uppercase">Service Period</th>
                 </tr>
@@ -1208,41 +1441,44 @@ const BillingReportComp = () => {
                     
                     return (
                       <React.Fragment key={`order-${order.id}-${orderIndex}`}>
-                        <BillingTableRow
+                        <TableRow
                           rowKey={rowKey1}
                           order={order}
+                          hideLsiColumn={hideLsiColumn}
                           fromDateFormatted={fromDateFormatted}
                           toDateFormatted={toDateFormatted}
                           splitFactor={2}
                           stateToShow={order.billing1?.state}
                           onViewBreakdown={setSelectedBreakdown}
-                          onBillingCalculated={handleBillingCalculated}
+                          onBalanceCalculated={handleBalanceCalculated}
                         />
-                        <BillingTableRow
+                        <TableRow
                           rowKey={rowKey2}
                           order={order}
+                          hideLsiColumn={hideLsiColumn}
                           fromDateFormatted={fromDateFormatted}
                           toDateFormatted={toDateFormatted}
                           splitFactor={2}
                           stateToShow={order.billing2?.state}
                           onViewBreakdown={setSelectedBreakdown}
-                          onBillingCalculated={handleBillingCalculated}
+                          onBalanceCalculated={handleBalanceCalculated}
                         />
                       </React.Fragment>
                     );
                   } else {
                     const rowKey = `${order.id}-main-1-${orderIndex}`;
                     return (
-                      <BillingTableRow
+                      <TableRow
                         key={`order-${order.id}-${orderIndex}`}
                         rowKey={rowKey}
                         order={order}
+                        hideLsiColumn={hideLsiColumn}
                         fromDateFormatted={fromDateFormatted}
                         toDateFormatted={toDateFormatted}
                         splitFactor={1}
                         stateToShow=""
                         onViewBreakdown={setSelectedBreakdown}
-                        onBillingCalculated={handleBillingCalculated}
+                        onBalanceCalculated={handleBalanceCalculated}
                       />
                     );
                   }
@@ -1263,4 +1499,4 @@ const BillingReportComp = () => {
   );
 };
 
-export default BillingReportComp;
+export default OutstandingReportCollectionComp;

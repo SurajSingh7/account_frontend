@@ -3,11 +3,26 @@
 // FOR BACKEND MAPPING PART: "moduleName": "dsr",url:"/dsr",action:["CREATE","UPDATE","READ"],exceptions:["canViewAll"] 
 export const navCategories = [
   {
-    category: "Billing",
+    category: "Account",
     items: [
-      { name: "View Circuit", path: "/billing/view-circuit", moduleName: "dsr", url: "/dsr", action: ["CREATE", "UPDATE",], exceptions: ["canViewAll"] },
-      { name: "Monthly Billing", path: "/billing/monthly-billing", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
+      { name: "View Circuit", path: "/billing/account/view-circuit", moduleName: "dsr", url: "/dsr", action: ["CREATE", "UPDATE",], exceptions: ["canViewAll"] },
+      { name: "Billing Report", path: "/billing/account/billing-report", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
+      { name: "Outstanding Report", path: "/billing/account/outstanding-report", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
      
+    ],
+  },
+  {
+    category: "Collection",
+    items: [
+      { name: "Outstanding Report", path: "/billing/collection/outstanding-report", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
+     
+    ],
+  },
+  {
+    category: "Generator",
+    items: [
+      { name: "Monthly bill generator", path: "/billing/generator?orderId=", moduleName: "dsr", url: "/dsr", action: ["CREATE", "UPDATE",], exceptions: ["canViewAll"] },
+      
     ],
   },
 ];

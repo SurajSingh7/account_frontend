@@ -5,12 +5,14 @@ const BillingSchema = new mongoose.Schema({
   area: { type: String, default: '' },
   city: { type: String, default: '' },
   pincode: { type: String, default: '' },
-  state: { type: String, default: '' }
+  state: { type: String, default: '' },
+  stateCode: { type: String, default: '' },
 }, { _id: false });
 
 const OrderSchema = new mongoose.Schema({
   orderId: { type: String, required: true },
   companyName: { type: String, required: true },
+  companyGroup: { type: String, required: true }, 
   entity: { type: String, required: true },
   product: { type: String, required: true },
   orderType: { type: String, required: true },
