@@ -3,15 +3,44 @@ import connectDB from '@/lib/mongodb';
 import MonthlyBilling from '@/models/MonthlyBilling';
 import Order from '@/models/Order';
 
-// Helper function to parse date (DD-MM-YYYY)
+// Helper function to parse date (DD-MM-YYYY) - FIXED
 const parseDate = (dateStr) => {
   if (!dateStr) return null;
-  const [day, month, year] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day);
+  
+  // If it's already a Date object
+  if (dateStr instanceof Date) {
+    return dateStr;
+  }
+  
+  // If it's an ISO string or timestamp
+  if (typeof dateStr === 'string' && (dateStr.includes('T') || dateStr.includes('Z'))) {
+    return new Date(dateStr);
+  }
+  
+  // If it's DD-MM-YYYY format
+  if (typeof dateStr === 'string' && dateStr.includes('-')) {
+    const parts = dateStr.split('-');
+    
+    // Check if it's DD-MM-YYYY (day will be <= 31)
+    if (parts.length === 3 && parseInt(parts[0]) <= 31) {
+      const [day, month, year] = parts.map(Number);
+      return new Date(year, month - 1, day);
+    }
+    
+    // Otherwise treat as YYYY-MM-DD
+    return new Date(dateStr);
+  }
+  
+  // Try to create date from any other format
+  return new Date(dateStr);
 };
 
 // Helper function to format date (DD-MM-YYYY)
 const formatDate = (date) => {
+  if (!date) return '';
+  if (!(date instanceof Date)) {
+    date = new Date(date);
+  }
   const day = String(date.getDate()).padStart(2, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = date.getFullYear();
@@ -28,7 +57,7 @@ const formatMonthYear = (month, year) => {
 // Helper function to get days in month
 const getDaysInMonth = (month, year) => new Date(year, month + 1, 0).getDate();
 
-// NEW: Helper function to generate unique invoice number
+// Helper function to generate unique invoice number
 const generateInvoiceNumber = (billing, index = 0) => {
   const date = new Date();
   const year = date.getFullYear().toString().substr(-2);
@@ -56,14 +85,16 @@ const calculateMonthlyBillings = (order, endDate, autoGenerateInvoice = false) =
   const state1 = order.billing1?.state || '';
   const state2 = order.billing2?.state || '';
   const shouldSplit = isNLD && state1 !== state2 && state2 !== '';
-  const splitFactor = shouldSplit ? 2 : 1;
+  
+  // Get split percentages from order
+  const splitFactor = order.splitFactor || { isApplicable: false, state1Percentage: 50, state2Percentage: 50 };
+  const state1Percentage = shouldSplit && splitFactor.isApplicable ? splitFactor.state1Percentage : 100;
+  const state2Percentage = shouldSplit && splitFactor.isApplicable ? splitFactor.state2Percentage : 0;
   
   // Calculate base amounts
   const capacityMbps = Number(order.capacity) || 0;
   const baseRate = Number(order.amount) || 0;
   const totalAmount = baseRate * capacityMbps;
-  const gstRate = 0.18;
-  const monthlyCharge = totalAmount / splitFactor;
   
   // Determine service end date
   let serviceEndDate = currentEndDate;
@@ -107,35 +138,51 @@ const calculateMonthlyBillings = (order, endDate, autoGenerateInvoice = false) =
       billingDays = endDay - startDay + 1;
     }
     
-    const perDayRate = monthlyCharge / daysInMonth;
-    const monthlyBilling = perDayRate * billingDays;
-    const gst = monthlyBilling * gstRate;
-    const totalWithGst = monthlyBilling + gst;
-    
     const startDateStr = formatDate(new Date(year, month, startDay));
     const endDateStr = formatDate(new Date(year, month, endDay));
     
     // Create billing entry for each state if split
     if (shouldSplit) {
       // Billing 1
+      const monthlyCharge1 = (totalAmount * state1Percentage / 100) * (billingDays / daysInMonth);
+      const gstDetails1 = order.gstDetails1 || order.gstDetails || {};
+      const isSelfGST1 = gstDetails1.isSelfGST || false;
+      
+      let cgst1 = 0, sgst1 = 0, igst1 = 0;
+      if (isSelfGST1) {
+        cgst1 = monthlyCharge1 * (gstDetails1.cgst || 9) / 100;
+        sgst1 = monthlyCharge1 * (gstDetails1.sgst || 9) / 100;
+      } else {
+        igst1 = monthlyCharge1 * (gstDetails1.igst || 18) / 100;
+      }
+      
+      const totalWithGst1 = monthlyCharge1 + cgst1 + sgst1 + igst1;
+      const perDayRate1 = totalAmount * state1Percentage / 100 / daysInMonth;
+      
       const billing1 = {
         orderId: order.orderId,
         month: formatMonthYear(month, year),
         startDate: startDateStr,
         endDate: endDateStr,
         billingDays,
-        perDayRate,
+        perDayRate: perDayRate1,
         receivedDetails: [],
-        creditNotes: [], // ✅ Added creditNotes
+        creditNotes: [],
         miscellaneousSell: [],
         tdsProvision: [],
         tdsConfirm: [],
-        monthlyBilling,
-        gst,
-        totalWithGst,
+        monthlyBilling: monthlyCharge1,
+        cgst: cgst1,
+        sgst: sgst1,
+        igst: igst1,
+        totalWithGst: totalWithGst1,
         invoiceNumber: '',
+        isSelfGST: isSelfGST1,
+        gstState: gstDetails1.gstState || '',
+        gstStateCode: gstDetails1.gstStateCode || '',
         state: state1,
         splitKey: '50',
+        splitPercentage: state1Percentage,
         capacity: capacityMbps,
         companyName: order.companyName,
         status: 'generated',
@@ -151,24 +198,45 @@ const calculateMonthlyBillings = (order, endDate, autoGenerateInvoice = false) =
       billings.push(billing1);
       
       // Billing 2
+      const monthlyCharge2 = (totalAmount * state2Percentage / 100) * (billingDays / daysInMonth);
+      const gstDetails2 = order.gstDetails2 || order.gstDetails || {};
+      const isSelfGST2 = gstDetails2.isSelfGST || false;
+      
+      let cgst2 = 0, sgst2 = 0, igst2 = 0;
+      if (isSelfGST2) {
+        cgst2 = monthlyCharge2 * (gstDetails2.cgst || 9) / 100;
+        sgst2 = monthlyCharge2 * (gstDetails2.sgst || 9) / 100;
+      } else {
+        igst2 = monthlyCharge2 * (gstDetails2.igst || 18) / 100;
+      }
+      
+      const totalWithGst2 = monthlyCharge2 + cgst2 + sgst2 + igst2;
+      const perDayRate2 = totalAmount * state2Percentage / 100 / daysInMonth;
+      
       const billing2 = {
         orderId: order.orderId,
         month: formatMonthYear(month, year),
         startDate: startDateStr,
         endDate: endDateStr,
         billingDays,
-        perDayRate,
+        perDayRate: perDayRate2,
         receivedDetails: [],
-        creditNotes: [], // ✅ Added creditNotes
+        creditNotes: [],
         miscellaneousSell: [],
         tdsProvision: [],
         tdsConfirm: [],
-        monthlyBilling,
-        gst,
-        totalWithGst,
+        monthlyBilling: monthlyCharge2,
+        cgst: cgst2,
+        sgst: sgst2,
+        igst: igst2,
+        totalWithGst: totalWithGst2,
         invoiceNumber: '',
+        isSelfGST: isSelfGST2,
+        gstState: gstDetails2.gstState || '',
+        gstStateCode: gstDetails2.gstStateCode || '',
         state: state2,
         splitKey: '50',
+        splitPercentage: state2Percentage,
         capacity: capacityMbps,
         companyName: order.companyName,
         status: 'generated',
@@ -183,6 +251,22 @@ const calculateMonthlyBillings = (order, endDate, autoGenerateInvoice = false) =
       
       billings.push(billing2);
     } else {
+      // Single billing
+      const monthlyCharge = totalAmount * (billingDays / daysInMonth);
+      const gstDetails = order.gstDetails || {};
+      const isSelfGST = gstDetails.isSelfGST || false;
+      
+      let cgst = 0, sgst = 0, igst = 0;
+      if (isSelfGST) {
+        cgst = monthlyCharge * (gstDetails.cgst || 9) / 100;
+        sgst = monthlyCharge * (gstDetails.sgst || 9) / 100;
+      } else {
+        igst = monthlyCharge * (gstDetails.igst || 18) / 100;
+      }
+      
+      const totalWithGst = monthlyCharge + cgst + sgst + igst;
+      const perDayRate = totalAmount / daysInMonth;
+      
       const billing = {
         orderId: order.orderId,
         month: formatMonthYear(month, year),
@@ -191,16 +275,22 @@ const calculateMonthlyBillings = (order, endDate, autoGenerateInvoice = false) =
         billingDays,
         perDayRate,
         receivedDetails: [],
-        creditNotes: [], // ✅ Added creditNotes
+        creditNotes: [],
         miscellaneousSell: [],
         tdsProvision: [],
         tdsConfirm: [],
-        monthlyBilling,
-        gst,
+        monthlyBilling: monthlyCharge,
+        cgst,
+        sgst,
+        igst,
         totalWithGst,
         invoiceNumber: '',
+        isSelfGST,
+        gstState: gstDetails.gstState || '',
+        gstStateCode: gstDetails.gstStateCode || '',
         state: state1 || state2,
         splitKey: '100',
+        splitPercentage: 100,
         capacity: capacityMbps,
         companyName: order.companyName,
         status: 'generated',
@@ -317,10 +407,6 @@ export async function PUT(request) {
     if (!_id) {
       return NextResponse.json({ success: false, error: 'Billing ID is required' }, { status: 400 });
     }
-    
-    // ✅ Ensure creditNotes is preserved in updates
-    // If creditNotes is not in updateData, it will be preserved from the existing document
-    // If it is in updateData (even as empty array), it will be updated
     
     const updatedBilling = await MonthlyBilling.findByIdAndUpdate(
       _id,

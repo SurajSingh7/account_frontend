@@ -1113,26 +1113,29 @@ const OrderCard = ({ order, onView, onEdit, onDelete }) => {
     );
   };
 
-  // ─── renderRow ─── always emits ALL GST columns; unused ones show "–"
-  // showAll=true means the table header has every GST column (mixed case)
+  // ─── renderRow ───────────────────────────────────────────────────────────────
+  // New column layout (% rate embedded in header label):
+  //   CGST+SGST case  →  CGST {n}%  |  SGST {n}%  |  CGST+SGST Amt
+  //   IGST case       →  IGST {n}%
+  //   Mixed           →  CGST {n}%  |  SGST {n}%  |  CGST+SGST Amt  |  IGST {n}%
+  //                      (row fills its own cols, dashes the other)
   const renderRow = (billingObj, gstObj, splitPercentage = 100, showAllCols = false) => {
-    const pct       = splitPercentage / 100;
-    const rowBase   = totalAmountLink * pct;
-    const splitRate = baseRate * pct;
-    const isSelf    = gstObj?.isSelfGST || false;
+    const pct        = splitPercentage / 100;
+    const rowBase    = totalAmountLink * pct;
+    const splitRate  = baseRate * pct;
+    const isSelf     = gstObj?.isSelfGST || false;
 
-    let cgstPct=0, sgstPct=0, igstPct=0;
-    let cgstAmt=0, sgstAmt=0, igstAmt=0, cgstSgstAmt=0, totalGST=0;
+    let cgstAmt = 0, sgstAmt = 0, igstAmt = 0, cgstSgstAmt = 0, totalGST = 0;
 
     if (isSelf) {
-      cgstPct = gstObj?.cgst || 9;
-      sgstPct = gstObj?.sgst || 9;
-      cgstAmt = (rowBase * cgstPct) / 100;
-      sgstAmt = (rowBase * sgstPct) / 100;
+      const cgstPct = gstObj?.cgst || 9;
+      const sgstPct = gstObj?.sgst || 9;
+      cgstAmt     = (rowBase * cgstPct) / 100;
+      sgstAmt     = (rowBase * sgstPct) / 100;
       cgstSgstAmt = cgstAmt + sgstAmt;
       totalGST    = cgstSgstAmt;
     } else {
-      igstPct  = gstObj?.igst || 18;
+      const igstPct = gstObj?.igst || 18;
       igstAmt  = (rowBase * igstPct) / 100;
       totalGST = igstAmt;
     }
@@ -1151,30 +1154,25 @@ const OrderCard = ({ order, onView, onEdit, onDelete }) => {
         <td className="py-4 px-4 font-bold text-blue-700">₹{splitRate.toFixed(2)}</td>
         <td className="py-4 px-4 font-bold text-blue-600">₹{rowBase.toFixed(0)}</td>
 
-        {/* When table has ALL columns (mixed GST types), fill relevant & dash unused */}
+        {/* GST amount cells — no separate % cells, rate lives in the <th> */}
         {showAllCols ? (
+          // Mixed types: show all 4 cols, dash unused ones
           <>
-            <td className="py-4 px-4 font-semibold text-gray-700">{isSelf ? `${cgstPct}%` : '–'}</td>
-            <td className="py-4 px-4 font-semibold text-gray-700">{isSelf ? `${sgstPct}%` : '–'}</td>
-            <td className="py-4 px-4 font-semibold text-green-700">{isSelf ? `₹${cgstAmt.toFixed(0)}` : '–'}</td>
-            <td className="py-4 px-4 font-semibold text-green-700">{isSelf ? `₹${sgstAmt.toFixed(0)}` : '–'}</td>
+            <td className="py-4 px-4 font-semibold text-green-700">{isSelf  ? `₹${cgstAmt.toFixed(0)}`     : '–'}</td>
+            <td className="py-4 px-4 font-semibold text-green-700">{isSelf  ? `₹${sgstAmt.toFixed(0)}`     : '–'}</td>
             <td className="py-4 px-4 font-semibold text-purple-700">{isSelf ? `₹${cgstSgstAmt.toFixed(0)}` : '–'}</td>
-            <td className="py-4 px-4 font-semibold text-gray-700">{!isSelf ? `${igstPct}%` : '–'}</td>
-            <td className="py-4 px-4 font-semibold text-green-700">{!isSelf ? `₹${igstAmt.toFixed(0)}` : '–'}</td>
+            <td className="py-4 px-4 font-semibold text-green-700">{!isSelf ? `₹${igstAmt.toFixed(0)}`     : '–'}</td>
           </>
         ) : isSelf ? (
+          // Intra-state only: CGST Amt | SGST Amt | CGST+SGST Amt
           <>
-            <td className="py-4 px-4 font-semibold text-gray-700">{cgstPct}%</td>
-            <td className="py-4 px-4 font-semibold text-gray-700">{sgstPct}%</td>
             <td className="py-4 px-4 font-semibold text-green-700">₹{cgstAmt.toFixed(0)}</td>
             <td className="py-4 px-4 font-semibold text-green-700">₹{sgstAmt.toFixed(0)}</td>
             <td className="py-4 px-4 font-semibold text-purple-700">₹{cgstSgstAmt.toFixed(0)}</td>
           </>
         ) : (
-          <>
-            <td className="py-4 px-4 font-semibold text-gray-700">{igstPct}%</td>
-            <td className="py-4 px-4 font-semibold text-green-700">₹{igstAmt.toFixed(0)}</td>
-          </>
+          // Inter-state only: IGST Amt
+          <td className="py-4 px-4 font-semibold text-green-700">₹{igstAmt.toFixed(0)}</td>
         )}
 
         <td className="py-4 px-4 font-bold text-green-700">₹{grandTotal.toFixed(0)}</td>
@@ -1203,8 +1201,15 @@ const OrderCard = ({ order, onView, onEdit, onDelete }) => {
   // When split rows have DIFFERENT GST types, show all columns in one table
   const mixedGSTTypes = isSplitApplicable && isSelf1 !== isSelf2;
 
-  // ─── Single unified header ─────────────────────────────────────────────────
-  // mixedGSTTypes → show every GST column; otherwise only the relevant ones
+  // Derive rates for header labels
+  // For mixed: the isSelf row supplies CGST/SGST rates; the non-isSelf row supplies IGST rate
+  const selfGst  = isSelf1 ? gst1 : gst2;   // whichever row is intra-state
+  const interGst = isSelf1 ? gst2 : gst1;   // whichever row is inter-state
+  const cgstRate = selfGst?.cgst  || 9;
+  const sgstRate = selfGst?.sgst  || 9;
+  const igstRate = interGst?.igst || 18;
+
+  // ─── Single unified header — rate is embedded in the <th> label ───────────
   const buildHeaders = () => (
     <tr>
       <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">Order ID</th>
@@ -1215,31 +1220,27 @@ const OrderCard = ({ order, onView, onEdit, onDelete }) => {
       <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">State</th>
       <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">Rate</th>
       <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">Total Basic</th>
+
       {mixedGSTTypes ? (
-        // All 7 GST columns when types differ
+        // Mixed: CGST {n}% | SGST {n}% | CGST+SGST Amt | IGST {n}%
         <>
-          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">CGST %</th>
-          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">SGST %</th>
-          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">CGST Amt</th>
-          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">SGST Amt</th>
-          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">CGST+SGST</th>
-          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">IGST %</th>
-          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">IGST Amt</th>
+          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">CGST {cgstRate}%</th>
+          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">SGST {sgstRate}%</th>
+          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">CGST+SGST Amt</th>
+          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">IGST {igstRate}%</th>
         </>
       ) : isSelf1 ? (
+        // Intra-state: CGST {n}% | SGST {n}% | CGST+SGST Amt
         <>
-          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">CGST %</th>
-          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">SGST %</th>
-          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">CGST Amt</th>
-          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">SGST Amt</th>
+          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">CGST {gst1.cgst || 9}%</th>
+          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">SGST {gst1.sgst || 9}%</th>
           <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">CGST+SGST Amt</th>
         </>
       ) : (
-        <>
-          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">IGST %</th>
-          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">IGST Amt</th>
-        </>
+        // Inter-state: IGST {n}%
+        <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">IGST {gst1.igst || 18}%</th>
       )}
+
       <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">Grand Total</th>
       <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">ARC Total</th>
       <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">Split</th>

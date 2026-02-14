@@ -1,1506 +1,1013 @@
 'use client'
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Search, Filter, Download, X, Eye, EyeOff, Info, ArrowLeft, FileText, TrendingUp, FileSpreadsheet } from 'lucide-react'
+import { Search, Download, X, Eye, EyeOff, Info, ArrowLeft, FileText, FileSpreadsheet } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 const INDIAN_STATES = [
-  "Delhi", "Maharashtra", "Karnataka", "Tamil Nadu", "Uttar Pradesh",
-  "Haryana", "Punjab", "Gujarat", "West Bengal", "Rajasthan", "Other"
-];
+  "Delhi","Maharashtra","Karnataka","Tamil Nadu","Uttar Pradesh",
+  "Haryana","Punjab","Gujarat","West Bengal","Rajasthan","Other"
+]
+const ENTITIES    = ["WIBRO","GTEL","GISPL"]
+const ALL_MONTHS  = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"]
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"]
 
-const ENTITIES = ["WIBRO", "GTEL", "GISPL"];
-
-const ALL_MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-
-// Utility Functions
-const parseDate = (dateStr) => {
-  if (!dateStr) return null;
-  const [day, month, year] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day);
-};
-
-const formatDateDisplay = (dateStr) => dateStr || '-';
-
-const getDaysInMonth = (month, year) => new Date(year, month + 1, 0).getDate();
-
-const getLastDayOfMonth = (month, year) => {
-  const lastDay = getDaysInMonth(month, year);
-  const monthStr = String(month + 1).padStart(2, '0');
-  return `${lastDay}-${monthStr}-${year}`;
-};
-
-const getCurrentDate = () => {
-  const now = new Date();
-  const day = String(now.getDate()).padStart(2, '0');
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const year = now.getFullYear();
-  return `${day}-${month}-${year}`;
-};
-
-const convertToInputFormat = (dateStr) => {
-  if (!dateStr) return '';
-  const [day, month, year] = dateStr.split('-');
-  return `${year}-${month}-${day}`;
-};
-
-const convertToStorageFormat = (dateStr) => {
-  if (!dateStr) return '';
-  const [year, month, day] = dateStr.split('-');
-  return `${day}-${month}-${year}`;
-};
-
-const formatMonthYear = (month, year) => {
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'];
-  return `${monthNames[month]} ${year}`;
-};
-
-const getCurrentYear = () => new Date().getFullYear();
-const getCurrentMonth = () => new Date().getMonth();
-
-const getYearOptions = () => {
-  const currentYear = getCurrentYear();
-  return ["All", ...Array.from({ length: 6 }, (_, i) => currentYear - i)];
-};
-
-const getAvailableMonths = (selectedYear) => {
-  const currentYear = getCurrentYear();
-  const currentMonthIndex = getCurrentMonth();
-
-  if (selectedYear === currentYear) {
-    return ALL_MONTHS.slice(0, currentMonthIndex + 1);
-  } else {
-    return ALL_MONTHS;
+// ─── Date helpers ─────────────────────────────────────────────
+const parseAnyDate = (s) => {
+  if (!s) return null
+  if (typeof s === 'object' && s instanceof Date) return s
+  if (s.includes('T') || s.includes('Z')) {
+    const d = new Date(s)
+    return isNaN(d) ? null : d
   }
-};
+  const p = s.split('-')
+  if (p.length !== 3) return null
+  const [dd, mm, yyyy] = p.map(Number)
+  if (!dd || !mm || !yyyy) return null
+  return new Date(yyyy, mm - 1, dd)
+}
+
+const getCurrentYear  = () => new Date().getFullYear()
+const getCurrentMonth = () => new Date().getMonth()
+const getDaysInMonth  = (m, y) => new Date(y, m + 1, 0).getDate()
+const getLastDayOfMonth = (m, y) => {
+  const d = getDaysInMonth(m, y)
+  return `${String(d).padStart(2,'0')}-${String(m+1).padStart(2,'0')}-${y}`
+}
+const todayDDMMYYYY = () => {
+  const n = new Date()
+  return `${String(n.getDate()).padStart(2,'0')}-${String(n.getMonth()+1).padStart(2,'0')}-${n.getFullYear()}`
+}
+const toInputFmt  = (s) => { if (!s) return ''; const [d,m,y] = s.split('-'); return `${y}-${m}-${d}` }
+const toStorageFmt = (s) => { if (!s) return ''; const [y,m,d] = s.split('-'); return `${d}-${m}-${y}` }
+const fmtMonthYear = (m, y) => `${MONTH_NAMES[m]} ${y}`
 
 const getDefaultDateRange = () => {
-  const year = getCurrentYear();
-  const month = getCurrentMonth() + 1;
-  const day = new Date().getDate();
-  return {
-    fromDate: `${year}-01-01`,
-    toDate: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-  };
-};
+  const y = getCurrentYear(), m = getCurrentMonth()+1, d = new Date().getDate()
+  return { from: `${y}-01-01`, to: `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}` }
+}
+const getYearOptions     = () => ["All", ...Array.from({length:6}, (_,i) => getCurrentYear()-i)]
+const getAvailMonths     = (y) => y === getCurrentYear() ? ALL_MONTHS.slice(0, getCurrentMonth()+1) : ALL_MONTHS
 
-// Helper function to calculate totals from array (matching Monthly Bill Generator)
-const calculateTotal = (arr) => {
-  if (!arr || arr.length === 0) return 0;
-  return arr.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-};
+// ─── Amount helpers ───────────────────────────────────────────
+const sumField = (arr, field) => (!arr?.length) ? 0 : arr.reduce((s,i) => s+(Number(i[field])||0), 0)
+const sumAmount       = (arr) => sumField(arr, 'amount')
+const sumTotalWithGst = (arr) => arr?.length ? arr.reduce((s,i) => s+(Number(i.totalWithGst)||Number(i.amount)||0), 0) : 0
 
-// Calculate balance with breakdown using API data
-const calculateBalanceWithBreakdownAPI = async (order, fromDate, toDate, splitFactor = 1, stateToShow = '') => {
-  const pcdDate = parseDate(order.pcdDate);
-  const terminateDate = order.terminateDate ? parseDate(order.terminateDate) : null;
-  const startDate = parseDate(fromDate);
-  const endDate = parseDate(toDate);
+const fmt = (n) => (n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})
 
-  const breakdown = {
-    months: [],
-    totalBalance: 0,
-    totalBilled: 0,
-    totalReceived: 0,
-    orderDetails: {
-      orderId: order.orderId,
-      lsiId: order.lsiId,
-      capacity: Number(order.capacity) || 0,
-      baseRate: Number(order.amount) || 0,
-      pcdDate: order.pcdDate,
-      terminateDate: order.terminateDate,
-      splitFactor: splitFactor,
-      state: stateToShow || order.billing1?.state || '',
-      splitKey: splitFactor === 2 ? '50' : '100',
-      id: order.id
-    }
-  };
+// ─── Split billing detection ──────────────────────────────────
+const isSplit = (order) => {
+  const s1 = order.billing1?.state||'', s2 = order.billing2?.state||''
+  return order.product === 'NLD' && s1 !== s2 && s2 !== ''
+}
 
-  if (!pcdDate || !startDate || !endDate) return breakdown;
+// ─── Credit-pool balance algorithm ────
+const creditPoolBalance = (months) => {
+  if (!months?.length) return 0
+  const sorted = [...months].sort((a,b)=>new Date(a.year,a.month)-new Date(b.year,b.month))
+  const pool0  = sorted.reduce((s,m) => s + m.received + m.creditNotes + m.tdsConfirm, 0)
+  let pool = pool0, running = 0
+  sorted.forEach(m => {
+    const charges = m.totalWithGst + m.miscSell
+    const credits = m.received + m.creditNotes + m.tdsConfirm
+    running += charges - credits
+    pool = Math.max(0, pool - charges)
+  })
+  return running
+}
 
-  const capacityMbps = Number(order.capacity) || 0;
-  const baseRate = Number(order.amount) || 0;
-  const totalAmount = baseRate * capacityMbps;
-  const gstAmount = totalAmount * 0.18;
-  const grandTotal = (totalAmount + gstAmount) / splitFactor;
-
-  breakdown.orderDetails.totalAmount = totalAmount;
-  breakdown.orderDetails.gstAmount = gstAmount;
-  breakdown.orderDetails.monthlyCharge = grandTotal;
-
-  let serviceEndDate = endDate;
-
-  if (terminateDate) {
-    const lastBillingDay = new Date(terminateDate);
-    lastBillingDay.setDate(lastBillingDay.getDate() - 1);
-    serviceEndDate = lastBillingDay;
-
-    if (serviceEndDate < startDate) {
-      return breakdown;
-    }
-  }
-
-  if (pcdDate > endDate || (terminateDate && terminateDate <= startDate)) {
-    return breakdown;
-  }
-
-  let totalBilledAmount = 0;
-  let totalReceivedAmount = 0;
-  let currentDate = new Date(Math.max(pcdDate, startDate));
-
-  // Fetch all billing data for this order
-  let billingData = [];
-  try {
-    const res = await fetch(`/api/billing/monthly?orderId=${order.orderId}`);
-    const result = await res.json();
-    if (result.success) {
-      billingData = result.data;
-    }
-  } catch (error) {
-    console.error("Error fetching billing data:", error);
-  }
-
-  while (currentDate <= serviceEndDate && currentDate <= endDate) {
-    const month = currentDate.getMonth();
-    const year = currentDate.getFullYear();
-    const daysInMonth = getDaysInMonth(month, year);
-
-    const isPcdMonth = (currentDate.getFullYear() === pcdDate.getFullYear() &&
-      currentDate.getMonth() === pcdDate.getMonth());
-
-    const isTerminateMonth = terminateDate &&
-      (currentDate.getFullYear() === serviceEndDate.getFullYear() &&
-        currentDate.getMonth() === serviceEndDate.getMonth());
-
-    let monthBalance = 0;
-    let billingDays = 0;
-    let startDay = 1;
-    let endDay = daysInMonth;
-
-    if (isPcdMonth && isTerminateMonth) {
-      startDay = pcdDate.getDate();
-      endDay = serviceEndDate.getDate();
-      billingDays = endDay - startDay + 1;
-      const perDayRate = grandTotal / daysInMonth;
-      monthBalance = perDayRate * billingDays;
-    } else if (isPcdMonth) {
-      startDay = pcdDate.getDate();
-      endDay = daysInMonth;
-      billingDays = endDay - startDay + 1;
-      const perDayRate = grandTotal / daysInMonth;
-      monthBalance = perDayRate * billingDays;
-    } else if (isTerminateMonth) {
-      startDay = 1;
-      endDay = serviceEndDate.getDate();
-      billingDays = endDay - startDay + 1;
-      const perDayRate = grandTotal / daysInMonth;
-      monthBalance = perDayRate * billingDays;
-    } else {
-      billingDays = daysInMonth;
-      monthBalance = grandTotal;
-    }
-
-    // Get received amount and other details from API
-    const monthName = formatMonthYear(month, year);
-    const billing = billingData.find(b => 
-      b.month === monthName && 
-      b.state === breakdown.orderDetails.state
-    );
-
-    let receivedAmount = 0;
-    let creditNotes = 0;
-    let miscSell = 0;
-    let tdsProvision = 0;
-    let tdsConfirm = 0;
-    let invoiceNumber = '-';
-
-    if (billing) {
-      receivedAmount = calculateTotal(billing.receivedDetails || []);
-      creditNotes = calculateTotal(billing.creditNotes || []);
-      miscSell = calculateTotal(billing.miscellaneousSell || []);
-      tdsProvision = calculateTotal(billing.tdsProvision || []);
-      tdsConfirm = calculateTotal(billing.tdsConfirm || []);
-      invoiceNumber = billing.invoiceNumber || '-';
-    }
-
-    totalBilledAmount += monthBalance;
-    totalReceivedAmount += receivedAmount;
-
-    breakdown.months.push({
-      monthYear: monthName,
-      month: month,
-      year: year,
-      daysInMonth: daysInMonth,
-      billingDays: billingDays,
-      startDay: startDay,
-      endDay: endDay,
-      perDayRate: grandTotal / daysInMonth,
-      monthlyCharge: grandTotal,
-      monthlyBilling: monthBalance / 1.18, // Base amount
-      gst: monthBalance - (monthBalance / 1.18), // GST amount
-      amount: monthBalance,
-      receivedAmount: receivedAmount,
-      creditNotes: creditNotes,
-      miscSell: miscSell,
-      tdsProvision: tdsProvision,
-      tdsConfirm: tdsConfirm,
-      invoiceNumber: invoiceNumber,
-      isPcdMonth: isPcdMonth,
-      isTerminateMonth: isTerminateMonth
-    });
-
-    if (isTerminateMonth) break;
-
-    currentDate = new Date(year, month + 1, 1);
-  }
-
-  breakdown.totalBilled = totalBilledAmount;
-  breakdown.totalReceived = totalReceivedAmount;
-  breakdown.totalBalance = totalBilledAmount - totalReceivedAmount;
-
-  return breakdown;
-};
-
-const calculateBalance = async (order, fromDate, toDate, splitFactor = 1, stateToShow = '') => {
-  const breakdown = await calculateBalanceWithBreakdownAPI(order, fromDate, toDate, splitFactor, stateToShow);
-  return breakdown.totalBalance;
-};
-
-const getServicePeriod = (order, toDate) => {
-  const pcdDate = order.pcdDate;
-  const terminateDate = order.terminateDate;
-  const endDateParsed = parseDate(toDate);
-
-  if (terminateDate) {
-    return { start: pcdDate, end: terminateDate, status: 'terminated' };
-  }
-
-  const endMonth = endDateParsed.getMonth();
-  const endYear = endDateParsed.getFullYear();
-  const lastDayOfMonth = getLastDayOfMonth(endMonth, endYear);
-
-  return { start: pcdDate, end: lastDayOfMonth, status: 'active' };
-};
-
-const shouldSplitBilling = (order) => {
-  const isNLD = order.product === "NLD";
-  const state1 = order.billing1?.state || "";
-  const state2 = order.billing2?.state || "";
-  return isNLD && state1 !== state2 && state2 !== "";
-};
-
-const truncateText = (text, maxLength) => {
-  if (!text) return '';
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + '...';
-};
-
-// ========== MONTHLY BILLING BREAKDOWN TABLE COMPONENT ==========
-const MonthlyBillingBreakdownTable = ({ breakdown }) => {
-  if (!breakdown || !breakdown.months || breakdown.months.length === 0) {
-    return (
-      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 text-center">
-        <p className="text-slate-500 text-lg">No billing data available for the selected period</p>
-      </div>
-    );
-  }
-
-  const getMonthlyBreakdownData = () => {
-    let runningBalance = 0;
-    let cumulativeUnpaid = 0;
-
-    const sortedMonths = [...breakdown.months].sort((a, b) => {
-      return new Date(a.year, a.month) - new Date(b.year, b.month);
-    });
-
-    const totalCreditPool = sortedMonths.reduce((sum, monthData) => {
-      const received = monthData.receivedAmount;
-      const creditNotes = monthData.creditNotes;
-      const tdsProv = monthData.tdsProvision;
-      const tdsConf = monthData.tdsConfirm;
-      return sum + received + creditNotes + tdsProv + tdsConf;
-    }, 0);
-
-    let creditPool = totalCreditPool;
-
-    return sortedMonths.map((monthData, index) => {
-      const monthlyBillingBasic = monthData.monthlyBilling;
-      const gst = monthData.gst;
-      const monthlyBillingWithGst = monthData.amount;
-      const receivedAmount = monthData.receivedAmount;
-      const creditNotes = monthData.creditNotes;
-      const miscSell = monthData.miscSell;
-      const tdsProvision = monthData.tdsProvision;
-      const tdsConfirm = monthData.tdsConfirm;
-
-      const monthlyCredits = receivedAmount + creditNotes + tdsProvision + tdsConfirm;
-      const monthlyCharges = monthlyBillingWithGst + miscSell;
-      const monthlyNet = monthlyCharges - monthlyCredits;
-      runningBalance += monthlyNet;
-
-      let totalRemainingAdjustment = 0;
-
-      if (creditPool >= monthlyCharges) {
-        creditPool -= monthlyCharges;
-        totalRemainingAdjustment = cumulativeUnpaid;
-      } else {
-        const unpaidThisMonth = monthlyCharges - creditPool;
-        creditPool = 0;
-        cumulativeUnpaid += unpaidThisMonth;
-        totalRemainingAdjustment = cumulativeUnpaid;
-      }
-
-      return {
-        ...monthData,
-        monthlyBillingBasic,
-        gst,
-        monthlyBillingWithGst,
-        receivedAmount,
-        creditNotes,
-        miscSell,
-        tdsProvision,
-        tdsConfirm,
-        totalBalance: runningBalance,
-        totalRemainingAdjustment: Math.max(0, totalRemainingAdjustment),
-        creditPoolRemaining: creditPool
-      };
-    });
-  };
-
-  const monthlyData = getMonthlyBreakdownData();
-
+// ─── Text truncation with popup ────────────────────────────────
+const TextPopup = React.memo(({ text, onClose }) => {
+  useEffect(()=>{ 
+    const h=e=>{if(e.key==='Escape')onClose()}
+    document.addEventListener('keydown',h)
+    return ()=>document.removeEventListener('keydown',h) 
+  },[onClose])
+  
   return (
-    <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
-      <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          <FileText className="w-6 h-6" />
-          Monthly Billing Breakdown Table
-        </h2>
-        <p className="text-blue-100 text-sm mt-1">
-          Detailed month-by-month calculation for {breakdown.orderDetails.orderId}
-        </p>
-      </div>
-
-      <div className="p-6">
-        {/* Order Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6 bg-slate-50 rounded-lg p-4 border border-slate-200">
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Order ID</p>
-            <p className="text-sm font-bold text-slate-900">{breakdown.orderDetails.orderId}</p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase mb-1">LSI ID</p>
-            <p className="text-sm font-bold text-slate-900">{breakdown.orderDetails.lsiId || '-'}</p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Capacity</p>
-            <p className="text-sm font-bold text-slate-900">{breakdown.orderDetails.capacity} Mbps</p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Base Rate</p>
-            <p className="text-sm font-bold text-slate-900">₹{breakdown.orderDetails.baseRate.toLocaleString('en-IN')}</p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase mb-1">State</p>
-            <p className="text-sm font-bold text-slate-900">{breakdown.orderDetails.state}</p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Split</p>
-            <p className="text-sm font-bold text-slate-900">{breakdown.orderDetails.splitFactor === 2 ? '50%' : '100%'}</p>
-          </div>
+    <div className="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[70vh] overflow-auto" onClick={e=>e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+          <p className="font-semibold text-slate-800">Full Text</p>
+          <button onClick={onClose}><X className="w-5 h-5 text-slate-400"/></button>
         </div>
-
-        {/* Detailed Table */}
-        <div className="overflow-x-auto rounded-xl border border-slate-200">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-slate-100 border-b-2 border-slate-200">
-                <th className="px-3 py-3 text-left text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Month</th>
-                <th className="px-3 py-3 text-center text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Days</th>
-                <th className="px-3 py-3 text-left text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Period</th>
-                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Received Amount</th>
-                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Credit Notes</th>
-                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Misc Sell</th>
-                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">TDS Provision</th>
-                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">TDS Confirm</th>
-                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Monthly Billing (Basic)</th>
-                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">GST</th>
-                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Monthly Billing + GST</th>
-                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Total Balance (Running)</th>
-                <th className="px-3 py-3 text-right text-xs font-bold text-slate-700 uppercase whitespace-nowrap">Total Remaining Adjustment</th>
-              </tr>
-            </thead>
-
-            <tbody className="bg-white divide-y divide-slate-100">
-              {monthlyData.map((monthData, index) => (
-                <tr key={`month-${monthData.year}-${monthData.month}-${index}`} className="hover:bg-slate-50">
-                  <td className="px-3 py-3 font-semibold text-slate-900 text-sm whitespace-nowrap">
-                    {monthData.monthYear}
-                  </td>
-                  <td className="px-3 py-3 text-center font-bold text-sm">
-                    {monthData.billingDays}
-                  </td>
-                  <td className="px-3 py-3 text-sm text-slate-700 whitespace-nowrap">
-                    {monthData.startDay}-{String(monthData.month + 1).padStart(2, '0')}-{monthData.year} to {monthData.endDay}-{String(monthData.month + 1).padStart(2, '0')}-{monthData.year}
-                  </td>
-                  <td className="px-3 py-3 text-right font-bold text-green-600 text-sm whitespace-nowrap">
-                    ₹{monthData.receivedAmount.toLocaleString('en-IN', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
-                  <td className="px-3 py-3 text-right font-bold text-cyan-600 text-sm whitespace-nowrap">
-                    ₹{monthData.creditNotes.toLocaleString('en-IN', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
-                  <td className="px-3 py-3 text-right font-bold text-purple-600 text-sm whitespace-nowrap">
-                    ₹{monthData.miscSell.toLocaleString('en-IN', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
-                  <td className="px-3 py-3 text-right font-bold text-orange-600 text-sm whitespace-nowrap">
-                    ₹{monthData.tdsProvision.toLocaleString('en-IN', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
-                  <td className="px-3 py-3 text-right font-bold text-blue-600 text-sm whitespace-nowrap">
-                    ₹{monthData.tdsConfirm.toLocaleString('en-IN', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
-                  <td className="px-3 py-3 text-right font-bold text-slate-900 text-sm whitespace-nowrap">
-                    ₹{monthData.monthlyBillingBasic.toLocaleString('en-IN', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
-                  <td className="px-3 py-3 text-right font-semibold text-slate-700 text-sm whitespace-nowrap">
-                    ₹{monthData.gst.toLocaleString('en-IN', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
-                  <td className="px-3 py-3 text-right font-bold text-emerald-600 text-sm whitespace-nowrap">
-                    ₹{monthData.monthlyBillingWithGst.toLocaleString('en-IN', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
-                  <td className="px-3 py-3 text-right font-bold text-slate-800 text-sm whitespace-nowrap">
-                    ₹{monthData.totalBalance.toLocaleString('en-IN', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
-                  <td className={`px-3 py-3 text-right font-bold text-sm whitespace-nowrap ${monthData.totalRemainingAdjustment > 0 ? 'text-rose-700 bg-rose-50' : 'text-emerald-700 bg-emerald-50'}`}>
-                    ₹{monthData.totalRemainingAdjustment.toLocaleString('en-IN', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-
-            <tfoot>
-              <tr className="bg-emerald-50 border-t-2 border-emerald-300">
-                <td colSpan="3" className="px-3 py-4 text-right font-bold text-slate-900">
-                  Total:
-                </td>
-                <td className="px-3 py-4 text-right font-bold text-green-700">
-                  ₹{monthlyData.reduce((sum, m) => sum + m.receivedAmount, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </td>
-                <td className="px-3 py-4 text-right font-bold text-cyan-700">
-                  ₹{monthlyData.reduce((sum, m) => sum + m.creditNotes, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </td>
-                <td className="px-3 py-4 text-right font-bold text-purple-700">
-                  ₹{monthlyData.reduce((sum, m) => sum + m.miscSell, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </td>
-                <td className="px-3 py-4 text-right font-bold text-orange-700">
-                  ₹{monthlyData.reduce((sum, m) => sum + m.tdsProvision, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </td>
-                <td className="px-3 py-4 text-right font-bold text-blue-700">
-                  ₹{monthlyData.reduce((sum, m) => sum + m.tdsConfirm, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </td>
-                <td className="px-3 py-4 text-right font-bold text-slate-900">
-                  ₹{monthlyData.reduce((sum, m) => sum + m.monthlyBillingBasic, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </td>
-                <td className="px-3 py-4 text-right font-bold text-slate-700">
-                  ₹{monthlyData.reduce((sum, m) => sum + m.gst, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </td>
-                <td className="px-3 py-4 text-right font-extrabold text-emerald-700 text-lg">
-                  ₹{monthlyData.reduce((sum, m) => sum + m.monthlyBillingWithGst, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </td>
-                <td className="px-3 py-4 text-right font-extrabold text-slate-900 text-lg">
-                  ₹{monthlyData[monthlyData.length - 1].totalBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </td>
-                <td className={`px-3 py-4 text-right font-extrabold text-lg ${monthlyData[monthlyData.length - 1].totalRemainingAdjustment > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
-                  ₹{monthlyData[monthlyData.length - 1].totalRemainingAdjustment.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+        <p className="px-5 py-4 text-sm text-slate-700 break-words whitespace-pre-wrap">{text}</p>
       </div>
     </div>
-  );
-};
+  )
+})
+TextPopup.displayName = 'TextPopup'
 
-// ========== CALCULATION BREAKDOWN COMPONENT ==========
-const CalculationBreakdown = ({ breakdown, onClose }) => {
-  if (!breakdown) return null;
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 py-8">
-      <div className=" mx-auto px-4 sm:px-6 lg:px-8">
-
-        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-8 py-6">
-            <div className="flex items-center justify-between mb-4">
-              <button
-                onClick={onClose}
-                className="group flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold rounded-lg shadow-sm border border-slate-200 transition-all duration-200 hover:shadow-md hover:border-slate-300"
-              >
-                <ArrowLeft className="w-5 h-5 text-slate-600 group-hover:text-blue-600 transition-colors" />
-                <span>Back to Reports</span>
-              </button>
-
-              <div className="text-right">
-                <h1 className="text-2xl font-bold text-white mb-1">
-                  Balance Calculation Breakdown
-                </h1>
-                <p className="text-blue-100 text-sm font-medium">
-                  Order ID: <span className="font-bold text-white">{breakdown.orderDetails.orderId}</span>
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-8 space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div>
-                <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <div className="w-1 h-5 bg-blue-600 rounded-full"></div>
-                  Order Details
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">LSI ID</p>
-                    <p className="text-base font-bold text-slate-900">{breakdown.orderDetails.lsiId || '-'}</p>
-                  </div>
-                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Capacity</p>
-                    <p className="text-base font-bold text-slate-900">{breakdown.orderDetails.capacity} Mbps</p>
-                  </div>
-                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Base Rate</p>
-                    <p className="text-base font-bold text-slate-900">₹{breakdown.orderDetails.baseRate.toLocaleString('en-IN')}</p>
-                  </div>
-                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">PCD Date</p>
-                    <p className="text-base font-bold text-slate-900">{breakdown.orderDetails.pcdDate}</p>
-                  </div>
-                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Terminate Date</p>
-                    <p className={`text-base font-bold ${breakdown.orderDetails.terminateDate ? 'text-rose-600' : 'text-emerald-600'}`}>
-                      {breakdown.orderDetails.terminateDate || 'Active'}
-                    </p>
-                  </div>
-                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Split Factor</p>
-                    <p className="text-base font-bold text-slate-900">
-                      {breakdown.orderDetails.splitFactor === 2 ? '50%' : '100%'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <div className="w-1 h-5 bg-blue-600 rounded-full"></div>
-                  Calculation Formula
-                </h2>
-                <div className="bg-blue-50 rounded-xl p-6 border border-blue-200 space-y-3 h-full">
-                  <div className="flex justify-between items-center pb-3">
-                    <span className="text-sm font-medium text-slate-700">Base Amount (Rate × Capacity)</span>
-                    <span className="text-sm font-bold text-slate-900">
-                      ₹{breakdown.orderDetails.baseRate.toLocaleString('en-IN')} × {breakdown.orderDetails.capacity} = ₹{breakdown.orderDetails.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center pb-3 border-t border-blue-200 pt-3">
-                    <span className="text-sm font-medium text-slate-700">GST (18%)</span>
-                    <span className="text-sm font-bold text-slate-900">
-                      ₹{breakdown.orderDetails.gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center pt-3 border-t-2 border-blue-300">
-                    <span className="text-base font-bold text-blue-900">Monthly Charge (After Split)</span>
-                    <span className="text-xl font-extrabold text-blue-700">
-                      ₹{breakdown.orderDetails.monthlyCharge.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <MonthlyBillingBreakdownTable breakdown={breakdown} />
-
-          </div>
-        </div>
-
-      </div>
-    </div>
-  );
-};
-
-// Text Popup Modal Component
-const TextPopupModal = React.memo(({ text, onClose }) => {
-  useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [onClose]);
-
-  return (
-    <div
-      className="fixed inset-0 bg-black/50 z-[10000] flex items-center justify-center p-4 animate-fadeIn"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-900">Full Text</h3>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors duration-200"
-          >
-            <X className="w-5 h-5 text-slate-500" />
-          </button>
-        </div>
-        <div className="px-6 py-5">
-          <p className="text-[15px] text-slate-700 leading-relaxed break-words whitespace-pre-wrap">
-            {text}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-});
-
-TextPopupModal.displayName = 'TextPopupModal';
-
-const TruncatedText = React.memo(({ text, limit, className = "" }) => {
-  const [showPopup, setShowPopup] = useState(false);
-
-  if (!text) return <span className={className}>-</span>;
-
-  if (text.length <= limit) {
-    return <span className={className}>{text}</span>;
-  }
-
+const TruncatedText = React.memo(({ text, limit = 18, className = '' }) => {
+  const [showPopup, setShowPopup] = useState(false)
+  
+  if (!text) return <span className={className}>-</span>
+  if (text.length <= limit) return <span className={className}>{text}</span>
+  
   return (
     <>
       <span className={className}>
-        {text.substring(0, limit)}
-        <span
-          className="text-blue-600 cursor-pointer hover:underline ml-1 font-medium"
+        {text.slice(0, limit)}
+        <button 
           onClick={() => setShowPopup(true)}
+          className="text-blue-600 hover:text-blue-700 hover:underline ml-1 font-medium"
         >
           ..more
-        </span>
+        </button>
       </span>
-      {showPopup && (
-        <TextPopupModal
-          text={text}
-          onClose={() => setShowPopup(false)}
-        />
-      )}
+      {showPopup && <TextPopup text={text} onClose={() => setShowPopup(false)} />}
     </>
-  );
-});
+  )
+})
+TruncatedText.displayName = 'TruncatedText'
 
-TruncatedText.displayName = 'TruncatedText';
+// ─── Month Detail View Popup ─────────────────────────────────
+const MonthDetailView = ({ monthData, onClose }) => {
+  if (!monthData) return null
+  
+  return (
+    <div className="fixed inset-0 bg-black/60 z-[10001] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-auto" onClick={e=>e.stopPropagation()}>
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+          <div>
+            <h3 className="text-xl font-bold text-white">Month Details</h3>
+            <p className="text-blue-100 text-sm mt-0.5">{monthData.monthYear}</p>
+          </div>
+          <button 
+            onClick={onClose}
+            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5 text-white"/>
+          </button>
+        </div>
+        
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Basic Info */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <p className="text-xs font-bold text-slate-500 uppercase mb-1">Billing Days</p>
+              <p className="text-2xl font-bold text-slate-900">{monthData.billingDays}</p>
+            </div>
+            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <p className="text-xs font-bold text-slate-500 uppercase mb-1">Start Date</p>
+              <p className="text-lg font-bold text-slate-900">
+                {String(monthData.startDay).padStart(2,'0')}-{String(monthData.month+1).padStart(2,'0')}-{monthData.year}
+              </p>
+            </div>
+            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <p className="text-xs font-bold text-slate-500 uppercase mb-1">End Date</p>
+              <p className="text-lg font-bold text-slate-900">
+                {String(monthData.endDay).padStart(2,'0')}-{String(monthData.month+1).padStart(2,'0')}-{monthData.year}
+              </p>
+            </div>
+          </div>
+          
+          {/* Billing Details */}
+          <div>
+            <h4 className="text-sm font-bold text-slate-700 uppercase mb-3 pb-2 border-b border-slate-200">Billing Amounts</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex justify-between items-center py-2 px-3 bg-slate-50 rounded">
+                <span className="text-sm text-slate-600">Monthly Billing:</span>
+                <span className="text-sm font-bold text-slate-900">₹{fmt(monthData.monthlyBilling)}</span>
+              </div>
+              {monthData.cgst > 0 && (
+                <div className="flex justify-between items-center py-2 px-3 bg-slate-50 rounded">
+                  <span className="text-sm text-slate-600">CGST (9%):</span>
+                  <span className="text-sm font-bold text-slate-900">₹{fmt(monthData.cgst)}</span>
+                </div>
+              )}
+              {monthData.sgst > 0 && (
+                <div className="flex justify-between items-center py-2 px-3 bg-slate-50 rounded">
+                  <span className="text-sm text-slate-600">SGST (9%):</span>
+                  <span className="text-sm font-bold text-slate-900">₹{fmt(monthData.sgst)}</span>
+                </div>
+              )}
+              {monthData.igst > 0 && (
+                <div className="flex justify-between items-center py-2 px-3 bg-slate-50 rounded">
+                  <span className="text-sm text-slate-600">IGST (18%):</span>
+                  <span className="text-sm font-bold text-slate-900">₹{fmt(monthData.igst)}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center py-2 px-3 bg-indigo-50 rounded border-2 border-indigo-200">
+                <span className="text-sm font-bold text-indigo-700">Total + GST:</span>
+                <span className="text-sm font-bold text-indigo-900">₹{fmt(monthData.totalWithGst)}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 px-3 bg-purple-50 rounded">
+                <span className="text-sm text-purple-600">Misc+GST Sell:</span>
+                <span className="text-sm font-bold text-purple-900">₹{fmt(monthData.miscSell)}</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Payments */}
+          <div>
+            <h4 className="text-sm font-bold text-slate-700 uppercase mb-3 pb-2 border-b border-slate-200">Payments & Adjustments</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex justify-between items-center py-2 px-3 bg-green-50 rounded">
+                <span className="text-sm text-green-600">Received:</span>
+                <span className="text-sm font-bold text-green-900">₹{fmt(monthData.received)}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 px-3 bg-cyan-50 rounded">
+                <span className="text-sm text-cyan-600">Credit Notes:</span>
+                <span className="text-sm font-bold text-cyan-900">₹{fmt(monthData.creditNotes)}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 px-3 bg-blue-50 rounded">
+                <span className="text-sm text-blue-600">TDS Confirm:</span>
+                <span className="text-sm font-bold text-blue-900">₹{fmt(monthData.tdsConfirm)}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 px-3 bg-orange-50 rounded">
+                <span className="text-sm text-orange-600">TDS Provision:</span>
+                <span className="text-sm font-bold text-orange-900">₹{fmt(monthData.tdsProvision)}</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Balances */}
+          <div>
+            <h4 className="text-sm font-bold text-slate-700 uppercase mb-3 pb-2 border-b border-slate-200">Balance Summary</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex justify-between items-center py-3 px-4 bg-yellow-50 rounded-lg border-2 border-yellow-200">
+                <span className="text-sm font-bold text-yellow-700">Running Balance:</span>
+                <span className={`text-lg font-extrabold ${monthData.running>=0?'text-green-700':'text-red-700'}`}>
+                  ₹{fmt(monthData.running)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-3 px-4 bg-rose-50 rounded-lg border-2 border-rose-200">
+                <span className="text-sm font-bold text-rose-700">Remaining Adjustment:</span>
+                <span className={`text-lg font-extrabold ${monthData.remAdj>0?'text-red-700':'text-green-700'}`}>
+                  ₹{fmt(monthData.remAdj)}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Invoice Info */}
+          {monthData.invoiceNumber && monthData.invoiceNumber !== '-' && (
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+              <p className="text-xs font-bold text-blue-600 uppercase mb-1">Invoice Number</p>
+              <p className="text-base font-bold text-blue-900">{monthData.invoiceNumber}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
-const TableRow = React.memo((({
-  order,
-  hideLsiColumn,
-  fromDateFormatted,
-  toDateFormatted,
-  splitFactor = 1,
-  stateToShow,
-  onViewBreakdown,
-  onBalanceCalculated,
-  rowKey
-}) => {
-  const router = useRouter();
-  const [breakdown, setBreakdown] = useState(null);
-  const [loading, setLoading] = useState(true);
+// ─── Main data loader per row ─────────────────────────────────
+const loadOrderBreakdown = async (order, toDateStr, splitState) => {
+  const pcdDate = parseAnyDate(order.pcdDate)
+  const termDate = order.terminateDate ? parseAnyDate(order.terminateDate) : null
+  const toDate  = parseAnyDate(toDateStr)
 
-  useEffect(() => {
-    const fetchBreakdown = async () => {
-      setLoading(true);
-      const result = await calculateBalanceWithBreakdownAPI(order, fromDateFormatted, toDateFormatted, splitFactor, stateToShow);
-      setBreakdown(result);
-      setLoading(false);
-
-      // ✅ FIX: Report balance immediately after calculation
-      if (onBalanceCalculated && result) {
-        onBalanceCalculated(rowKey, result.totalBalance);
-      }
-    };
-
-    fetchBreakdown();
-  }, [order, fromDateFormatted, toDateFormatted, splitFactor, stateToShow, onBalanceCalculated, rowKey]);
-
-  if (loading || !breakdown) {
-    return (
-      <tr key={rowKey} className="hover:bg-blue-50/40 transition-colors duration-150 border-b border-slate-100">
-        <td colSpan={hideLsiColumn ? "10" : "11"} className="px-4 py-4 text-center text-slate-500">
-          Loading...
-        </td>
-      </tr>
-    );
+  const breakdownBase = {
+    months: [], totalBalance: 0,
+    orderDetails: {
+      orderId: order.orderId, 
+      lsiId: order.lsiId, 
+      state: splitState,
+      splitFactor: isSplit(order) ? 2 : 1,
+      pcdDate: order.pcdDate, 
+      terminateDate: order.terminateDate,
+      capacity: Number(order.capacity)||0, 
+      baseRate: Number(order.amount)||0,
+      companyName: order.companyName,
+      endA: order.endA || '-',
+      endB: order.endB || '-',
+    }
   }
 
-  const servicePeriod = getServicePeriod(order, toDateFormatted);
+  if (!pcdDate || !toDate) {
+    return breakdownBase
+  }
 
-  const handleGenerateClick = () => {
-    router.push(`/billing/generator?orderId=${order.orderId}`);
-  };
+  // Fetch billing records
+  let billingData = []
+  try {
+    const r = await fetch(`/api/billing/monthly?orderId=${order.orderId}`)
+    const j = await r.json()
+    if (j.success) {
+      billingData = j.data
+    }
+  } catch(e) {
+    console.error(`[loadBreakdown] fetch exception:`, e)
+  }
+
+  // Determine service window
+  let serviceEnd = toDate
+  if (termDate) {
+    const lastServiceDay = new Date(termDate)
+    lastServiceDay.setDate(lastServiceDay.getDate() - 1)
+    serviceEnd = lastServiceDay
+    if (serviceEnd < pcdDate) return breakdownBase
+  }
+
+  let cur = new Date(pcdDate.getFullYear(), pcdDate.getMonth(), 1)
+
+  while (cur <= serviceEnd && cur <= toDate) {
+    const m = cur.getMonth(), y = cur.getFullYear()
+    const monthName = fmtMonthYear(m, y)
+    const rec = billingData.find(b => b.month === monthName && b.state === splitState)
+
+    let totalWithGst, monthlyBilling, cgst = 0, sgst = 0, igst = 0, miscSell, received, creditNotes, tdsProvision, tdsConfirm, invoiceNumber, billingDays, startDay, endDay, isSelfGST = false
+
+    if (rec) {
+      totalWithGst  = Number(rec.totalWithGst) || 0
+      monthlyBilling = Number(rec.monthlyBilling) || 0
+      cgst = Number(rec.cgst) || 0
+      sgst = Number(rec.sgst) || 0
+      igst = Number(rec.igst) || 0
+      isSelfGST = rec.isSelfGST || false
+      miscSell      = sumTotalWithGst(rec.miscellaneousSell)
+      received      = sumAmount(rec.receivedDetails)
+      creditNotes   = sumAmount(rec.creditNotes)
+      tdsProvision  = sumAmount(rec.tdsProvision)
+      tdsConfirm    = sumAmount(rec.tdsConfirm)
+      invoiceNumber = rec.invoiceNumber || '-'
+      billingDays   = rec.billingDays || getDaysInMonth(m, y)
+      startDay      = Number((rec.startDate||'').split('-')[0]) || 1
+      endDay        = Number((rec.endDate||'').split('-')[0])   || getDaysInMonth(m, y)
+    } else {
+      const daysInM = getDaysInMonth(m, y)
+      const isPcd   = y === pcdDate.getFullYear() && m === pcdDate.getMonth()
+      const isTerm  = termDate && y === serviceEnd.getFullYear() && m === serviceEnd.getMonth()
+
+      let splitPct  = 1
+      if (isSplit(order)) {
+        splitPct = splitState === (order.billing1?.state||'')
+          ? (Number(order.splitFactor?.state1Percentage)||50) / 100
+          : (Number(order.splitFactor?.state2Percentage)||50) / 100
+      }
+
+      const cap  = Number(order.capacity) || 0
+      const rate = Number(order.amount)   || 0
+      const baseMonthly = cap * rate * splitPct
+      const gstRate     = 0.18
+      const grandTotal  = baseMonthly * (1 + gstRate)
+
+      startDay = isPcd ? pcdDate.getDate() : 1
+      endDay   = isTerm ? serviceEnd.getDate() : daysInM
+      billingDays = endDay - startDay + 1
+      totalWithGst  = (grandTotal / daysInM) * billingDays
+      monthlyBilling = totalWithGst / (1 + gstRate)
+      igst = totalWithGst - monthlyBilling
+      miscSell = received = creditNotes = tdsProvision = tdsConfirm = 0
+      invoiceNumber = '-'
+    }
+
+    breakdownBase.months.push({
+      monthYear: monthName, month: m, year: y, billingDays, startDay, endDay,
+      monthlyBilling, cgst, sgst, igst, totalWithGst, miscSell,
+      received, creditNotes, tdsProvision, tdsConfirm, invoiceNumber, isSelfGST
+    })
+
+    if (termDate && y === serviceEnd.getFullYear() && m === serviceEnd.getMonth()) break
+    cur = new Date(y, m+1, 1)
+  }
+
+  breakdownBase.totalBalance = creditPoolBalance(breakdownBase.months)
+  return breakdownBase
+}
+
+// ─── Breakdown popup (full month table) ──────────────────────
+const BreakdownTable = ({ bd, onClose }) => {
+  const router = useRouter()
+  const [viewingMonth, setViewingMonth] = useState(null)
+  
+  if (!bd) return null
+  const od = bd.orderDetails
+  const sorted = [...bd.months].sort((a,b)=>new Date(a.year,a.month)-new Date(b.year,b.month))
+
+  // Check if we have CGST/SGST or IGST
+  const hasCGST = sorted.some(m => (m.cgst ?? 0) > 0)
+  const hasSGST = sorted.some(m => (m.sgst ?? 0) > 0)
+  const hasIGST = sorted.some(m => (m.igst ?? 0) > 0)
+
+  // Running balance rows
+  const pool0 = sorted.reduce((s,m)=>s+m.received+m.creditNotes+m.tdsConfirm, 0)
+  let pool = pool0, running = 0, cumUnpaid = 0
+  const rows = sorted.map(m => {
+    const charges = m.totalWithGst + m.miscSell
+    const credits = m.received + m.creditNotes + m.tdsConfirm
+    running += charges - credits
+    let remAdj = 0
+    if (pool >= charges) { pool -= charges; remAdj = cumUnpaid }
+    else { cumUnpaid += charges - pool; pool = 0; remAdj = cumUnpaid }
+    return { ...m, running, remAdj }
+  })
+
+  const T = rows.reduce((a,m)=>({
+    mb: a.mb+m.monthlyBilling, 
+    cgst: a.cgst+(m.cgst||0),
+    sgst: a.sgst+(m.sgst||0),
+    igst: a.igst+(m.igst||0),
+    total: a.total+m.totalWithGst,
+    misc: a.misc+m.miscSell, 
+    recv: a.recv+m.received, 
+    cn: a.cn+m.creditNotes,
+    tdsp: a.tdsp+m.tdsProvision, 
+    tdsc: a.tdsc+m.tdsConfirm
+  }),{mb:0,cgst:0,sgst:0,igst:0,total:0,misc:0,recv:0,cn:0,tdsp:0,tdsc:0})
 
   return (
-    <tr key={rowKey} className="hover:bg-blue-50/40 transition-colors duration-150 border-b border-slate-100 last:border-0">
-      <td className="px-4 py-4">
-        <span className="text-[16px] font-semibold text-blue-600">{order.orderId}</span>
+    <>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/10 to-slate-50 py-6">
+        <div className="max-w-[1800px] mx-auto px-4">
+          <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div>
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <FileText className="w-5 h-5"/>Monthly Billing Breakdown
+                  </h2>
+                  <p className="text-blue-100 text-sm mt-0.5">
+                    Order: <b className="text-white">{od.orderId}</b> — State: <b className="text-white">{od.state}</b>
+                  </p>
+                </div>
+                
+                {/* Quick Info Chips */}
+                <div className="flex items-center gap-2">
+                  <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1.5">
+                    <p className="text-[10px] font-bold text-blue-100 uppercase">Capacity</p>
+                    <p className="text-sm font-bold text-white">{od.capacity} Mbps</p>
+                  </div>
+                  <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1.5">
+                    <p className="text-[10px] font-bold text-blue-100 uppercase">Base Rate</p>
+                    <p className="text-sm font-bold text-white">₹{od.baseRate}</p>
+                  </div>
+                  <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1.5">
+                    <p className="text-[10px] font-bold text-blue-100 uppercase">Split</p>
+                    <p className="text-sm font-bold text-white">{od.splitFactor === 2 ? 'Yes' : 'No'}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <button 
+                onClick={onClose} 
+                className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-medium text-sm transition-all"
+              >
+                <ArrowLeft className="w-4 h-4"/>Back
+              </button>
+            </div>
+
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gradient-to-r from-gray-50 to-blue-50 border-b-2 border-gray-200">
+                    <th className="px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Month</th>
+                    <th className="px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Days</th>
+                    <th className="px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Period</th>
+                    <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Monthly Billing</th>
+                    {hasCGST && <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">CGST (9%)</th>}
+                    {hasSGST && <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">SGST (9%)</th>}
+                    {hasIGST && <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">IGST (18%)</th>}
+                    <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Total + GST</th>
+                    <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Misc+GST Sell</th>
+                    <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Received</th>
+                    <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Credit Notes</th>
+                    <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">TDS Conf</th>
+                    <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">TDS Prov</th>
+                    <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider bg-yellow-50">Total Balance</th>
+                    <th className="px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider bg-green-50">Remaining Adj</th>
+                    <th className="px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {rows.map((m,i)=>(
+                    <tr key={i} className={`transition-all ${i % 2 === 0 ? 'bg-white hover:bg-blue-50/50' : 'bg-gray-50/50 hover:bg-blue-50/50'}`}>
+                      <td className="px-3 py-3 font-semibold text-slate-900">{m.monthYear}</td>
+                      <td className="px-3 py-3 text-center font-bold text-slate-700">{m.billingDays}</td>
+                      <td className="px-3 py-3 text-xs text-slate-500">
+                        <div>{String(m.startDay).padStart(2,'0')}-{String(m.month+1).padStart(2,'0')}-{m.year}</div>
+                        <div>{String(m.endDay).padStart(2,'0')}-{String(m.month+1).padStart(2,'0')}-{m.year}</div>
+                      </td>
+                      <td className="px-3 py-3 text-right font-bold text-slate-800">₹{fmt(m.monthlyBilling)}</td>
+                      {hasCGST && <td className="px-3 py-3 text-right text-slate-600">₹{fmt(m.cgst||0)}</td>}
+                      {hasSGST && <td className="px-3 py-3 text-right text-slate-600">₹{fmt(m.sgst||0)}</td>}
+                      {hasIGST && <td className="px-3 py-3 text-right text-slate-600">₹{fmt(m.igst||0)}</td>}
+                      <td className="px-3 py-3 text-right font-bold text-indigo-700">₹{fmt(m.totalWithGst)}</td>
+                      <td className="px-3 py-3 text-right font-bold text-purple-600">₹{fmt(m.miscSell)}</td>
+                      <td className="px-3 py-3 text-right font-bold text-green-600">₹{fmt(m.received)}</td>
+                      <td className="px-3 py-3 text-right font-bold text-cyan-600">₹{fmt(m.creditNotes)}</td>
+                      <td className="px-3 py-3 text-right font-bold text-blue-600">₹{fmt(m.tdsConfirm)}</td>
+                      <td className="px-3 py-3 text-right font-bold text-orange-500">₹{fmt(m.tdsProvision)}</td>
+                      <td className={`px-3 py-3 text-right font-extrabold bg-yellow-50 ${m.running>=0?'text-green-700':'text-red-700'}`}>
+                        ₹{fmt(m.running)}
+                      </td>
+                      <td className={`px-3 py-3 text-center font-bold bg-green-50 ${m.remAdj>0?'text-rose-700':'text-emerald-700'}`}>
+                        {m.remAdj > 0 ? (
+                          <span className="inline-flex items-center gap-1 text-red-700">
+                            <X className="w-4 h-4"/>₹{fmt(m.remAdj)}
+                          </span>
+                        ) : (
+                          <span className="text-emerald-700">₹{fmt(0)}</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="flex items-center justify-center">
+                          <button 
+                            onClick={() => setViewingMonth(m)}
+                            className="p-2 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4 text-blue-700" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-gradient-to-r from-gray-100 to-blue-100 border-t-2 border-gray-300">
+                  <tr className="font-bold">
+                    <td colSpan="3" className="px-3 py-4 text-sm text-gray-900">TOTAL</td>
+                    <td className="px-3 py-4 text-right text-sm text-slate-900">₹{fmt(T.mb)}</td>
+                    {hasCGST && <td className="px-3 py-4 text-right text-sm text-gray-700">₹{fmt(T.cgst)}</td>}
+                    {hasSGST && <td className="px-3 py-4 text-right text-sm text-gray-700">₹{fmt(T.sgst)}</td>}
+                    {hasIGST && <td className="px-3 py-4 text-right text-sm text-gray-700">₹{fmt(T.igst)}</td>}
+                    <td className="px-3 py-4 text-right text-sm text-indigo-700">₹{fmt(T.total)}</td>
+                    <td className="px-3 py-4 text-right text-sm text-purple-700">₹{fmt(T.misc)}</td>
+                    <td className="px-3 py-4 text-right text-sm text-green-700">₹{fmt(T.recv)}</td>
+                    <td className="px-3 py-4 text-right text-sm text-cyan-700">₹{fmt(T.cn)}</td>
+                    <td className="px-3 py-4 text-right text-sm text-blue-700">₹{fmt(T.tdsc)}</td>
+                    <td className="px-3 py-4 text-right text-sm text-orange-600">₹{fmt(T.tdsp)}</td>
+                    <td className={`px-3 py-4 text-right text-lg font-extrabold bg-yellow-100 ${rows[rows.length-1]?.running>=0?'text-green-700':'text-red-700'}`}>
+                      ₹{fmt(rows[rows.length-1]?.running||0)}
+                    </td>
+                    <td className="px-3 py-4 bg-green-100" colSpan="2"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Month Detail Popup */}
+      {viewingMonth && <MonthDetailView monthData={viewingMonth} onClose={() => setViewingMonth(null)} />}
+    </>
+  )
+}
+
+// ─── Simplified table row ─────────────────────────────────────
+const OrderRow = React.memo(({ order, toDateStr, splitState, onViewBreakdown, onBalanceReady, rowKey, hideLsi }) => {
+  const router = useRouter()
+  const [bd, setBd] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      setLoading(true)
+      const result = await loadOrderBreakdown(order, toDateStr, splitState)
+      if (cancelled) return
+      setBd(result)
+      setLoading(false)
+      onBalanceReady?.(rowKey, result.totalBalance)
+    })()
+    return () => { cancelled = true }
+  }, [order._id, toDateStr, splitState, rowKey, onBalanceReady])
+
+  if (loading) return (
+    <tr className="border-b border-slate-100">
+      <td colSpan={hideLsi ? 8 : 9} className="px-4 py-3 text-center text-slate-400 text-sm">
+        <div className="flex items-center justify-center gap-2">
+          <div className="animate-spin h-4 w-4 rounded-full border-b-2 border-blue-500"/>
+          <span>Loading {order.orderId}…</span>
+        </div>
       </td>
-      {!hideLsiColumn && (
-        <td className="px-4 py-4">
-          <span className="text-[16px] font-semibold text-orange-600">{order.lsiId || '-'}</span>
+    </tr>
+  )
+
+  if (!bd) return null
+
+  const bal = bd.totalBalance
+  const splitPct = isSplit(order) 
+    ? (splitState === (order.billing1?.state||'') 
+        ? Number(order.splitFactor?.state1Percentage)||50 
+        : Number(order.splitFactor?.state2Percentage)||50)
+    : 100
+
+  return (
+    <tr className="hover:bg-blue-50/30 transition-colors border-b border-slate-100">
+      <td className="px-4 py-3">
+        <span className="text-sm font-bold text-blue-600">{order.orderId}</span>
+      </td>
+      {!hideLsi && (
+        <td className="px-4 py-3">
+          <TruncatedText text={order.lsiId} limit={18} className="text-sm text-orange-600 font-semibold" />
         </td>
       )}
-      <td className="px-4 py-4">
-        <TruncatedText
-          text={order.endA}
-          limit={18}
-          className="text-[15px] font-semibold text-slate-700"
-        />
+      <td className="px-4 py-3">
+        <TruncatedText text={order.endA} limit={18} className="text-sm text-slate-700" />
       </td>
-      <td className="px-4 py-4">
-        <TruncatedText
-          text={order.endB}
-          limit={18}
-          className="text-[15px] font-semibold text-slate-700"
-        />
+      <td className="px-4 py-3">
+        <TruncatedText text={order.endB} limit={18} className="text-sm text-slate-700" />
       </td>
-      <td className="px-4 py-4">
-        <TruncatedText
-          text={order.companyName}
-          limit={18}
-          className="text-[15px] font-semibold text-slate-700"
-        />
+      <td className="px-4 py-3 max-w-[200px]">
+        <TruncatedText text={order.companyName} limit={18} className="text-sm font-semibold text-slate-800" />
       </td>
-      <td className="px-4 py-4">
-        <span className="inline-flex px-3 py-1.5 bg-indigo-50 text-indigo-700 text-[14px] font-semibold rounded-md">
-          {stateToShow || order.billing1?.state || order.billing2?.state || '-'}
+      <td className="px-4 py-3">
+        <span className="inline-flex px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded">
+          {splitState || order.billing1?.state || '-'}
         </span>
       </td>
-      <td className="px-4 py-4 text-right">
+      <td className="px-4 py-3 text-right bg-yellow-50/60">
         <div className="flex items-center justify-end gap-2">
-          <span className={`text-[16px] font-bold ${breakdown.totalBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-            ₹{breakdown.totalBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          <span className={`text-base font-extrabold ${bal>=0?'text-emerald-600':'text-rose-600'}`}>
+            ₹{fmt(bal)}
           </span>
-          <button
-            onClick={() => onViewBreakdown(breakdown)}
-            className="p-1.5 hover:bg-blue-100 rounded-lg transition-colors duration-200 group"
-            title="View calculation breakdown"
+          <button 
+            onClick={()=>onViewBreakdown(bd)} 
+            title="View breakdown"
+            className="p-1.5 hover:bg-blue-100 rounded-lg transition-colors"
           >
-            <Info className="w-4 h-4 text-blue-600 group-hover:text-blue-700" />
+            <Info className="w-4 h-4 text-blue-500"/>
           </button>
         </div>
       </td>
-      <td className="px-4 py-4 text-center">
-        <span className={`inline-flex px-3 py-1 text-[14px] font-semibold rounded ${splitFactor === 2
-          ? 'bg-amber-50 text-amber-700'
-          : 'bg-slate-100 text-slate-700'
-          }`}>
-          {splitFactor === 2 ? '50%' : '100%'}
+      <td className="px-4 py-3 text-center">
+        <span className="inline-flex px-3 py-1 bg-purple-50 text-purple-700 text-sm font-bold rounded">
+          {splitPct}%
         </span>
       </td>
-      <td className="px-4 py-4">
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${servicePeriod.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
-          <span className="text-[14px] text-slate-700 font-semibold whitespace-nowrap">
-            {formatDateDisplay(servicePeriod.start)} → {formatDateDisplay(servicePeriod.end)}
-          </span>
-          <span className={`ml-1 px-2 py-0.5 text-[13px] font-semibold rounded ${servicePeriod.status === 'active'
-            ? 'bg-emerald-50 text-emerald-700'
-            : 'bg-rose-50 text-rose-700'
-            }`}>
-            {servicePeriod.status === 'active' ? 'Active' : 'Terminated'}
-          </span>
-        </div>
-      </td>
-      <td className="px-4 py-4 text-center">
-        <button
-          onClick={handleGenerateClick}
-          className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-semibold rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
-          title="Generate bill for this order"
+      <td className="px-4 py-3 text-center">
+        <button 
+          onClick={()=>router.push(`/billing/generator?orderId=${order.orderId}`)}
+          className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-all"
         >
-          <FileSpreadsheet className="w-4 h-4" />
-          G
+          <FileSpreadsheet className="w-4 h-4"/>Generate
         </button>
       </td>
     </tr>
-  );
-}));
+  )
+})
+OrderRow.displayName = 'OrderRow'
 
-TableRow.displayName = 'TableRow';
+// ─── Main component ────────────────────────────────────────────
+export default function OutstandingReportComp() {
+  const router = useRouter()
+  const [orders, setOrders] = useState([])
+  const [viewBreakdown, setViewBD] = useState(null)
+  const [rowBalances, setRowBalances] = useState({})
+  const [hideLsi, setHideLsi] = useState(true)
 
-const OutstandingReportComp = () => {
-  const [orders, setOrders] = useState([]);
-  const [hideLsiColumn, setHideLsiColumn] = useState(true);
-  const [selectedBreakdown, setSelectedBreakdown] = useState(null);
+  const defaultRange = getDefaultDateRange()
+  const todayDMY = todayDDMMYYYY()
+  const curYear = getCurrentYear()
+  const curMonthIdx = getCurrentMonth()
 
-  // ✅ FIX: Track balances by row
-  const [rowBalances, setRowBalances] = useState({});
+  const [activeTab, setActiveTab] = useState('period')
+  const [statusFilter, setStatusFilter] = useState('active')
+  const [filters, setFilters] = useState({ 
+    search:'', state:'', company:'', entity:'', 
+    from: defaultRange.from, to: defaultRange.to 
+  })
+  const [selYear, setSelYear] = useState(curYear)
+  const [selMonth, setSelMonth] = useState('All')
 
-  const currentDate = new Date();
-  const currentYear = currentDate.getFullYear();
-  const currentMonth = currentDate.getMonth();
-  const todayFormatted = getCurrentDate();
-  const defaultDateRange = getDefaultDateRange();
-
-  const [activeTab, setActiveTab] = useState('period');
-  const [statusFilter, setStatusFilter] = useState('active');
-
-  const [filters, setFilters] = useState({
-    search: '',
-    state: '',
-    company: '',
-    entity: '',
-    fromDate: defaultDateRange.fromDate,
-    toDate: defaultDateRange.toDate,
-  });
-
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedMonth, setSelectedMonth] = useState('All');
-
+  // Load orders
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    fetch('/api/billing/orders')
+      .then(r=>r.json())
+      .then(j => {
+        if (j.success) {
+          setOrders(j.data)
+        }
+      })
+      .catch(e => console.error('[OutstandingReport] fetch error:', e))
+  }, [])
 
-  const fetchOrders = async () => {
-    try {
-      const res = await fetch('/api/billing/orders');
-      const result = await res.json();
-      if (result.success) {
-        setOrders(result.data);
-      }
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-    }
-  };
+  const handleBalanceReady = useCallback((key, bal) => {
+    setRowBalances(prev => ({...prev, [key]: bal}))
+  }, [])
 
-  // ✅ FIX: Callback to receive balance from child TableRow
-  const handleBalanceCalculated = useCallback((rowKey, balance) => {
-    setRowBalances(prev => ({
-      ...prev,
-      [rowKey]: balance
-    }));
-  }, []);
+  // Reset balances when filters change
+  const filterKey = useMemo(()=>JSON.stringify({filters,statusFilter,activeTab,selYear,selMonth}),
+    [filters,statusFilter,activeTab,selYear,selMonth])
+  useEffect(()=>{ setRowBalances({}) },[filterKey])
 
-  // ✅ Generate unique key for current filter state
-  const filterKey = useMemo(() => {
-    return JSON.stringify({
-      filters,
-      statusFilter,
-      activeTab,
-      selectedYear,
-      selectedMonth
-    });
-  }, [filters, statusFilter, activeTab, selectedYear, selectedMonth]);
-
-  // ✅ Reset balances only when filter key changes
+  // Sync toDate from period selector
   useEffect(() => {
-    setRowBalances({});
-  }, [filterKey]);
-
-  const yearOptions = useMemo(() => getYearOptions(), []);
-
-  const handleYearChange = (year) => {
-    if (year === 'All') {
-      setSelectedYear(year);
-      setSelectedMonth('All');
+    if (activeTab !== 'period') return
+    if (selYear === 'All') {
+      setFilters(p=>({...p, from:'', to: toInputFmt(todayDMY)}))
     } else {
-      const yearNum = parseInt(year);
-      setSelectedYear(yearNum);
-      setSelectedMonth(yearNum === getCurrentYear() ? ALL_MONTHS[getCurrentMonth()] : 'All');
+      const y = selYear
+      const mIdx = selMonth === 'All' ? (y === curYear ? curMonthIdx : 11) : ALL_MONTHS.indexOf(selMonth)
+      setFilters(p=>({...p, from:'', to: toInputFmt(getLastDayOfMonth(mIdx, y))}))
     }
-  };
+  }, [selMonth, selYear, activeTab, todayDMY, curYear, curMonthIdx])
 
-  const availableMonths = useMemo(() => {
-    if (selectedYear === 'All') {
-      return [];
-    }
-    return getAvailableMonths(parseInt(selectedYear));
-  }, [selectedYear]);
+  const yearOptions = useMemo(()=>getYearOptions(),[])
+  const availMonths = useMemo(()=>selYear==='All'?[]:getAvailMonths(parseInt(selYear)),[selYear])
+  const uniqueCompanies = useMemo(()=>[...new Set(orders.map(o=>o.companyName))].filter(Boolean),[orders])
 
-  useEffect(() => {
-    if (activeTab === 'period') {
-      if (selectedYear === 'All') {
-        setFilters(prev => ({
-          ...prev,
-          fromDate: '',
-          toDate: convertToInputFormat(todayFormatted)
-        }));
-      } else {
-        const year = selectedYear;
-        let lastDay;
-
-        if (selectedMonth === 'All') {
-          const monthIndex = year === getCurrentYear() ? getCurrentMonth() : 11;
-          lastDay = getLastDayOfMonth(monthIndex, year);
-        } else {
-          const monthIndex = ALL_MONTHS.indexOf(selectedMonth);
-          lastDay = getLastDayOfMonth(monthIndex, year);
-        }
-
-        setFilters(prev => ({
-          ...prev,
-          fromDate: '',
-          toDate: convertToInputFormat(lastDay)
-        }));
-      }
-    }
-  }, [selectedMonth, selectedYear, activeTab, todayFormatted]);
-
-  const maxDateForInput = useMemo(() => {
-    return convertToInputFormat(todayFormatted);
-  }, [todayFormatted]);
-
-  const minDateForInput = useMemo(() => {
-    const minYear = currentYear - 5;
-    return `${minYear}-01-01`;
-  }, [currentYear]);
-
-  const filteredOrders = useMemo(() => {
-    return orders.filter(order => {
-      const matchCompany = !filters.company ||
-        order.companyName?.toLowerCase().includes(filters.company.toLowerCase());
-
-      const matchEntity = !filters.entity || order.entity === filters.entity;
-
-      const matchState = !filters.state ||
-        order.billing1?.state === filters.state ||
-        order.billing2?.state === filters.state;
-
-      const matchSearch = !filters.search ||
-        order.orderId?.toLowerCase().includes(filters.search.toLowerCase()) ||
-        order.lsiId?.toLowerCase().includes(filters.search.toLowerCase());
-
-      let matchStatus = true;
-      if (statusFilter === 'active') {
-        matchStatus = order.status === 'PCD';
-      } else {
-        matchStatus = order.status === 'Terminate';
-      }
-
-      let matchDateFilter = true;
-
-      const pcdDate = parseDate(order.pcdDate);
-      const terminateDate = order.terminateDate ? parseDate(order.terminateDate) : null;
-
-      if (pcdDate) {
-        if (activeTab === 'period') {
-          if (selectedYear !== 'All') {
-            const selectedYearNum = parseInt(selectedYear);
-
-            if (selectedMonth === 'All') {
-              const yearEndDate = new Date(selectedYearNum, 11, 31, 23, 59, 59);
-              matchDateFilter = pcdDate <= yearEndDate;
-            } else {
-              const monthIndex = ALL_MONTHS.indexOf(selectedMonth);
-              const monthEndDate = new Date(selectedYearNum, monthIndex + 1, 0, 23, 59, 59);
-              matchDateFilter = pcdDate <= monthEndDate;
-            }
-          }
-        } else if (activeTab === 'dateRange') {
-          if (filters.fromDate && filters.toDate) {
-            const fromDate = new Date(filters.fromDate);
-            fromDate.setHours(0, 0, 0, 0);
-            const toDate = new Date(filters.toDate);
-            toDate.setHours(23, 59, 59, 999);
-
-            const orderStartedBeforeRangeEnds = pcdDate <= toDate;
-            const orderActiveAfterRangeStarts = !terminateDate || terminateDate >= fromDate;
-
-            matchDateFilter = orderStartedBeforeRangeEnds && orderActiveAfterRangeStarts;
-          }
-        }
-      }
-
-      return matchSearch && matchCompany && matchEntity && matchState && matchStatus && matchDateFilter;
-    });
-  }, [orders, filters, statusFilter, activeTab, selectedYear, selectedMonth]);
-
-  // ✅ FIX: Calculate expected number of rows (after filteredOrders is defined)
-  const expectedRowCount = useMemo(() => {
-    let count = 0;
-    filteredOrders.forEach(order => {
-      const splitBilling = shouldSplitBilling(order);
-      count += splitBilling ? 2 : 1;
-    });
-    return count;
-  }, [filteredOrders]);
-
-  // ✅ FIX: Only calculate total when all rows are loaded
-  const totalBalance = useMemo(() => {
-    // Always calculate sum of available balances
-    const total = Object.values(rowBalances).reduce((sum, balance) => sum + balance, 0);
-    return total;
-  }, [rowBalances]);
-
-  // ✅ FIX: Check if still calculating
-  const isCalculating = useMemo(() => {
-    if (expectedRowCount === 0) return false;
-    return Object.keys(rowBalances).length < expectedRowCount;
-  }, [rowBalances, expectedRowCount]);
-
-  const uniqueCompanies = useMemo(() => {
-    return [...new Set(orders.map(o => o.companyName))].filter(Boolean);
-  }, [orders]);
-
-  const clearAllFilters = useCallback(() => {
-    const defaultRange = getDefaultDateRange();
-    setFilters({
-      search: '',
-      state: '',
-      company: '',
-      entity: '',
-      fromDate: defaultRange.fromDate,
-      toDate: defaultRange.toDate,
-    });
-    setActiveTab('period');
-    setSelectedYear(currentYear);
-    setSelectedMonth(ALL_MONTHS[getCurrentMonth()]);
-    setStatusFilter('active');
-  }, [currentYear]);
-
-  const hasActiveFilters = filters.search || filters.state || filters.company || filters.entity || (activeTab === 'dateRange' && filters.fromDate);
-
-  const handleExport = useCallback(() => {
-    console.log('Export functionality to be implemented');
-  }, []);
-
-  const getPeriodLabel = () => {
-    if (selectedYear === 'All') {
-      return 'All Time';
-    }
-    if (selectedMonth === 'All') {
-      return `Up to Dec ${selectedYear}`;
-    }
-    return `Up to ${selectedMonth} ${selectedYear}`;
-  };
-
-  if (selectedBreakdown) {
-    return (
-      <CalculationBreakdown
-        breakdown={selectedBreakdown}
-        onClose={() => setSelectedBreakdown(null)}
-      />
-    );
+  const handleYearChange = (y) => {
+    if (y==='All') { setSelYear(y); setSelMonth('All') }
+    else { const yn=parseInt(y); setSelYear(yn); setSelMonth(yn===curYear?ALL_MONTHS[curMonthIdx]:'All') }
   }
 
+  // Filter orders
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => {
+      if (filters.search) {
+        const s = filters.search.toLowerCase()
+        if (!order.orderId?.toLowerCase().includes(s) && !order.lsiId?.toLowerCase().includes(s)) return false
+      }
+      if (filters.company && !order.companyName?.toLowerCase().includes(filters.company.toLowerCase())) return false
+      if (filters.entity && order.entity !== filters.entity) return false
+      if (filters.state && order.billing1?.state !== filters.state && order.billing2?.state !== filters.state) return false
+
+      const matchStatus = statusFilter === 'active' ? order.status === 'PCD' : order.status === 'Terminate'
+      if (!matchStatus) return false
+
+      const pcdDate = parseAnyDate(order.pcdDate)
+      const termDate = order.terminateDate ? parseAnyDate(order.terminateDate) : null
+
+      if (!pcdDate) return false
+
+      let matchDate = true
+      if (activeTab === 'period' && selYear !== 'All') {
+        const yn = parseInt(selYear)
+        const mIdx = selMonth === 'All' ? (yn===curYear?curMonthIdx:11) : ALL_MONTHS.indexOf(selMonth)
+        const endOfPeriod = new Date(yn, mIdx+1, 0, 23, 59, 59)
+        matchDate = pcdDate <= endOfPeriod
+      } else if (activeTab === 'dateRange' && filters.from && filters.to) {
+        const from = new Date(filters.from); from.setHours(0,0,0,0)
+        const to = new Date(filters.to); to.setHours(23,59,59,999)
+        matchDate = pcdDate <= to && (!termDate || termDate >= from)
+      }
+
+      return matchDate
+    })
+  }, [orders, filters, statusFilter, activeTab, selYear, selMonth, curYear, curMonthIdx])
+
+  const expectedRows = useMemo(()=>filteredOrders.reduce((c,o)=>c+(isSplit(o)?2:1),0),[filteredOrders])
+  const totalBalance = useMemo(()=>Object.values(rowBalances).reduce((s,b)=>s+b,0),[rowBalances])
+  const isCalc = useMemo(()=>expectedRows>0&&Object.keys(rowBalances).length<expectedRows,[rowBalances,expectedRows])
+
+  const toDateStr = useMemo(()=>toStorageFmt(filters.to)||todayDMY,[filters.to,todayDMY])
+
+  const clearFilters = useCallback(()=>{
+    const dr = getDefaultDateRange()
+    setFilters({search:'',state:'',company:'',entity:'',from:dr.from,to:dr.to})
+    setActiveTab('period'); setSelYear(curYear); setSelMonth(ALL_MONTHS[curMonthIdx]); setStatusFilter('active')
+  },[curYear,curMonthIdx])
+
+  const hasFilters = filters.search||filters.state||filters.company||filters.entity
+  const periodLabel = selYear==='All' ? 'All Time' : selMonth==='All' ? `Up to Dec ${selYear}` : `Up to ${selMonth} ${selYear}`
+
+  if (viewBreakdown) return <BreakdownTable bd={viewBreakdown} onClose={()=>setViewBD(null)}/>
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50">
-      <div className="max-w-[1800px] mx-auto p-6 lg:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/10 to-slate-50">
+      <div className="max-w-[1900px] mx-auto p-4 lg:p-6">
 
-        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm mb-6">
-
-          <div className="mb-5">
-            <h1 className="text-2xl font-bold text-slate-900 mb-0.5">
-              Outstanding Balance Report Summary
-            </h1>
-            <p className="text-[14px] text-slate-600">
-              {activeTab === 'period' 
-                ? 'Cumulative totals - includes all orders up to selected period' 
-                : 'Shows orders active during selected date range'}
-            </p>
+        {/* Controls */}
+        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm mb-4">
+          <div className="mb-4">
+            <h1 className="text-2xl font-bold text-slate-900">Outstanding Balance Report</h1>
+            <p className="text-sm text-slate-500 mt-0.5">Cumulative balances per order up to selected period</p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 mb-5">
-            <div className="relative flex-1 min-w-[220px]">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search Order/LSI..."
-                className="w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                value={filters.search}
-                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+          {/* Filters */}
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <div className="relative flex-1 min-w-[180px]">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"/>
+              <input 
+                type="text" 
+                placeholder="Search Order / LSI…" 
+                className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={filters.search} 
+                onChange={e=>setFilters(p=>({...p,search:e.target.value}))}
               />
             </div>
-
-            <select
-              className="px-3 py-2.5 border border-slate-300 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white min-w-[140px]"
-              value={filters.state}
-              onChange={(e) => setFilters(prev => ({ ...prev, state: e.target.value }))}
+            <select 
+              className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 min-w-[120px]" 
+              value={filters.state} 
+              onChange={e=>setFilters(p=>({...p,state:e.target.value}))}
             >
               <option value="">All States</option>
-              {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+              {INDIAN_STATES.map(s=><option key={s} value={s}>{s}</option>)}
             </select>
-
-            <select
-              className="px-3 py-2.5 border border-slate-300 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white min-w-[160px]"
-              value={filters.company}
-              onChange={(e) => setFilters(prev => ({ ...prev, company: e.target.value }))}
+            <select 
+              className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 min-w-[140px]" 
+              value={filters.company} 
+              onChange={e=>setFilters(p=>({...p,company:e.target.value}))}
             >
               <option value="">All Companies</option>
-              {uniqueCompanies.map(company => (
-                <option key={company} value={company}>
-                  {truncateText(company, 20)}
-                </option>
-              ))}
+              {uniqueCompanies.map(c=><option key={c} value={c}>{c.slice(0,25)}</option>)}
             </select>
-
-            <select
-              className="px-3 py-2.5 border border-slate-300 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white min-w-[140px]"
-              value={filters.entity}
-              onChange={(e) => setFilters(prev => ({ ...prev, entity: e.target.value }))}
+            <select 
+              className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 min-w-[110px]" 
+              value={filters.entity} 
+              onChange={e=>setFilters(p=>({...p,entity:e.target.value}))}
             >
               <option value="">All Entities</option>
-              {ENTITIES.map(e => <option key={e} value={e}>{e}</option>)}
+              {ENTITIES.map(e=><option key={e} value={e}>{e}</option>)}
             </select>
-
-            <select
-              className="px-3 py-2.5 border border-emerald-300 rounded-lg text-[14px] font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-emerald-50 text-emerald-700 min-w-[150px]"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+            <select 
+              className="px-3 py-2 border border-emerald-300 rounded-lg text-sm bg-emerald-50 text-emerald-700 font-semibold focus:ring-2 focus:ring-emerald-400 min-w-[140px]" 
+              value={statusFilter} 
+              onChange={e=>setStatusFilter(e.target.value)}
             >
               <option value="active">Active (PCD)</option>
               <option value="inactive">Inactive (Terminate)</option>
             </select>
-
-            {hasActiveFilters && (
-              <button
-                onClick={clearAllFilters}
-                className="flex items-center gap-1.5 px-3 py-2.5 bg-rose-50 text-rose-600 text-[14px] font-medium rounded-lg hover:bg-rose-100 transition-colors duration-200 border border-rose-200"
+            {hasFilters && (
+              <button 
+                onClick={clearFilters} 
+                className="flex items-center gap-1 px-3 py-2 bg-rose-50 text-rose-600 text-sm rounded-lg border border-rose-200 hover:bg-rose-100"
               >
-                <X className="w-3.5 h-3.5" />
-                Clear Filter
+                <X className="w-3.5 h-3.5"/>Clear
               </button>
             )}
-
-            <div className="flex-1"></div>
-
-            <div className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-white to-slate-100 rounded-xl px-5 py-3 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300">
-              <div className="absolute -top-10 -right-10 w-24 h-24 bg-slate-200/40 rounded-full blur-2xl" />
-              <div className="relative">
-                <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
-                  Total Orders
-                </p>
-                <div className="flex items-end gap-2 mt-1">
-                  <p className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                    {filteredOrders.length}
-                  </p>
-                  <span className="text-xs text-slate-500 font-medium pb-1">
-                    Orders
-                  </span>
+            <div className="flex-1"/>
+            
+            {/* Stats */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-center">
+              <p className="text-[10px] font-bold text-slate-400 uppercase">Orders</p>
+              <p className="text-2xl font-extrabold text-slate-900">{filteredOrders.length}</p>
+            </div>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 text-center min-w-[160px]">
+              <p className="text-[10px] font-bold text-emerald-500 uppercase">Total Balance</p>
+              {isCalc ? (
+                <div className="flex items-center justify-center gap-2 mt-1">
+                  <div className="animate-spin h-5 w-5 rounded-full border-b-2 border-emerald-600"/>
+                  <span className="text-sm font-semibold text-emerald-600">Calculating…</span>
                 </div>
-              </div>
+              ) : (
+                <p className="text-xl font-extrabold text-emerald-700">₹{fmt(totalBalance)}</p>
+              )}
             </div>
-
-            <div className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-emerald-100 rounded-xl px-5 py-3 border border-emerald-200 shadow-sm hover:shadow-md transition-all duration-300">
-              <div className="absolute -top-10 -right-10 w-24 h-24 bg-emerald-200/40 rounded-full blur-2xl" />
-              <div className="relative">
-                <p className="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">
-                  Total Balance
-                </p>
-                {isCalculating ? (
-                  <div className="flex items-center gap-3 mt-1">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-600"></div>
-                    <span className="text-sm font-semibold text-emerald-600">Calculating...</span>
-                  </div>
-                ) : (
-                  <div className="flex items-end gap-2 mt-1">
-                    <p className="text-2xl font-extrabold text-emerald-700 tracking-tight">
-                      ₹{totalBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                    <span className="text-xs text-emerald-600 font-medium pb-1">
-                      INR
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-
           </div>
 
+          {/* Tabs */}
           <div className="flex items-center justify-between border-b border-slate-200 mb-4">
-            <div className="flex gap-1">
-              <button
-                onClick={() => {
-                  setActiveTab('period');
-                  const defaultRange = getDefaultDateRange();
-                  setFilters(prev => ({
-                    ...prev,
-                    fromDate: defaultRange.fromDate,
-                    toDate: defaultRange.toDate
-                  }));
-                }}
-                className={`px-5 py-2.5 text-[14px] font-semibold transition-all duration-200 border-b-2 ${activeTab === 'period'
-                  ? 'text-teal-600 border-teal-600'
-                  : 'text-slate-500 border-transparent hover:text-slate-700'
-                  }`}
-              >
-                Period Selector
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab('dateRange');
-                  const defaultRange = getDefaultDateRange();
-                  setFilters(prev => ({
-                    ...prev,
-                    fromDate: defaultRange.fromDate,
-                    toDate: defaultRange.toDate
-                  }));
-                }}
-                className={`px-5 py-2.5 text-[14px] font-semibold transition-all duration-200 border-b-2 ${activeTab === 'dateRange'
-                  ? 'text-teal-600 border-teal-600'
-                  : 'text-slate-500 border-transparent hover:text-slate-700'
-                  }`}
-              >
-                Date Range
-              </button>
+            <div className="flex">
+              {[['period','Period Selector'],['dateRange','Date Range']].map(([t,l])=>(
+                <button 
+                  key={t} 
+                  onClick={()=>{setActiveTab(t); const dr=getDefaultDateRange(); setFilters(p=>({...p,from:dr.from,to:dr.to}))}}
+                  className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition-all ${activeTab===t?'text-teal-600 border-teal-600':'text-slate-500 border-transparent hover:text-slate-700'}`}
+                >
+                  {l}
+                </button>
+              ))}
             </div>
-
-            <div className="flex items-center gap-2 mb-0.5">
-              <button
-                onClick={() => setHideLsiColumn(!hideLsiColumn)}
-                className="flex items-center gap-2 px-3.5 py-2 bg-slate-100 text-slate-700 text-[14px] font-medium rounded-lg hover:bg-slate-200 transition-colors duration-200"
+            <div className="flex gap-2 mb-0.5">
+              <button 
+                onClick={()=>setHideLsi(!hideLsi)} 
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200"
               >
-                {hideLsiColumn ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                {hideLsiColumn ? 'Show' : 'Hide'} LSI
+                {hideLsi?<Eye className="w-4 h-4"/>:<EyeOff className="w-4 h-4"/>} {hideLsi?'Show':'Hide'} LSI
               </button>
-
-              <button
-                onClick={handleExport}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md font-medium text-[14px]"
-              >
-                <Download className="w-4 h-4" />
-                Export
+              <button className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
+                <Download className="w-4 h-4"/>Export
               </button>
             </div>
           </div>
 
+          {/* Period selector */}
           {activeTab === 'period' && (
-            <div className="flex flex-wrap items-center gap-6 px-4">
-              <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
-                <label className="text-sm font-semibold text-gray-600">
-                  Year
-                </label>
-                <select
-                  className="border border-gray-300 rounded-lg px-4 py-2 text-sm font-semibold text-gray-700 bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-teal-400 min-w-[120px]"
-                  value={selectedYear}
-                  onChange={(e) => handleYearChange(e.target.value)}
+            <div className="flex flex-wrap items-center gap-4 px-1">
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                <label className="text-xs font-bold text-slate-500 uppercase">Year</label>
+                <select 
+                  className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  value={selYear} 
+                  onChange={e=>handleYearChange(e.target.value)}
                 >
-                  {yearOptions.map(year => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
+                  {yearOptions.map(y=><option key={y} value={y}>{y}</option>)}
                 </select>
               </div>
-
-              {selectedYear !== 'All' && (
-                <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 shadow-sm flex-1 min-w-[420px]">
-                  <label className="text-sm font-semibold text-gray-600 whitespace-nowrap">
-                    Month
-                  </label>
-
-                  <div className="flex gap-2 flex-wrap justify-center">
-                    <button
-                      onClick={() => setSelectedMonth('All')}
-                      className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${selectedMonth === 'All'
-                        ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-md scale-105'
-                        : 'bg-white text-gray-700 border border-gray-200 hover:border-teal-300 hover:shadow-sm'
-                        }`}
+              {selYear !== 'All' && (
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex-1 min-w-[360px]">
+                  <label className="text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Month</label>
+                  <div className="flex gap-1.5 flex-wrap">
+                    <button 
+                      onClick={()=>setSelMonth('All')} 
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${selMonth==='All'?'bg-teal-500 text-white':'bg-white text-slate-700 border border-slate-200 hover:border-teal-300'}`}
                     >
                       All
                     </button>
-
-                    {ALL_MONTHS.map(month => {
-                      const isAvailable = availableMonths.includes(month);
+                    {ALL_MONTHS.map(m=>{
+                      const ok=availMonths.includes(m)
                       return (
-                        <button
-                          key={month}
-                          onClick={() => isAvailable && setSelectedMonth(month)}
-                          disabled={!isAvailable}
-                          className={`px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${selectedMonth === month
-                            ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-md scale-105'
-                            : isAvailable
-                              ? 'bg-white text-gray-700 border border-gray-200 hover:border-teal-300 hover:shadow-sm'
-                              : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed opacity-50'
-                            }`}
+                        <button 
+                          key={m} 
+                          onClick={()=>ok&&setSelMonth(m)} 
+                          disabled={!ok}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${selMonth===m?'bg-teal-500 text-white':ok?'bg-white text-slate-700 border border-slate-200 hover:border-teal-300':'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-50'}`}
                         >
-                          {month}
+                          {m}
                         </button>
-                      );
+                      )
                     })}
                   </div>
                 </div>
               )}
-
-              <div className="bg-teal-50 border-2 border-teal-200 rounded-lg px-4 py-2">
-                <span className="text-sm font-bold text-teal-700">
-                  Showing: {getPeriodLabel()}
-                </span>
+              <div className="bg-teal-50 border-2 border-teal-200 rounded-lg px-3 py-1.5">
+                <span className="text-sm font-bold text-teal-700">Showing: {periodLabel}</span>
               </div>
             </div>
           )}
 
+          {/* Date range */}
           {activeTab === 'dateRange' && (
-            <div className="px-6 space-y-4">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="flex items-center gap-2">
-                  <label className="text-[14px] font-semibold text-slate-700 whitespace-nowrap">
-                    From Date:
-                  </label>
-                  <input
-                    type="date"
-                    className="flex-1 px-3 py-2.5 border border-slate-300 rounded-lg text-[14px]
-                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    value={filters.fromDate}
-                    min={minDateForInput}
-                    max={maxDateForInput}
-                    onChange={(e) =>
-                      setFilters(prev => ({ ...prev, fromDate: e.target.value }))
-                    }
+            <div className="flex flex-wrap gap-4 px-1">
+              {[['From','from'],['To','to']].map(([l,k])=>(
+                <div key={k} className="flex items-center gap-2">
+                  <label className="text-sm font-semibold text-slate-600">{l}:</label>
+                  <input 
+                    type="date" 
+                    className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={filters[k]} 
+                    max={toInputFmt(todayDMY)}
+                    onChange={e=>setFilters(p=>({...p,[k]:e.target.value}))}
                   />
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <label className="text-[14px] font-semibold text-slate-700 whitespace-nowrap">
-                    To Date:
-                  </label>
-                  <input
-                    type="date"
-                    className="flex-1 px-3 py-2.5 border border-slate-300 rounded-lg text-[14px]
-                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    value={filters.toDate}
-                    min={filters.fromDate || minDateForInput}
-                    max={maxDateForInput}
-                    onChange={(e) =>
-                      setFilters(prev => ({ ...prev, toDate: e.target.value }))
-                    }
-                  />
-                </div>
-              </div>
+              ))}
             </div>
           )}
-
         </div>
 
-        {/* Orders Table */}
+        {/* Simplified Table */}
         <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-slate-100 border-b-2 border-slate-200">
-                  <th className="px-4 py-3.5 text-left text-xs font-bold text-slate-700 uppercase">Order ID</th>
-                  {!hideLsiColumn && (
-                    <th className="px-4 py-3.5 text-left text-xs font-bold text-slate-700 uppercase">LSI ID</th>
-                  )}
-                  <th className="px-4 py-3.5 text-left text-xs font-bold text-slate-700 uppercase">End A</th>
-                  <th className="px-4 py-3.5 text-left text-xs font-bold text-slate-700 uppercase">End B</th>
-                  <th className="px-4 py-3.5 text-left text-xs font-bold text-slate-700 uppercase">Company</th>
-                  <th className="px-4 py-3.5 text-left text-xs font-bold text-slate-700 uppercase">State</th>
-                  <th className="px-4 py-3.5 text-right text-xs font-bold text-slate-700 uppercase">Balance</th>
-                  <th className="px-4 py-3.5 text-center text-xs font-bold text-slate-700 uppercase">Split</th>
-                  <th className="px-4 py-3.5 text-left text-xs font-bold text-slate-700 uppercase">Service Period</th>
-                  <th className="px-4 py-3.5 text-center text-xs font-bold text-slate-700 uppercase">Action</th>
+                <tr className="bg-gradient-to-r from-gray-50 to-blue-50 border-b-2 border-gray-200">
+                  <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Order ID</th>
+                  {!hideLsi && <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">LSI ID</th>}
+                  <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">End A</th>
+                  <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">End B</th>
+                  <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Company</th>
+                  <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">State</th>
+                  <th className="px-4 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider bg-yellow-50">Balance</th>
+                  <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Split</th>
+                  <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-
               <tbody className="bg-white divide-y divide-slate-100">
-                {filteredOrders.map((order, orderIndex) => {
-                  const fromDateFormatted = filters.fromDate ?
-                    convertToStorageFormat(filters.fromDate) : order.pcdDate;
-                  const toDateFormatted = convertToStorageFormat(filters.toDate);
-
-                  const splitBilling = shouldSplitBilling(order);
-
-                  if (splitBilling) {
-                    const rowKey1 = `${order.id}-${order.billing1?.state}-2-${orderIndex}`;
-                    const rowKey2 = `${order.id}-${order.billing2?.state}-2-${orderIndex}`;
-
+                {filteredOrders.map((order, idx) => {
+                  const split = isSplit(order)
+                  if (split) {
+                    const s1 = order.billing1?.state||''
+                    const s2 = order.billing2?.state||''
                     return (
-                      <React.Fragment key={`order-${order.id}-${orderIndex}`}>
-                        <TableRow
-                          rowKey={rowKey1}
-                          order={order}
-                          hideLsiColumn={hideLsiColumn}
-                          fromDateFormatted={fromDateFormatted}
-                          toDateFormatted={toDateFormatted}
-                          splitFactor={2}
-                          stateToShow={order.billing1?.state}
-                          onViewBreakdown={setSelectedBreakdown}
-                          onBalanceCalculated={handleBalanceCalculated}
+                      <React.Fragment key={`${order._id}-${idx}`}>
+                        <OrderRow 
+                          rowKey={`${order._id}-${s1}-${idx}`} 
+                          order={order} 
+                          toDateStr={toDateStr} 
+                          splitState={s1} 
+                          onViewBreakdown={setViewBD} 
+                          onBalanceReady={handleBalanceReady}
+                          hideLsi={hideLsi}
                         />
-                        <TableRow
-                          rowKey={rowKey2}
-                          order={order}
-                          hideLsiColumn={hideLsiColumn}
-                          fromDateFormatted={fromDateFormatted}
-                          toDateFormatted={toDateFormatted}
-                          splitFactor={2}
-                          stateToShow={order.billing2?.state}
-                          onViewBreakdown={setSelectedBreakdown}
-                          onBalanceCalculated={handleBalanceCalculated}
+                        <OrderRow 
+                          rowKey={`${order._id}-${s2}-${idx}`} 
+                          order={order} 
+                          toDateStr={toDateStr} 
+                          splitState={s2} 
+                          onViewBreakdown={setViewBD} 
+                          onBalanceReady={handleBalanceReady}
+                          hideLsi={hideLsi}
                         />
                       </React.Fragment>
-                    );
-                  } else {
-                    const rowKey = `${order.id}-main-1-${orderIndex}`;
-                    return (
-                      <TableRow
-                        key={`order-${order.id}-${orderIndex}`}
-                        rowKey={rowKey}
-                        order={order}
-                        hideLsiColumn={hideLsiColumn}
-                        fromDateFormatted={fromDateFormatted}
-                        toDateFormatted={toDateFormatted}
-                        splitFactor={1}
-                        stateToShow=""
-                        onViewBreakdown={setSelectedBreakdown}
-                        onBalanceCalculated={handleBalanceCalculated}
-                      />
-                    );
+                    )
                   }
+                  return (
+                    <OrderRow 
+                      key={`${order._id}-${idx}`} 
+                      rowKey={`${order._id}-main-${idx}`} 
+                      order={order} 
+                      toDateStr={toDateStr} 
+                      splitState={order.billing1?.state||''} 
+                      onViewBreakdown={setViewBD} 
+                      onBalanceReady={handleBalanceReady}
+                      hideLsi={hideLsi}
+                    />
+                  )
                 })}
               </tbody>
             </table>
           </div>
 
           {filteredOrders.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-slate-500 text-lg">No orders found matching your filters</p>
+            <div className="text-center py-16">
+              <p className="text-slate-500 text-base font-medium">No orders found</p>
+              <p className="text-slate-400 text-sm mt-1">Check status filter (Active/Inactive) or date range</p>
             </div>
           )}
         </div>
 
       </div>
     </div>
-  );
-};
-
-export default OutstandingReportComp;
+  )
+}

@@ -39,10 +39,39 @@ const getCurrentDateDDMMYYYY = () => {
   return `${dd}-${mm}-${yyyy}`;
 };
 
+// Helper to get month start and end dates
+const getMonthRange = (monthStr) => {
+  // monthStr format: "January 2026"
+  const [monthName, year] = monthStr.split(' ');
+  const monthIndex = ['January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'].indexOf(monthName);
+  
+  const startDate = new Date(parseInt(year), monthIndex, 1);
+  const endDate = new Date(parseInt(year), monthIndex + 1, 0);
+  
+  const formatDate = (date) => {
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    return `${dd}-${mm}-${yyyy}`;
+  };
+  
+  return {
+    startDate: formatDate(startDate),
+    endDate: formatDate(endDate)
+  };
+};
+
 // Helper function to calculate totals from array
 const calculateTotal = (arr) => {
   if (!arr || arr.length === 0) return 0;
   return arr.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+};
+
+// Helper function to calculate misc sell total with GST
+const calculateMiscSellTotal = (arr) => {
+  if (!arr || arr.length === 0) return 0;
+  return arr.reduce((sum, item) => sum + (Number(item.totalWithGst) || Number(item.amount) || 0), 0);
 };
 
 // Separate component for View/Edit Mode
@@ -61,13 +90,36 @@ const BillingDetailModal = ({
     await onSave(editFormData);
   };
 
-  const handleAddEntry = (arrayName) => {
-    const newEntry = { date: getCurrentDateDDMMYYYY(), amount: 0, notes: '' };
-    setEditFormData({
-      ...editFormData,
-      [arrayName]: [...(editFormData[arrayName] || []), newEntry]
-    });
-  };
+ const handleAddEntry = (arrayName) => {
+  let newEntry;
+
+  if (arrayName === 'creditNotes') {
+    newEntry = {
+      submitDate: getCurrentDateDDMMYYYY(), // date credit note was submitted
+      periodStart: '',                      // period start (within current month)
+      periodEnd: '',                        // period end (within current month)
+      amount: 0,                            // auto-calculated, not editable
+      notes: '',
+    };
+  } else if (arrayName === 'miscellaneousSell') {
+    newEntry = {
+      date: getCurrentDateDDMMYYYY(),
+      amount: 0,
+      notes: '',
+      cgst: 0,
+      sgst: 0,
+      igst: 0,
+      totalWithGst: 0,
+    };
+  } else {
+    newEntry = { date: getCurrentDateDDMMYYYY(), amount: 0, notes: '' };
+  }
+
+  setEditFormData({
+    ...editFormData,
+    [arrayName]: [...(editFormData[arrayName] || []), newEntry],
+  });
+};
 
   const handleRemoveEntry = (arrayName, index) => {
     const updatedArray = editFormData[arrayName].filter((_, i) => i !== index);
@@ -80,6 +132,25 @@ const BillingDetailModal = ({
   const handleUpdateEntry = (arrayName, index, field, value) => {
     const updatedArray = [...editFormData[arrayName]];
     updatedArray[index] = { ...updatedArray[index], [field]: value };
+    
+    // Auto-calculate GST for miscellaneous sell
+    if (arrayName === 'miscellaneousSell' && field === 'amount') {
+      const amount = Number(value) || 0;
+      const isSelfGST = editFormData.isSelfGST || false;
+      
+      if (isSelfGST) {
+        updatedArray[index].cgst = amount * 0.09;
+        updatedArray[index].sgst = amount * 0.09;
+        updatedArray[index].igst = 0;
+      } else {
+        updatedArray[index].cgst = 0;
+        updatedArray[index].sgst = 0;
+        updatedArray[index].igst = amount * 0.18;
+      }
+      
+      updatedArray[index].totalWithGst = amount + updatedArray[index].cgst + updatedArray[index].sgst + updatedArray[index].igst;
+    }
+    
     setEditFormData({
       ...editFormData,
       [arrayName]: updatedArray
@@ -230,6 +301,26 @@ const BillingDetailModal = ({
             </div>
             
             <div>
+              <label className="text-sm font-semibold text-gray-600 mb-2 block">Split Percentage</label>
+              <input
+                type="text"
+                value={`${editFormData.splitPercentage || 100}%`}
+                disabled
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-900 font-medium"
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-semibold text-gray-600 mb-2 block">GST Type</label>
+              <input
+                type="text"
+                value={editFormData.isSelfGST ? 'Self GST (CGST+SGST)' : 'IGST'}
+                disabled
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-900 font-medium"
+              />
+            </div>
+            
+            <div>
               <label className="text-sm font-semibold text-gray-600 mb-2 block">Monthly Billing (Basic)</label>
               <input
                 type="number"
@@ -237,12 +328,23 @@ const BillingDetailModal = ({
                 onChange={(e) => {
                   if (isEditMode) {
                     const newMonthly = Number(e.target.value);
-                    const newGst = newMonthly * 0.18;
+                    const isSelfGST = editFormData.isSelfGST || false;
+                    
+                    let cgst = 0, sgst = 0, igst = 0;
+                    if (isSelfGST) {
+                      cgst = newMonthly * 0.09;
+                      sgst = newMonthly * 0.09;
+                    } else {
+                      igst = newMonthly * 0.18;
+                    }
+                    
                     setEditFormData({
                       ...editFormData,
                       monthlyBilling: newMonthly,
-                      gst: newGst,
-                      totalWithGst: newMonthly + newGst
+                      cgst,
+                      sgst,
+                      igst,
+                      totalWithGst: newMonthly + cgst + sgst + igst
                     });
                   }
                 }}
@@ -256,10 +358,30 @@ const BillingDetailModal = ({
             </div>
             
             <div>
-              <label className="text-sm font-semibold text-gray-600 mb-2 block">GST (18%)</label>
+              <label className="text-sm font-semibold text-gray-600 mb-2 block">CGST (9%)</label>
               <input
                 type="number"
-                value={editFormData.gst.toFixed(2)}
+                value={editFormData.cgst.toFixed(2)}
+                disabled
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-900 font-medium"
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-semibold text-gray-600 mb-2 block">SGST (9%)</label>
+              <input
+                type="number"
+                value={editFormData.sgst.toFixed(2)}
+                disabled
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-900 font-medium"
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-semibold text-gray-600 mb-2 block">IGST (18%)</label>
+              <input
+                type="number"
+                value={editFormData.igst.toFixed(2)}
                 disabled
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-900 font-medium"
               />
@@ -325,8 +447,8 @@ const BillingDetailModal = ({
           colorClass="green"
         />
         
-        {/* Credit Notes */}
-        <ArrayDetailsSection
+        {/* Credit Notes with Month Selector */}
+        <CreditNotesSection
           title="Credit Notes"
           icon={<Receipt className="w-6 h-6 text-cyan-600" />}
           arrayName="creditNotes"
@@ -336,10 +458,14 @@ const BillingDetailModal = ({
           onUpdateEntry={handleUpdateEntry}
           onRemoveEntry={handleRemoveEntry}
           colorClass="cyan"
+          currentMonth={editFormData.month}
+          totalWithGst={editFormData.totalWithGst}
+          setEditFormData={setEditFormData}
+          editFormData={editFormData}
         />
         
         {/* Miscellaneous Sell */}
-        <ArrayDetailsSection
+        <MiscSellSection
           title="Miscellaneous Sell"
           icon={<TrendingUp className="w-6 h-6 text-purple-600" />}
           arrayName="miscellaneousSell"
@@ -488,6 +614,453 @@ const ArrayDetailsSection = ({
   );
 };
 
+// Credit Notes Section with Month Selector
+const CreditNotesSection = ({
+  title,
+  icon,
+  arrayName,
+  data,
+  isEditMode,
+  onAddEntry,
+  onUpdateEntry,
+  onRemoveEntry,
+  colorClass,
+  currentMonth,
+  totalWithGst,
+  setEditFormData,
+  editFormData,
+}) => {
+  // Derive month boundaries and total days from currentMonth ("November 2025")
+  const monthInfo = useMemo(() => {
+    if (!currentMonth) return null;
+    const [monthName, yearStr] = currentMonth.split(' ');
+    const monthNames = [
+      'January','February','March','April','May','June',
+      'July','August','September','October','November','December',
+    ];
+    const monthIndex = monthNames.indexOf(monthName);
+    const year = parseInt(yearStr, 10);
+    const totalDays = new Date(year, monthIndex + 1, 0).getDate();
+    const mm = String(monthIndex + 1).padStart(2, '0');
+    const lastDayStr = String(totalDays).padStart(2, '0');
+    return {
+      totalDays,
+      monthIndex,
+      year,
+      inputMin: `${year}-${mm}-01`,
+      inputMax: `${year}-${mm}-${lastDayStr}`,
+    };
+  }, [currentMonth]);
+
+  // Parse a DD-MM-YYYY string → Date object
+  const parseDDMMYYYY = (ddmmyyyy) => {
+    if (!ddmmyyyy) return null;
+    const parts = ddmmyyyy.split('-');
+    if (parts.length !== 3) return null;
+    return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+  };
+
+  // Calculate proportional amount based on selected period
+  const calcAmount = (periodStart, periodEnd) => {
+    if (!periodStart || !periodEnd || !monthInfo) return 0;
+    const start = parseDDMMYYYY(periodStart);
+    const end = parseDDMMYYYY(periodEnd);
+    if (!start || !end || end <= start) return 0;
+    const diffDays = Math.round((end - start) / (1000 * 60 * 60 * 24));
+    return Math.round((diffDays / monthInfo.totalDays) * totalWithGst * 100) / 100;
+  };
+
+  // Handle period date changes — also auto-updates amount
+  const handlePeriodChange = (index, field, value) => {
+    const updatedArray = [...editFormData.creditNotes];
+    updatedArray[index] = { ...updatedArray[index], [field]: value };
+
+    const start = field === 'periodStart' ? value : updatedArray[index].periodStart;
+    const end   = field === 'periodEnd'   ? value : updatedArray[index].periodEnd;
+    updatedArray[index].amount = calcAmount(start, end);
+
+    setEditFormData({ ...editFormData, creditNotes: updatedArray });
+  };
+
+  return (
+    <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+      {/* Section Header */}
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+          {icon}
+          {title}
+        </h3>
+        {isEditMode && (
+          <button
+            onClick={() => onAddEntry(arrayName)}
+            className={`flex items-center gap-2 px-4 py-2 bg-${colorClass}-100 text-${colorClass}-700 rounded-lg hover:bg-${colorClass}-200 transition-colors font-semibold`}
+          >
+            <Plus className="w-4 h-4" />
+            Add Entry
+          </button>
+        )}
+      </div>
+
+      <div className="space-y-5">
+        {data.map((detail, index) => {
+          // Compute display values
+          const start       = parseDDMMYYYY(detail.periodStart);
+          const end         = parseDDMMYYYY(detail.periodEnd);
+          const selectedDays =
+            start && end && end > start
+              ? Math.round((end - start) / (1000 * 60 * 60 * 24))
+              : 0;
+          const hasPeriod = !!detail.periodStart && !!detail.periodEnd && selectedDays > 0;
+
+          return (
+            <div
+              key={index}
+              className="rounded-xl border border-gray-200 overflow-hidden bg-gray-50"
+            >
+              {/* ── Top bar: formula preview ─────────────────────────────── */}
+              {hasPeriod && (
+                <div className="px-4 py-2.5 bg-gradient-to-r from-cyan-50 to-teal-50 border-b border-cyan-200 flex items-center gap-2 text-xs text-cyan-800 font-semibold">
+                  <CalendarIcon className="w-3.5 h-3.5 flex-shrink-0 text-cyan-600" />
+                  <span>
+                    ₹{totalWithGst.toFixed(2)} &times; {selectedDays}&nbsp;days /{' '}
+                    {monthInfo?.totalDays}&nbsp;days&nbsp;=&nbsp;
+                    <span className="text-teal-700 font-extrabold">
+                      ₹{(detail.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </span>
+                  </span>
+                  <span className="ml-auto text-cyan-500 font-normal">
+                    ({detail.periodStart} → {detail.periodEnd})
+                  </span>
+                </div>
+              )}
+
+              {/* ── Field grid ───────────────────────────────────────────── */}
+              <div className="p-4 grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4">
+
+                {/* 1. Submit Date — stored as 'date' to satisfy MongoDB schema */}
+                <div className="xl:col-span-1">
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block">
+                    Submit Date
+                  </label>
+                  <input
+                    type="date"
+                    value={formatDateToInput(detail.date || '')}
+                    onChange={(e) => {
+                      if (isEditMode) {
+                        const ddmmyyyy = formatDateToDisplay(e.target.value);
+                        onUpdateEntry(arrayName, index, 'date', ddmmyyyy);  // ← 'date' key
+                      }
+                    }}
+                    disabled={!isEditMode}
+                    className={`w-full px-3 py-2 border rounded-lg text-sm ${
+                      isEditMode
+                        ? 'border-blue-300 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none'
+                        : 'border-gray-200 bg-white'
+                    }`}
+                  />
+                  {!isEditMode && detail.date && (
+                    <p className="text-xs text-gray-500 mt-1">{detail.date}</p>
+                  )}
+                </div>
+
+                {/* 2. Period Start */}
+                <div className="xl:col-span-1">
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block">
+                    Period Start{' '}
+                    <span className="text-cyan-600 font-normal">
+                      ({currentMonth})
+                    </span>
+                  </label>
+                  <input
+                    type="date"
+                    value={formatDateToInput(detail.periodStart || '')}
+                    min={monthInfo?.inputMin}
+                    max={monthInfo?.inputMax}
+                    onChange={(e) => {
+                      if (isEditMode) {
+                        const ddmmyyyy = formatDateToDisplay(e.target.value);
+                        handlePeriodChange(index, 'periodStart', ddmmyyyy);
+                      }
+                    }}
+                    disabled={!isEditMode}
+                    className={`w-full px-3 py-2 border rounded-lg text-sm ${
+                      isEditMode
+                        ? 'border-cyan-300 bg-white focus:ring-2 focus:ring-cyan-500 focus:outline-none'
+                        : 'border-gray-200 bg-white'
+                    }`}
+                  />
+                  {!isEditMode && detail.periodStart && (
+                    <p className="text-xs text-gray-500 mt-1">{detail.periodStart}</p>
+                  )}
+                </div>
+
+                {/* 3. Period End */}
+                <div className="xl:col-span-1">
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block">
+                    Period End{' '}
+                    <span className="text-cyan-600 font-normal">
+                      ({monthInfo?.totalDays} days total)
+                    </span>
+                  </label>
+                  <input
+                    type="date"
+                    value={formatDateToInput(detail.periodEnd || '')}
+                    min={monthInfo?.inputMin}
+                    max={monthInfo?.inputMax}
+                    onChange={(e) => {
+                      if (isEditMode) {
+                        const ddmmyyyy = formatDateToDisplay(e.target.value);
+                        handlePeriodChange(index, 'periodEnd', ddmmyyyy);
+                      }
+                    }}
+                    disabled={!isEditMode}
+                    className={`w-full px-3 py-2 border rounded-lg text-sm ${
+                      isEditMode
+                        ? 'border-cyan-300 bg-white focus:ring-2 focus:ring-cyan-500 focus:outline-none'
+                        : 'border-gray-200 bg-white'
+                    }`}
+                  />
+                  {!isEditMode && detail.periodEnd && (
+                    <p className="text-xs text-gray-500 mt-1">{detail.periodEnd}</p>
+                  )}
+                </div>
+
+                {/* 4. Auto-calculated Amount (read-only) */}
+                <div className="xl:col-span-1">
+                  <label className="text-xs font-semibold text-gray-600 mb-1 flex items-center gap-1">
+                    Amount
+                    <span className="px-1.5 py-0.5 bg-teal-100 text-teal-700 rounded text-[10px] font-bold leading-none">
+                      AUTO
+                    </span>
+                  </label>
+                  <input
+                    type="number"
+                    value={detail.amount || 0}
+                    disabled
+                    className="w-full px-3 py-2 border border-teal-300 rounded-lg text-sm bg-teal-50 text-teal-900 font-extrabold cursor-not-allowed"
+                  />
+                  {hasPeriod && (
+                    <p className="text-[11px] text-teal-600 mt-1 font-semibold">
+                      {selectedDays}/{monthInfo?.totalDays} days
+                    </p>
+                  )}
+                  {isEditMode && !hasPeriod && (
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      Select period to auto-fill
+                    </p>
+                  )}
+                </div>
+
+                {/* 5. Notes */}
+                <div className="xl:col-span-1">
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Notes</label>
+                  <input
+                    type="text"
+                    value={detail.notes || ''}
+                    onChange={(e) =>
+                      isEditMode && onUpdateEntry(arrayName, index, 'notes', e.target.value)
+                    }
+                    disabled={!isEditMode}
+                    placeholder="Add notes..."
+                    className={`w-full px-3 py-2 border rounded-lg text-sm ${
+                      isEditMode
+                        ? 'border-blue-300 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none'
+                        : 'border-gray-200 bg-white'
+                    }`}
+                  />
+                </div>
+
+                {/* 6. Remove Button (edit mode only) */}
+                {isEditMode && (
+                  <div className="xl:col-span-1 flex items-end">
+                    <button
+                      onClick={() => onRemoveEntry(arrayName, index)}
+                      className="w-full px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-semibold flex items-center justify-center gap-2 text-sm"
+                    >
+                      <Trash className="w-4 h-4" />
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Visual progress bar ──────────────────────────────────── */}
+              {hasPeriod && (
+                <div className="px-4 pb-3">
+                  <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1">
+                    <span>Month start</span>
+                    <span className="text-cyan-600 font-semibold">
+                      {selectedDays} of {monthInfo?.totalDays} days selected
+                    </span>
+                    <span>Month end</span>
+                  </div>
+                  <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-cyan-400 to-teal-500 rounded-full transition-all duration-300"
+                      style={{
+                        width: `${Math.min(100, (selectedDays / (monthInfo?.totalDays || 1)) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {data.length === 0 && (
+          <p className="text-center text-gray-500 py-8">
+            No {title.toLowerCase()} added yet
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Specialized section for Miscellaneous Sell with GST
+const MiscSellSection = ({ 
+  title, 
+  icon, 
+  arrayName, 
+  data, 
+  isEditMode, 
+  onAddEntry, 
+  onUpdateEntry, 
+  onRemoveEntry,
+  colorClass 
+}) => {
+  return (
+    <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+          {icon}
+          {title}
+        </h3>
+        {isEditMode && (
+          <button
+            onClick={() => onAddEntry(arrayName)}
+            className={`flex items-center gap-2 px-4 py-2 bg-${colorClass}-100 text-${colorClass}-700 rounded-lg hover:bg-${colorClass}-200 transition-colors font-semibold`}
+          >
+            <Plus className="w-4 h-4" />
+            Add Entry
+          </button>
+        )}
+      </div>
+      
+      <div className="space-y-4">
+        {data.map((detail, index) => (
+          <div key={index} className="grid grid-cols-1 md:grid-cols-7 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Date</label>
+              <input
+                type="date"
+                value={formatDateToInput(detail.date)}
+                onChange={(e) => {
+                  if (isEditMode) {
+                    const ddmmyyyy = formatDateToDisplay(e.target.value);
+                    onUpdateEntry(arrayName, index, 'date', ddmmyyyy);
+                  }
+                }}
+                disabled={!isEditMode}
+                className={`w-full px-3 py-2 border rounded-lg text-sm ${
+                  isEditMode 
+                    ? 'border-blue-300 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none' 
+                    : 'border-gray-200 bg-white'
+                }`}
+              />
+              {!isEditMode && detail.date && (
+                <p className="text-xs text-gray-500 mt-1">{detail.date}</p>
+              )}
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Amount</label>
+              <input
+                type="number"
+                value={detail.amount}
+                onChange={(e) => isEditMode && onUpdateEntry(arrayName, index, 'amount', Number(e.target.value))}
+                disabled={!isEditMode}
+                placeholder="0.00"
+                className={`w-full px-3 py-2 border rounded-lg text-sm ${
+                  isEditMode 
+                    ? 'border-blue-300 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none' 
+                    : 'border-gray-200 bg-white'
+                }`}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">CGST (9%)</label>
+              <input
+                type="number"
+                value={(detail.cgst || 0).toFixed(2)}
+                disabled
+                className="w-full px-3 py-2 border rounded-lg text-sm border-gray-200 bg-gray-50"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">SGST (9%)</label>
+              <input
+                type="number"
+                value={(detail.sgst || 0).toFixed(2)}
+                disabled
+                className="w-full px-3 py-2 border rounded-lg text-sm border-gray-200 bg-gray-50"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">IGST (18%)</label>
+              <input
+                type="number"
+                value={(detail.igst || 0).toFixed(2)}
+                disabled
+                className="w-full px-3 py-2 border rounded-lg text-sm border-gray-200 bg-gray-50"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Total + GST</label>
+              <input
+                type="number"
+                value={(detail.totalWithGst || detail.amount || 0).toFixed(2)}
+                disabled
+                className="w-full px-3 py-2 border rounded-lg text-sm border-green-300 bg-green-50 font-bold"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Notes</label>
+              <input
+                type="text"
+                value={detail.notes || ''}
+                onChange={(e) => isEditMode && onUpdateEntry(arrayName, index, 'notes', e.target.value)}
+                disabled={!isEditMode}
+                placeholder="Notes..."
+                className={`w-full px-3 py-2 border rounded-lg text-sm ${
+                  isEditMode 
+                    ? 'border-blue-300 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none' 
+                    : 'border-gray-200 bg-white'
+                }`}
+              />
+            </div>
+            {isEditMode && (
+              <div className="flex items-end md:col-span-7">
+                <button
+                  onClick={() => onRemoveEntry(arrayName, index)}
+                  className="w-full px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-semibold flex items-center justify-center gap-2"
+                >
+                  <Trash className="w-4 h-4" />
+                  Remove
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+        {data.length === 0 && (
+          <p className="text-center text-gray-500 py-8">No {title.toLowerCase()} added yet</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Main Component continues in next part...
 // Main Component
 const MonthlyBillGeneratorComp = () => {
   const searchParams = useSearchParams();
@@ -557,14 +1130,21 @@ const MonthlyBillGeneratorComp = () => {
     return billings.filter(b => b.state === selectedState);
   }, [billings, selectedState]);
   
-  // ✅ CORRECT CALCULATION: Total Remaining Adjustment with Payment Allocation (INCLUDING CREDIT NOTES)
+  // Check if we have any CGST, SGST, or IGST values
+  const hasGSTColumns = useMemo(() => {
+    const hasCGST = filteredBillings.some(b => (b.cgst ?? 0) > 0);
+    const hasSGST = filteredBillings.some(b => (b.sgst ?? 0) > 0);
+    const hasIGST = filteredBillings.some(b => (b.igst ?? 0) > 0);
+    return { hasCGST, hasSGST, hasIGST };
+  }, [filteredBillings]);
+  
+  // Calculate billings with balance (TDS Prov NOT subtracted, only TDS Conf)
   const billingsWithBalance = useMemo(() => {
     let runningBalance = 0;
-    let cumulativeUnpaid = 0; // Track cumulative unpaid amount
+    let cumulativeUnpaid = 0;
     
     console.log('=== BILLING CALCULATION START ===');
     
-    // Sort billings chronologically
     const sortedBillings = [...filteredBillings].sort((a, b) => {
       const parseMonth = (monthStr) => {
         const [monthName, year] = monthStr.split(' ');
@@ -575,61 +1155,50 @@ const MonthlyBillGeneratorComp = () => {
       return parseMonth(a.month) - parseMonth(b.month);
     });
     
-    // Calculate TOTAL credit pool from ALL months (INCLUDING CREDIT NOTES)
+    // Calculate TOTAL credit pool (Received + Credit Notes + TDS Confirm only)
     const totalCreditPool = sortedBillings.reduce((sum, billing) => {
       const received = calculateTotal(billing.receivedDetails);
       const creditNotes = calculateTotal(billing.creditNotes);
-      const tdsProv = calculateTotal(billing.tdsProvision);
-      const tdsConf = calculateTotal(billing.tdsConfirm);
-      return sum + received + creditNotes + tdsProv + tdsConf;
+      const tdsConf = calculateTotal(billing.tdsConfirm); // Only TDS Confirm
+      return sum + received + creditNotes + tdsConf;
     }, 0);
     
-    console.log(`💰 TOTAL CREDIT POOL (All Payments + Credit Notes): ₹${totalCreditPool.toFixed(2)}`);
+    console.log(`💰 TOTAL CREDIT POOL: ₹${totalCreditPool.toFixed(2)}`);
     
     let creditPool = totalCreditPool;
     
     return sortedBillings.map((billing, index) => {
       console.log(`\n📅 ${billing.month} (${billing.state})`);
       
-      // Calculate monthly totals (INCLUDING CREDIT NOTES)
       const monthlyReceived = calculateTotal(billing.receivedDetails);
       const monthlyCreditNotes = calculateTotal(billing.creditNotes);
-      const monthlyMiscSell = calculateTotal(billing.miscellaneousSell);
-      const monthlyTDSProv = calculateTotal(billing.tdsProvision);
-      const monthlyTDSConf = calculateTotal(billing.tdsConfirm);
-      const monthlyCredits = monthlyReceived + monthlyCreditNotes + monthlyTDSProv + monthlyTDSConf;
+      const monthlyMiscSell = calculateMiscSellTotal(billing.miscellaneousSell);
+      const monthlyTDSProv = calculateTotal(billing.tdsProvision); // For display only
+      const monthlyTDSConf = calculateTotal(billing.tdsConfirm); // Subtracted
+      const monthlyCredits = monthlyReceived + monthlyCreditNotes + monthlyTDSConf; // TDS Prov NOT included
       
-      // Calculate charges for this month
       const monthlyCharges = billing.totalWithGst + monthlyMiscSell;
       
-      console.log(`📋 Charges needed: ₹${monthlyCharges.toFixed(2)}`);
-      console.log(`💳 Credit Pool available: ₹${creditPool.toFixed(2)}`);
+      console.log(`📋 Charges: ₹${monthlyCharges.toFixed(2)}`);
+      console.log(`💳 Pool: ₹${creditPool.toFixed(2)}`);
       
-      // Standard running balance calculation
       const monthlyNet = monthlyCharges - monthlyCredits;
       runningBalance += monthlyNet;
       
-      console.log(`📊 Total Balance (Running): ₹${runningBalance.toFixed(2)}`);
+      console.log(`📊 Balance: ₹${runningBalance.toFixed(2)}`);
       
-      // ✅ FIFO Allocation with proper unpaid tracking
       let totalRemainingAdjustment = 0;
       
       if (creditPool >= monthlyCharges) {
-        // Fully covered by credit pool
         creditPool -= monthlyCharges;
-        totalRemainingAdjustment = cumulativeUnpaid; // No new unpaid, keep previous
-        console.log(`✅ SETTLED | Pool after: ₹${creditPool.toFixed(2)} | Remaining: ₹${totalRemainingAdjustment.toFixed(2)}`);
-      } else {
-        // Partial payment
-        const unpaidThisMonth = monthlyCharges - creditPool;
-        creditPool = 0; // Pool exhausted
-        
-        cumulativeUnpaid += unpaidThisMonth; // Add to cumulative
         totalRemainingAdjustment = cumulativeUnpaid;
-        
-        console.log(`⚠️ PARTIAL | Unpaid this month: ₹${unpaidThisMonth.toFixed(2)}`);
-        console.log(`📍 Cumulative Unpaid: ₹${cumulativeUnpaid.toFixed(2)}`);
-        console.log(`📍 Total Remaining Adjustment: ₹${totalRemainingAdjustment.toFixed(2)}`);
+        console.log(`✅ SETTLED | Pool: ₹${creditPool.toFixed(2)}`);
+      } else {
+        const unpaidThisMonth = monthlyCharges - creditPool;
+        creditPool = 0;
+        cumulativeUnpaid += unpaidThisMonth;
+        totalRemainingAdjustment = cumulativeUnpaid;
+        console.log(`⚠️ PARTIAL | Unpaid: ₹${unpaidThisMonth.toFixed(2)}`);
       }
       
       return {
@@ -637,8 +1206,8 @@ const MonthlyBillGeneratorComp = () => {
         monthlyReceived,
         monthlyCreditNotes,
         monthlyMiscSell,
-        monthlyTDSProv,
-        monthlyTDSConf,
+        monthlyTDSProv, // For display
+        monthlyTDSConf, // Subtracted
         monthlyCharges,
         totalBalance: runningBalance,
         totalRemainingAdjustment: Math.max(0, totalRemainingAdjustment),
@@ -646,20 +1215,21 @@ const MonthlyBillGeneratorComp = () => {
       };
     });
   }, [filteredBillings]);
-
   
-  // Calculate totals (INCLUDING CREDIT NOTES)
+  // Calculate totals
   const totals = useMemo(() => {
     return {
       count: billingsWithBalance.length,
-      monthlyBilling: billingsWithBalance.reduce((sum, b) => sum + b.monthlyBilling, 0),
-      gst: billingsWithBalance.reduce((sum, b) => sum + b.gst, 0),
-      totalWithGst: billingsWithBalance.reduce((sum, b) => sum + b.totalWithGst, 0),
-      monthlyReceived: billingsWithBalance.reduce((sum, b) => sum + b.monthlyReceived, 0),
-      monthlyCreditNotes: billingsWithBalance.reduce((sum, b) => sum + b.monthlyCreditNotes, 0),
-      monthlyMiscSell: billingsWithBalance.reduce((sum, b) => sum + b.monthlyMiscSell, 0),
-      monthlyTDSProv: billingsWithBalance.reduce((sum, b) => sum + b.monthlyTDSProv, 0),
-      monthlyTDSConf: billingsWithBalance.reduce((sum, b) => sum + b.monthlyTDSConf, 0),
+      monthlyBilling: billingsWithBalance.reduce((sum, b) => sum + (b.monthlyBilling ?? 0), 0),
+      cgst: billingsWithBalance.reduce((sum, b) => sum + (b.cgst ?? 0), 0),
+      sgst: billingsWithBalance.reduce((sum, b) => sum + (b.sgst ?? 0), 0),
+      igst: billingsWithBalance.reduce((sum, b) => sum + (b.igst ?? 0), 0),
+      totalWithGst: billingsWithBalance.reduce((sum, b) => sum + (b.totalWithGst ?? 0), 0),
+      monthlyReceived: billingsWithBalance.reduce((sum, b) => sum + (b.monthlyReceived ?? 0), 0),
+      monthlyCreditNotes: billingsWithBalance.reduce((sum, b) => sum + (b.monthlyCreditNotes ?? 0), 0),
+      monthlyMiscSell: billingsWithBalance.reduce((sum, b) => sum + (b.monthlyMiscSell ?? 0), 0),
+      monthlyTDSProv: billingsWithBalance.reduce((sum, b) => sum + (b.monthlyTDSProv ?? 0), 0),
+      monthlyTDSConf: billingsWithBalance.reduce((sum, b) => sum + (b.monthlyTDSConf ?? 0), 0),
       finalBalance: billingsWithBalance.length > 0 ? billingsWithBalance[billingsWithBalance.length - 1].totalBalance : 0
     };
   }, [billingsWithBalance]);
@@ -673,7 +1243,7 @@ const MonthlyBillGeneratorComp = () => {
     setLoading(true);
     
     try {
-      console.log('🔄 Generating billing entries with invoices...');
+      console.log('🔄 Generating billing entries...');
       
       const res = await fetch('/api/billing/monthly', {
         method: 'POST',
@@ -691,21 +1261,10 @@ const MonthlyBillGeneratorComp = () => {
         throw new Error(result.error || 'Failed to generate billings');
       }
 
-      console.log(`✅ Generated ${result.data.length} billing entries with invoices`);
+      console.log(`✅ Generated ${result.data.length} billing entries`);
+      alert(`✅ Successfully generated ${result.data.length} billings!`);
       
-      const withInvoices = result.data.filter(b => b.invoiceNumber && b.invoiceNumber !== '').length;
-      const withoutInvoices = result.data.filter(b => !b.invoiceNumber || b.invoiceNumber === '').length;
-      
-      if (withoutInvoices > 0) {
-        alert(`⚠️ Generated ${result.data.length} billings.\n✅ ${withInvoices} with invoices\n❌ ${withoutInvoices} without invoices`);
-      } else {
-        alert(`✅ Successfully generated ${result.data.length} billings with invoices!\n\nAll ${withInvoices} invoices created automatically.`);
-      }
-      
-      console.log('🔄 Refreshing billing list...');
-      await new Promise(resolve => setTimeout(resolve, 500));
       await fetchBillings();
-      console.log('✅ Billing list refreshed');
       
     } catch (error) {
       console.error('❌ Auto generate error:', error);
@@ -738,7 +1297,7 @@ const MonthlyBillGeneratorComp = () => {
   };
   
   const handleDeleteAll = async () => {
-    if (!confirm(`Are you sure you want to delete all ${billings.length} billings for this order?`)) return;
+    if (!confirm(`Are you sure you want to delete all ${billings.length} billings?`)) return;
     
     try {
       const res = await fetch(`/api/billing/monthly?orderId=${orderId}`, {
@@ -933,7 +1492,7 @@ const MonthlyBillGeneratorComp = () => {
             </span>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
             <div className="space-y-1">
               <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Company Name</p>
               <p className="text-base font-bold text-gray-900">{orderDetails.companyName}</p>
@@ -961,6 +1520,21 @@ const MonthlyBillGeneratorComp = () => {
               <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Capacity</p>
               <p className="text-base font-bold text-gray-900">{orderDetails.capacity} Mbps</p>
             </div>
+            
+            {/* Split Factor Information */}
+            {orderDetails.splitFactor && orderDetails.splitFactor.isApplicable && (
+              <div className="space-y-1">
+                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Split Factor</p>
+                <div className="flex items-center gap-2">
+                  <span className="inline-block px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-bold">
+                    {orderDetails.billing1?.state}: {orderDetails.splitFactor.state1Percentage}%
+                  </span>
+                  <span className="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm font-bold">
+                    {orderDetails.billing2?.state}: {orderDetails.splitFactor.state2Percentage}%
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         
@@ -1104,24 +1678,33 @@ const MonthlyBillGeneratorComp = () => {
                   <th className="px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Month</th>
                   <th className="px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Days</th>
                   <th className="px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Period</th>
-                  <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Received Amount</th>
+                  <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Monthly Billing</th>
+                  {hasGSTColumns.hasCGST && <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">CGST (9%)</th>}
+                  {hasGSTColumns.hasSGST && <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">SGST (9%)</th>}
+                  {hasGSTColumns.hasIGST && <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">IGST (18%)</th>}
+                  <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Total + GST</th>
+                  <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Misc+GST Sell</th>
+                  <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Received</th>
                   <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Credit Notes</th>
-                  <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Misc Sell</th>
-                  <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">TDS Provision</th>
-                  <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">TDS Confirm</th>
-                  <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Monthly Billing (Basic)</th>
-                  <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">GST</th>
-                  <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Monthly Billing + GST</th>
-                  <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider bg-yellow-50">Total Balance (Running)</th>
-                  <th className="px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider bg-green-50">Total Remaining Adjustment</th>
+                  <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">TDS Conf</th>
+                  <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">TDS Prov</th>
+                  <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider bg-yellow-50">Total Balance</th>
+                  <th className="px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider bg-green-50">Remaining Adj</th>
                   <th className="px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {billingsWithBalance.map((billing, index) => {
-                  // Determine if month is fully paid (INCLUDING CREDIT NOTES)
-                  const isFullyPaid = billing.monthlyCharges <= (billing.monthlyReceived + billing.monthlyCreditNotes + billing.monthlyTDSProv + billing.monthlyTDSConf);
+                  const isFullyPaid = billing.monthlyCharges <= (billing.monthlyReceived + billing.monthlyCreditNotes + billing.monthlyTDSConf);
                   const unpaidAmount = billing.totalRemainingAdjustment;
+                  
+                  // Safe value extraction with defaults
+                  const cgst = billing.cgst ?? 0;
+                  const sgst = billing.sgst ?? 0;
+                  const igst = billing.igst ?? 0;
+                  const monthlyBilling = billing.monthlyBilling ?? 0;
+                  const totalWithGst = billing.totalWithGst ?? 0;
+                  const totalBalance = billing.totalBalance ?? 0;
                   
                   return (
                     <tr 
@@ -1131,10 +1714,7 @@ const MonthlyBillGeneratorComp = () => {
                       }`}
                     >
                       <td className="px-3 py-4 text-sm font-semibold text-gray-900">
-                        <div className="flex flex-col">
-                          <span>{billing.month}</span>
-                          <span className="text-xs text-gray-500">{billing.state}</span>
-                        </div>
+                        {billing.month}
                       </td>
                       <td className="px-3 py-4 text-center text-sm font-semibold text-gray-900">
                         {billing.billingDays}
@@ -1145,34 +1725,46 @@ const MonthlyBillGeneratorComp = () => {
                           <span>{billing.endDate}</span>
                         </div>
                       </td>
+                      <td className="px-3 py-4 text-right text-sm font-bold text-gray-900">
+                        ₹{monthlyBilling.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      </td>
+                      {hasGSTColumns.hasCGST && (
+                        <td className="px-3 py-4 text-right text-sm font-semibold text-gray-700">
+                          ₹{cgst.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                        </td>
+                      )}
+                      {hasGSTColumns.hasSGST && (
+                        <td className="px-3 py-4 text-right text-sm font-semibold text-gray-700">
+                          ₹{sgst.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                        </td>
+                      )}
+                      {hasGSTColumns.hasIGST && (
+                        <td className="px-3 py-4 text-right text-sm font-semibold text-gray-700">
+                          ₹{igst.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                        </td>
+                      )}
+                      <td className="px-3 py-4 text-right text-sm font-bold text-indigo-700">
+                        ₹{totalWithGst.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      </td>
+                      <td className="px-3 py-4 text-right text-sm font-semibold text-purple-700">
+                        ₹{billing.monthlyMiscSell.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      </td>
                       <td className="px-3 py-4 text-right text-sm font-semibold text-green-700">
                         ₹{billing.monthlyReceived.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                       </td>
                       <td className="px-3 py-4 text-right text-sm font-semibold text-cyan-700">
                         ₹{billing.monthlyCreditNotes.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                       </td>
-                      <td className="px-3 py-4 text-right text-sm font-semibold text-purple-700">
-                        ₹{billing.monthlyMiscSell.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      <td className="px-3 py-4 text-right text-sm font-semibold text-blue-700">
+                        ₹{billing.monthlyTDSConf.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                       </td>
                       <td className="px-3 py-4 text-right text-sm font-semibold text-orange-700">
                         ₹{billing.monthlyTDSProv.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                       </td>
-                      <td className="px-3 py-4 text-right text-sm font-semibold text-blue-700">
-                        ₹{billing.monthlyTDSConf.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                      </td>
-                      <td className="px-3 py-4 text-right text-sm font-bold text-gray-900">
-                        ₹{billing.monthlyBilling.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                      </td>
-                      <td className="px-3 py-4 text-right text-sm font-semibold text-gray-700">
-                        ₹{billing.gst.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                      </td>
-                      <td className="px-3 py-4 text-right text-sm font-bold text-indigo-700">
-                        ₹{billing.totalWithGst.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                      </td>
                       <td className={`px-3 py-4 text-right text-sm font-extrabold bg-yellow-50 ${
-                        billing.totalBalance >= 0 ? 'text-green-700' : 'text-red-700'
+                        totalBalance >= 0 ? 'text-green-700' : 'text-red-700'
                       }`}>
-                        ₹{billing.totalBalance.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                        ₹{totalBalance.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                       </td>
                       <td className="px-3 py-4 text-center bg-green-50">
                         {unpaidAmount === 0 || isFullyPaid ? (
@@ -1235,34 +1827,46 @@ const MonthlyBillGeneratorComp = () => {
               <tfoot className="bg-gradient-to-r from-gray-100 to-blue-100 border-t-2 border-gray-300">
                 <tr className="font-bold">
                   <td className="px-3 py-4 text-sm text-gray-900" colSpan="3">TOTAL</td>
-                  <td className="px-3 py-4 text-right text-sm text-green-700">
-                    ₹{totals.monthlyReceived.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  <td className="px-3 py-4 text-right text-sm text-gray-900">
+                    ₹{(totals.monthlyBilling ?? 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   </td>
-                  <td className="px-3 py-4 text-right text-sm text-cyan-700">
-                    ₹{totals.monthlyCreditNotes.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  {hasGSTColumns.hasCGST && (
+                    <td className="px-3 py-4 text-right text-sm text-gray-700">
+                      ₹{(totals.cgst ?? 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    </td>
+                  )}
+                  {hasGSTColumns.hasSGST && (
+                    <td className="px-3 py-4 text-right text-sm text-gray-700">
+                      ₹{(totals.sgst ?? 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    </td>
+                  )}
+                  {hasGSTColumns.hasIGST && (
+                    <td className="px-3 py-4 text-right text-sm text-gray-700">
+                      ₹{(totals.igst ?? 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    </td>
+                  )}
+                  <td className="px-3 py-4 text-right text-sm text-indigo-700">
+                    ₹{(totals.totalWithGst ?? 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   </td>
                   <td className="px-3 py-4 text-right text-sm text-purple-700">
-                    ₹{totals.monthlyMiscSell.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    ₹{(totals.monthlyMiscSell ?? 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   </td>
-                  <td className="px-3 py-4 text-right text-sm text-orange-700">
-                    ₹{totals.monthlyTDSProv.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  <td className="px-3 py-4 text-right text-sm text-green-700">
+                    ₹{(totals.monthlyReceived ?? 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  </td>
+                  <td className="px-3 py-4 text-right text-sm text-cyan-700">
+                    ₹{(totals.monthlyCreditNotes ?? 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   </td>
                   <td className="px-3 py-4 text-right text-sm text-blue-700">
-                    ₹{totals.monthlyTDSConf.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    ₹{(totals.monthlyTDSConf ?? 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   </td>
-                  <td className="px-3 py-4 text-right text-sm text-gray-900">
-                    ₹{totals.monthlyBilling.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                  </td>
-                  <td className="px-3 py-4 text-right text-sm text-gray-700">
-                    ₹{totals.gst.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                  </td>
-                  <td className="px-3 py-4 text-right text-sm text-indigo-700">
-                    ₹{totals.totalWithGst.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  <td className="px-3 py-4 text-right text-sm text-orange-700">
+                    ₹{(totals.monthlyTDSProv ?? 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   </td>
                   <td className={`px-3 py-4 text-right text-lg font-extrabold bg-yellow-100 ${
-                    totals.finalBalance >= 0 ? 'text-green-700' : 'text-red-700'
+                    (totals.finalBalance ?? 0) >= 0 ? 'text-green-700' : 'text-red-700'
                   }`}>
-                    ₹{totals.finalBalance.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    ₹{(totals.finalBalance ?? 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   </td>
                   <td className="px-3 py-4 bg-green-100" colSpan="2"></td>
                 </tr>
