@@ -1,7 +1,6 @@
 'use client'
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Search, Download, X, Eye, EyeOff, Info, ArrowLeft, FileText, FileSpreadsheet } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { Search, Download, X, Eye, EyeOff, Info, ArrowLeft, FileText } from 'lucide-react'
 
 const INDIAN_STATES = [
   "Delhi","Maharashtra","Karnataka","Tamil Nadu","Uttar Pradesh",
@@ -53,7 +52,7 @@ const sumField = (arr, field) => (!arr?.length) ? 0 : arr.reduce((s,i) => s+(Num
 const sumAmount       = (arr) => sumField(arr, 'amount')
 const sumTotalWithGst = (arr) => arr?.length ? arr.reduce((s,i) => s+(Number(i.totalWithGst)||Number(i.amount)||0), 0) : 0
 
-const fmt = (n) => (n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigals:2})
+const fmt = (n) => (n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})
 
 // ─── Split billing detection ──────────────────────────────────
 const isSplit = (order) => {
@@ -439,7 +438,6 @@ const loadOrderBilling = async (order, filterMonths, splitState) => {
 
 // ─── Breakdown popup (full month table) ──────────────────────
 const BillingBreakdownTable = ({ bd, onClose }) => {
-  const router = useRouter()
   const [viewingMonth, setViewingMonth] = useState(null)
   
   if (!bd) return null
@@ -465,9 +463,15 @@ const BillingBreakdownTable = ({ bd, onClose }) => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/10 to-slate-50 py-6">
         <div className="max-w-[1800px] mx-auto px-4">
           <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-6">
+            {/* Header — Back button LEFT, then title */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center gap-4">
+              <button
+                onClick={onClose}
+                className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-medium text-sm transition-all shrink-0"
+              >
+                <ArrowLeft className="w-4 h-4"/>Back
+              </button>
+              <div className="flex items-center gap-6 flex-1">
                 <div>
                   <h2 className="text-xl font-bold text-white flex items-center gap-2">
                     <FileText className="w-5 h-5"/>Monthly Billing Breakdown
@@ -476,7 +480,6 @@ const BillingBreakdownTable = ({ bd, onClose }) => {
                     Order: <b className="text-white">{od.orderId}</b> — State: <b className="text-white">{od.state}</b>
                   </p>
                 </div>
-                
                 {/* Quick Info Chips */}
                 <div className="flex items-center gap-2">
                   <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1.5">
@@ -493,13 +496,6 @@ const BillingBreakdownTable = ({ bd, onClose }) => {
                   </div>
                 </div>
               </div>
-              
-              <button 
-                onClick={onClose} 
-                className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-medium text-sm transition-all"
-              >
-                <ArrowLeft className="w-4 h-4"/>Back
-              </button>
             </div>
 
             {/* Table */}
@@ -576,7 +572,6 @@ const BillingBreakdownTable = ({ bd, onClose }) => {
 
 // ─── Simplified table row ─────────────────────────────────────
 const OrderBillingRow = React.memo(({ order, filterMonths, splitState, onViewBreakdown, onDataReady, rowKey, hideLsi }) => {
-  const router = useRouter()
   const [bd, setBd] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -660,9 +655,18 @@ const OrderBillingRow = React.memo(({ order, filterMonths, splitState, onViewBre
         </div>
       </td>
       <td className="px-4 py-3 text-right bg-purple-50/60">
-        <span className="text-base font-extrabold text-purple-600">
-          ₹{fmt(billingWithMisc)}
-        </span>
+        <div className="flex items-center justify-end gap-2">
+          <span className="text-base font-extrabold text-purple-600">
+            ₹{fmt(billingWithMisc)}
+          </span>
+          <button 
+            onClick={()=>onViewBreakdown(bd)} 
+            title="View breakdown"
+            className="p-1.5 hover:bg-purple-100 rounded-lg transition-colors"
+          >
+            <Info className="w-4 h-4 text-purple-500"/>
+          </button>
+        </div>
       </td>
       <td className="px-4 py-3 text-center">
         <span className="inline-flex px-3 py-1 bg-purple-50 text-purple-700 text-sm font-bold rounded">
@@ -672,14 +676,6 @@ const OrderBillingRow = React.memo(({ order, filterMonths, splitState, onViewBre
       <td className="px-4 py-3 text-center text-xs text-slate-600">
         {servicePeriod}
       </td>
-      <td className="px-4 py-3 text-center">
-        <button 
-          onClick={()=>router.push(`/billing/generator?orderId=${order.orderId}`)}
-          className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-all"
-        >
-          <FileSpreadsheet className="w-4 h-4"/>Generate
-        </button>
-      </td>
     </tr>
   )
 })
@@ -687,7 +683,6 @@ OrderBillingRow.displayName = 'OrderBillingRow'
 
 // ─── Main component ────────────────────────────────────────────
 export default function BillingReportSummary() {
-  const router = useRouter()
   const [orders, setOrders] = useState([])
   const [viewBreakdown, setViewBD] = useState(null)
   const [rowData, setRowData] = useState({})
@@ -1043,7 +1038,6 @@ export default function BillingReportSummary() {
                   <th className="px-4 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider bg-purple-50">Billing + Misc</th>
                   <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Split</th>
                   <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Service Period</th>
-                  <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-100">

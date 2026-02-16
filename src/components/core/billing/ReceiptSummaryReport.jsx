@@ -1,7 +1,6 @@
 'use client'
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Search, Download, X, Eye, EyeOff, Info, ArrowLeft, FileText, FileSpreadsheet, Receipt } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { Search, Download, X, Eye, EyeOff, Info, ArrowLeft, FileText, Receipt } from 'lucide-react'
 
 const INDIAN_STATES = [
   "Delhi","Maharashtra","Karnataka","Tamil Nadu","Uttar Pradesh",
@@ -390,8 +389,12 @@ const ReceiptBreakdownTable = ({ bd, onClose }) => {
           <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
 
             {/* Header */}
-            <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-6">
+            <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-4 flex items-center gap-4">
+              <button onClick={onClose}
+                className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-medium text-sm transition-all shrink-0">
+                <ArrowLeft className="w-4 h-4"/>Back
+              </button>
+              <div className="flex items-center gap-6 flex-1">
                 <div>
                   <h2 className="text-xl font-bold text-white flex items-center gap-2">
                     <Receipt className="w-5 h-5"/>Monthly Receipt Breakdown
@@ -411,10 +414,6 @@ const ReceiptBreakdownTable = ({ bd, onClose }) => {
                   </div>
                 </div>
               </div>
-              <button onClick={onClose}
-                className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-medium text-sm transition-all">
-                <ArrowLeft className="w-4 h-4"/>Back
-              </button>
             </div>
 
             {/* Summary Bar */}
@@ -492,7 +491,6 @@ const ReceiptBreakdownTable = ({ bd, onClose }) => {
 
 // ─── Order Row ────────────────────────────────────────────────
 const OrderReceiptRow = React.memo(({ order, filterMonths, splitState, onViewBreakdown, onDataReady, rowKey, hideLsi }) => {
-  const router = useRouter()
   const [bd, setBd]           = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -518,7 +516,7 @@ const OrderReceiptRow = React.memo(({ order, filterMonths, splitState, onViewBre
 
   if (loading) return (
     <tr className="border-b border-slate-100">
-      <td colSpan={hideLsi?10:11} className="px-4 py-3 text-center text-slate-400 text-sm">
+      <td colSpan={hideLsi?9:10} className="px-4 py-3 text-center text-slate-400 text-sm">
         <div className="flex items-center justify-center gap-2">
           <div className="animate-spin h-4 w-4 rounded-full border-b-2 border-emerald-500"/>
           <span>Loading {order.orderId}…</span>
@@ -598,13 +596,6 @@ const OrderReceiptRow = React.memo(({ order, filterMonths, splitState, onViewBre
       </td>
       {/* Service Period */}
       <td className="px-4 py-3 text-center text-xs text-slate-500 whitespace-nowrap">{servicePeriod}</td>
-      {/* Actions */}
-      <td className="px-4 py-3 text-center">
-        <button onClick={()=>router.push(`/billing/generator?orderId=${order.orderId}`)}
-          className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-all">
-          <FileSpreadsheet className="w-4 h-4"/>Generate
-        </button>
-      </td>
     </tr>
   )
 })
@@ -612,7 +603,6 @@ OrderReceiptRow.displayName = 'OrderReceiptRow'
 
 // ─── Main Component ───────────────────────────────────────────
 export default function ReceiptSummaryReport() {
-  const router = useRouter()
   const [orders, setOrders]           = useState([])
   const [viewBreakdown, setViewBD]    = useState(null)
   const [rowData, setRowData]         = useState({})
@@ -912,7 +902,6 @@ export default function ReceiptSummaryReport() {
                   <th className="px-4 py-4 text-right  text-xs font-bold text-gray-700 uppercase tracking-wider bg-emerald-50">Total Receipts</th>
                   <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Split</th>
                   <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Service Period</th>
-                  <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-100">
