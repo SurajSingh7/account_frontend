@@ -6,8 +6,9 @@ export const navCategories = [
     category: "Account",
     items: [
       { name: "View Circuit", path: "/billing/account/view-circuit", moduleName: "dsr", url: "/dsr", action: ["CREATE", "UPDATE",], exceptions: ["canViewAll"] },
-      { name: "Billing Report", path: "/billing/account/billing-report", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
       { name: "Outstanding Report", path: "/billing/account/outstanding-report", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
+      { name: "Billing sell Report", path: "/billing/account/billing-report", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
+      { name: "Receipt Report", path: "/billing/account/receipt", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
      
     ],
   },

@@ -121,138 +121,286 @@ const TruncatedText = React.memo(({ text, limit = 18, className = '' }) => {
 })
 TruncatedText.displayName = 'TruncatedText'
 
-// ─── Month Detail View Popup ─────────────────────────────────
-const MonthDetailView = ({ monthData, onClose }) => {
-  if (!monthData) return null
-  
-  return (
-    <div className="fixed inset-0 bg-black/60 z-[10001] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-auto" onClick={e=>e.stopPropagation()}>
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-          <div>
-            <h3 className="text-xl font-bold text-white">Month Details</h3>
-            <p className="text-blue-100 text-sm mt-0.5">{monthData.monthYear}</p>
+// ─── NEW: Array Details Popup ─────────────────────────────────
+const ArrayDetailsPopup = React.memo(({ data, title, onClose }) => {
+  useEffect(()=>{ 
+    const h=e=>{if(e.key==='Escape')onClose()}
+    document.addEventListener('keydown',h)
+    return ()=>document.removeEventListener('keydown',h) 
+  },[onClose])
+
+  if (!data || data.length === 0) {
+    return (
+      <div className="fixed inset-0 bg-black/60 z-[10002] flex items-center justify-center p-4" onClick={onClose}>
+        <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full" onClick={e=>e.stopPropagation()}>
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between rounded-t-xl">
+            <h3 className="text-lg font-bold text-white">{title}</h3>
+            <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
+              <X className="w-5 h-5 text-white"/>
+            </button>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-          >
+          <div className="p-8 text-center">
+            <p className="text-slate-500">No data available</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-[10002] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[80vh] overflow-auto" onClick={e=>e.stopPropagation()}>
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between sticky top-0 z-10 rounded-t-xl">
+          <h3 className="text-lg font-bold text-white">{title}</h3>
+          <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
             <X className="w-5 h-5 text-white"/>
           </button>
         </div>
         
-        {/* Content */}
-        <div className="p-6 space-y-6">
-          {/* Basic Info */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-              <p className="text-xs font-bold text-slate-500 uppercase mb-1">Billing Days</p>
-              <p className="text-2xl font-bold text-slate-900">{monthData.billingDays}</p>
-            </div>
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-              <p className="text-xs font-bold text-slate-500 uppercase mb-1">Start Date</p>
-              <p className="text-lg font-bold text-slate-900">
-                {String(monthData.startDay).padStart(2,'0')}-{String(monthData.month+1).padStart(2,'0')}-{monthData.year}
-              </p>
-            </div>
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-              <p className="text-xs font-bold text-slate-500 uppercase mb-1">End Date</p>
-              <p className="text-lg font-bold text-slate-900">
-                {String(monthData.endDay).padStart(2,'0')}-{String(monthData.month+1).padStart(2,'0')}-{monthData.year}
-              </p>
-            </div>
-          </div>
-          
-          {/* Billing Details */}
-          <div>
-            <h4 className="text-sm font-bold text-slate-700 uppercase mb-3 pb-2 border-b border-slate-200">Billing Amounts</h4>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex justify-between items-center py-2 px-3 bg-slate-50 rounded">
-                <span className="text-sm text-slate-600">Monthly Billing:</span>
-                <span className="text-sm font-bold text-slate-900">₹{fmt(monthData.monthlyBilling)}</span>
-              </div>
-              {monthData.cgst > 0 && (
-                <div className="flex justify-between items-center py-2 px-3 bg-slate-50 rounded">
-                  <span className="text-sm text-slate-600">CGST (9%):</span>
-                  <span className="text-sm font-bold text-slate-900">₹{fmt(monthData.cgst)}</span>
-                </div>
-              )}
-              {monthData.sgst > 0 && (
-                <div className="flex justify-between items-center py-2 px-3 bg-slate-50 rounded">
-                  <span className="text-sm text-slate-600">SGST (9%):</span>
-                  <span className="text-sm font-bold text-slate-900">₹{fmt(monthData.sgst)}</span>
-                </div>
-              )}
-              {monthData.igst > 0 && (
-                <div className="flex justify-between items-center py-2 px-3 bg-slate-50 rounded">
-                  <span className="text-sm text-slate-600">IGST (18%):</span>
-                  <span className="text-sm font-bold text-slate-900">₹{fmt(monthData.igst)}</span>
-                </div>
-              )}
-              <div className="flex justify-between items-center py-2 px-3 bg-indigo-50 rounded border-2 border-indigo-200">
-                <span className="text-sm font-bold text-indigo-700">Total + GST:</span>
-                <span className="text-sm font-bold text-indigo-900">₹{fmt(monthData.totalWithGst)}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 px-3 bg-purple-50 rounded">
-                <span className="text-sm text-purple-600">Misc+GST Sell:</span>
-                <span className="text-sm font-bold text-purple-900">₹{fmt(monthData.miscSell)}</span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Payments */}
-          <div>
-            <h4 className="text-sm font-bold text-slate-700 uppercase mb-3 pb-2 border-b border-slate-200">Payments & Adjustments</h4>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex justify-between items-center py-2 px-3 bg-green-50 rounded">
-                <span className="text-sm text-green-600">Received:</span>
-                <span className="text-sm font-bold text-green-900">₹{fmt(monthData.received)}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 px-3 bg-cyan-50 rounded">
-                <span className="text-sm text-cyan-600">Credit Notes:</span>
-                <span className="text-sm font-bold text-cyan-900">₹{fmt(monthData.creditNotes)}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 px-3 bg-blue-50 rounded">
-                <span className="text-sm text-blue-600">TDS Confirm:</span>
-                <span className="text-sm font-bold text-blue-900">₹{fmt(monthData.tdsConfirm)}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 px-3 bg-orange-50 rounded">
-                <span className="text-sm text-orange-600">TDS Provision:</span>
-                <span className="text-sm font-bold text-orange-900">₹{fmt(monthData.tdsProvision)}</span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Balances */}
-          <div>
-            <h4 className="text-sm font-bold text-slate-700 uppercase mb-3 pb-2 border-b border-slate-200">Balance Summary</h4>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex justify-between items-center py-3 px-4 bg-yellow-50 rounded-lg border-2 border-yellow-200">
-                <span className="text-sm font-bold text-yellow-700">Running Balance:</span>
-                <span className={`text-lg font-extrabold ${monthData.running>=0?'text-green-700':'text-red-700'}`}>
-                  ₹{fmt(monthData.running)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-3 px-4 bg-rose-50 rounded-lg border-2 border-rose-200">
-                <span className="text-sm font-bold text-rose-700">Remaining Adjustment:</span>
-                <span className={`text-lg font-extrabold ${monthData.remAdj>0?'text-red-700':'text-green-700'}`}>
-                  ₹{fmt(monthData.remAdj)}
-                </span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Invoice Info */}
-          {monthData.invoiceNumber && monthData.invoiceNumber !== '-' && (
-            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-              <p className="text-xs font-bold text-blue-600 uppercase mb-1">Invoice Number</p>
-              <p className="text-base font-bold text-blue-900">{monthData.invoiceNumber}</p>
-            </div>
-          )}
+        <div className="p-6">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b-2 border-slate-200">
+                <th className="px-4 py-3 text-left text-xs font-bold text-slate-700 uppercase">Date</th>
+                <th className="px-4 py-3 text-right text-xs font-bold text-slate-700 uppercase">Amount</th>
+                {data[0]?.cgst !== undefined && <th className="px-4 py-3 text-right text-xs font-bold text-slate-700 uppercase">CGST</th>}
+                {data[0]?.sgst !== undefined && <th className="px-4 py-3 text-right text-xs font-bold text-slate-700 uppercase">SGST</th>}
+                {data[0]?.igst !== undefined && <th className="px-4 py-3 text-right text-xs font-bold text-slate-700 uppercase">IGST</th>}
+                {data[0]?.totalWithGst !== undefined && <th className="px-4 py-3 text-right text-xs font-bold text-slate-700 uppercase">Basic + GST</th>}
+                <th className="px-4 py-3 text-left text-xs font-bold text-slate-700 uppercase">Notes</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {data.map((item, idx) => (
+                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                  <td className="px-4 py-3 text-sm text-slate-800 font-semibold">{item.date || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-slate-900 font-bold text-right">₹{fmt(item.amount || 0)}</td>
+                  {data[0]?.cgst !== undefined && <td className="px-4 py-3 text-sm text-slate-700 text-right">₹{fmt(item.cgst || 0)}</td>}
+                  {data[0]?.sgst !== undefined && <td className="px-4 py-3 text-sm text-slate-700 text-right">₹{fmt(item.sgst || 0)}</td>}
+                  {data[0]?.igst !== undefined && <td className="px-4 py-3 text-sm text-slate-700 text-right">₹{fmt(item.igst || 0)}</td>}
+                  {data[0]?.totalWithGst !== undefined && <td className="px-4 py-3 text-sm text-indigo-700 font-bold text-right">₹{fmt(item.totalWithGst || 0)}</td>}
+                  <td className="px-4 py-3 text-sm text-slate-600">{item.notes || '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot className="bg-slate-100 border-t-2 border-slate-300">
+              <tr className="font-bold">
+                <td className="px-4 py-3 text-sm text-slate-900">TOTAL</td>
+                <td className="px-4 py-3 text-sm text-slate-900 text-right">₹{fmt(sumAmount(data))}</td>
+                {data[0]?.cgst !== undefined && <td className="px-4 py-3 text-sm text-slate-700 text-right">₹{fmt(sumField(data, 'cgst'))}</td>}
+                {data[0]?.sgst !== undefined && <td className="px-4 py-3 text-sm text-slate-700 text-right">₹{fmt(sumField(data, 'sgst'))}</td>}
+                {data[0]?.igst !== undefined && <td className="px-4 py-3 text-sm text-slate-700 text-right">₹{fmt(sumField(data, 'igst'))}</td>}
+                {data[0]?.totalWithGst !== undefined && <td className="px-4 py-3 text-sm text-indigo-700 text-right">₹{fmt(sumTotalWithGst(data))}</td>}
+                <td className="px-4 py-3"></td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
       </div>
     </div>
+  )
+})
+ArrayDetailsPopup.displayName = 'ArrayDetailsPopup'
+
+// ─── Month Detail View Popup ─────────────────────────────────
+const MonthDetailView = ({ monthData, rawData, onClose }) => {
+  const [detailsPopup, setDetailsPopup] = useState(null)
+
+  if (!monthData) return null
+
+  const showDetails = (data, title) => {
+    setDetailsPopup({ data, title })
+  }
+  
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/60 z-[10001] flex items-center justify-center p-4" onClick={onClose}>
+        <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-auto" onClick={e=>e.stopPropagation()}>
+          {/* Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+            <div>
+              <h3 className="text-xl font-bold text-white">Month Details</h3>
+              <p className="text-blue-100 text-sm mt-0.5">{monthData.monthYear}</p>
+            </div>
+            <button 
+              onClick={onClose}
+              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-white"/>
+            </button>
+          </div>
+          
+          {/* Content */}
+          <div className="p-6 space-y-6">
+            {/* Basic Info */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <p className="text-xs font-bold text-slate-500 uppercase mb-1">Billing Days</p>
+                <p className="text-2xl font-bold text-slate-900">{monthData.billingDays}</p>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <p className="text-xs font-bold text-slate-500 uppercase mb-1">Start Date</p>
+                <p className="text-lg font-bold text-slate-900">
+                  {String(monthData.startDay).padStart(2,'0')}-{String(monthData.month+1).padStart(2,'0')}-{monthData.year}
+                </p>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <p className="text-xs font-bold text-slate-500 uppercase mb-1">End Date</p>
+                <p className="text-lg font-bold text-slate-900">
+                  {String(monthData.endDay).padStart(2,'0')}-{String(monthData.month+1).padStart(2,'0')}-{monthData.year}
+                </p>
+              </div>
+            </div>
+            
+            {/* Billing Details */}
+            <div>
+              <h4 className="text-sm font-bold text-slate-700 uppercase mb-3 pb-2 border-b border-slate-200">Billing Amounts</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex justify-between items-center py-2 px-3 bg-slate-50 rounded">
+                  <span className="text-sm text-slate-600">Monthly Basic Bill:</span>
+                  <span className="text-sm font-bold text-slate-900">₹{fmt(monthData.monthlyBilling)}</span>
+                </div>
+                {monthData.cgst > 0 && (
+                  <div className="flex justify-between items-center py-2 px-3 bg-slate-50 rounded">
+                    <span className="text-sm text-slate-600">CGST (9%):</span>
+                    <span className="text-sm font-bold text-slate-900">₹{fmt(monthData.cgst)}</span>
+                  </div>
+                )}
+                {monthData.sgst > 0 && (
+                  <div className="flex justify-between items-center py-2 px-3 bg-slate-50 rounded">
+                    <span className="text-sm text-slate-600">SGST (9%):</span>
+                    <span className="text-sm font-bold text-slate-900">₹{fmt(monthData.sgst)}</span>
+                  </div>
+                )}
+                {monthData.igst > 0 && (
+                  <div className="flex justify-between items-center py-2 px-3 bg-slate-50 rounded">
+                    <span className="text-sm text-slate-600">IGST (18%):</span>
+                    <span className="text-sm font-bold text-slate-900">₹{fmt(monthData.igst)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center py-2 px-3 bg-indigo-50 rounded border-2 border-indigo-200">
+                  <span className="text-sm font-bold text-indigo-700">Basic + GST:</span>
+                  <span className="text-sm font-bold text-indigo-900">₹{fmt(monthData.totalWithGst)}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 px-3 bg-purple-50 rounded">
+                  <span className="text-sm text-purple-600">Misc+GST Sell:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-purple-900">₹{fmt(monthData.miscSell)}</span>
+                    {rawData?.miscellaneousSell?.length > 0 && (
+                      <button 
+                        onClick={() => showDetails(rawData.miscellaneousSell, 'Miscellaneous Sell Details')}
+                        className="text-xs px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded font-medium"
+                      >
+                        View Details
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Payments */}
+            <div>
+              <h4 className="text-sm font-bold text-slate-700 uppercase mb-3 pb-2 border-b border-slate-200">Payments & Adjustments</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex justify-between items-center py-2 px-3 bg-green-50 rounded">
+                  <span className="text-sm text-green-600">Received:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-green-900">₹{fmt(monthData.received)}</span>
+                    {rawData?.receivedDetails?.length > 0 && (
+                      <button 
+                        onClick={() => showDetails(rawData.receivedDetails, 'Payment Received Details')}
+                        className="text-xs px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded font-medium"
+                      >
+                        View Details
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="flex justify-between items-center py-2 px-3 bg-cyan-50 rounded">
+                  <span className="text-sm text-cyan-600">Credit Notes:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-cyan-900">₹{fmt(monthData.creditNotes)}</span>
+                    {rawData?.creditNotes?.length > 0 && (
+                      <button 
+                        onClick={() => showDetails(rawData.creditNotes, 'Credit Notes Details')}
+                        className="text-xs px-2 py-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded font-medium"
+                      >
+                        View Details
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="flex justify-between items-center py-2 px-3 bg-blue-50 rounded">
+                  <span className="text-sm text-blue-600">TDS Confirm:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-blue-900">₹{fmt(monthData.tdsConfirm)}</span>
+                    {rawData?.tdsConfirm?.length > 0 && (
+                      <button 
+                        onClick={() => showDetails(rawData.tdsConfirm, 'TDS Confirm Details')}
+                        className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium"
+                      >
+                        View Details
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="flex justify-between items-center py-2 px-3 bg-orange-50 rounded">
+                  <span className="text-sm text-orange-600">TDS Provision:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-orange-900">₹{fmt(monthData.tdsProvision)}</span>
+                    {rawData?.tdsProvision?.length > 0 && (
+                      <button 
+                        onClick={() => showDetails(rawData.tdsProvision, 'TDS Provision Details')}
+                        className="text-xs px-2 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded font-medium"
+                      >
+                        View Details
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Balances */}
+            <div>
+              <h4 className="text-sm font-bold text-slate-700 uppercase mb-3 pb-2 border-b border-slate-200">Balance Summary</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex justify-between items-center py-3 px-4 bg-yellow-50 rounded-lg border-2 border-yellow-200">
+                  <span className="text-sm font-bold text-yellow-700">Running Balance:</span>
+                  <span className={`text-lg font-extrabold ${monthData.running>=0?'text-green-700':'text-red-700'}`}>
+                    ₹{fmt(monthData.running)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-3 px-4 bg-rose-50 rounded-lg border-2 border-rose-200">
+                  <span className="text-sm font-bold text-rose-700">Remaining Adjustment:</span>
+                  <span className={`text-lg font-extrabold ${monthData.remAdj>0?'text-red-700':'text-green-700'}`}>
+                    ₹{fmt(monthData.remAdj)}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Invoice Info */}
+            {monthData.invoiceNumber && monthData.invoiceNumber !== '-' && (
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <p className="text-xs font-bold text-blue-600 uppercase mb-1">Invoice Number</p>
+                <p className="text-base font-bold text-blue-900">{monthData.invoiceNumber}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Details Popup */}
+      {detailsPopup && (
+        <ArrayDetailsPopup 
+          data={detailsPopup.data} 
+          title={detailsPopup.title} 
+          onClose={() => setDetailsPopup(null)} 
+        />
+      )}
+    </>
   )
 }
 
@@ -312,6 +460,7 @@ const loadOrderBreakdown = async (order, toDateStr, splitState) => {
     const rec = billingData.find(b => b.month === monthName && b.state === splitState)
 
     let totalWithGst, monthlyBilling, cgst = 0, sgst = 0, igst = 0, miscSell, received, creditNotes, tdsProvision, tdsConfirm, invoiceNumber, billingDays, startDay, endDay, isSelfGST = false
+    let rawData = null
 
     if (rec) {
       totalWithGst  = Number(rec.totalWithGst) || 0
@@ -329,6 +478,15 @@ const loadOrderBreakdown = async (order, toDateStr, splitState) => {
       billingDays   = rec.billingDays || getDaysInMonth(m, y)
       startDay      = Number((rec.startDate||'').split('-')[0]) || 1
       endDay        = Number((rec.endDate||'').split('-')[0])   || getDaysInMonth(m, y)
+      
+      // Store raw data for popup
+      rawData = {
+        miscellaneousSell: rec.miscellaneousSell || [],
+        receivedDetails: rec.receivedDetails || [],
+        creditNotes: rec.creditNotes || [],
+        tdsConfirm: rec.tdsConfirm || [],
+        tdsProvision: rec.tdsProvision || []
+      }
     } else {
       const daysInM = getDaysInMonth(m, y)
       const isPcd   = y === pcdDate.getFullYear() && m === pcdDate.getMonth()
@@ -355,12 +513,20 @@ const loadOrderBreakdown = async (order, toDateStr, splitState) => {
       igst = totalWithGst - monthlyBilling
       miscSell = received = creditNotes = tdsProvision = tdsConfirm = 0
       invoiceNumber = '-'
+      rawData = {
+        miscellaneousSell: [],
+        receivedDetails: [],
+        creditNotes: [],
+        tdsConfirm: [],
+        tdsProvision: []
+      }
     }
 
     breakdownBase.months.push({
       monthYear: monthName, month: m, year: y, billingDays, startDay, endDay,
       monthlyBilling, cgst, sgst, igst, totalWithGst, miscSell,
-      received, creditNotes, tdsProvision, tdsConfirm, invoiceNumber, isSelfGST
+      received, creditNotes, tdsProvision, tdsConfirm, invoiceNumber, isSelfGST,
+      rawData
     })
 
     if (termDate && y === serviceEnd.getFullYear() && m === serviceEnd.getMonth()) break
@@ -461,12 +627,12 @@ const BreakdownTable = ({ bd, onClose }) => {
                     <th className="px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Month</th>
                     <th className="px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Days</th>
                     <th className="px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Period</th>
-                    <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Monthly Billing</th>
+                    <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Basic Bill</th>
                     {hasCGST && <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">CGST (9%)</th>}
                     {hasSGST && <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">SGST (9%)</th>}
                     {hasIGST && <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">IGST (18%)</th>}
-                    <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Total + GST</th>
-                    <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Misc+GST Sell</th>
+                    <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Basic + GST</th>
+                    <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Misc+GST Bill</th>
                     <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Received</th>
                     <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Credit Notes</th>
                     <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">TDS Conf</th>
@@ -547,7 +713,7 @@ const BreakdownTable = ({ bd, onClose }) => {
       </div>
       
       {/* Month Detail Popup */}
-      {viewingMonth && <MonthDetailView monthData={viewingMonth} onClose={() => setViewingMonth(null)} />}
+      {viewingMonth && <MonthDetailView monthData={viewingMonth} rawData={viewingMonth.rawData} onClose={() => setViewingMonth(null)} />}
     </>
   )
 }
