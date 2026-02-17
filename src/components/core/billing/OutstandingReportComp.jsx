@@ -471,7 +471,9 @@ const loadOrderBreakdown = async (order, toDateStr, splitState) => {
       isSelfGST = rec.isSelfGST || false
       miscSell      = sumTotalWithGst(rec.miscellaneousSell)
       received      = sumAmount(rec.receivedDetails)
-      creditNotes   = sumAmount(rec.creditNotes)
+      // creditNotes   = sumAmount(rec.creditNotes)
+      creditNotes = sumTotalWithGst(rec.creditNotes)
+
       tdsProvision  = sumAmount(rec.tdsProvision)
       tdsConfirm    = sumAmount(rec.tdsConfirm)
       invoiceNumber = rec.invoiceNumber || '-'

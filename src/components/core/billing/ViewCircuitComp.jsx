@@ -1141,7 +1141,7 @@ const OrderCard = ({ order, onView, onEdit, onDelete }) => {
     }
 
     const grandTotal = rowBase + totalGST;
-    const arcTotal   = grandTotal * 12;
+    const arcTotal   = rowBase * 12;
 
     return (
       <tr className="border-t border-gray-200 text-base hover:bg-gray-50 transition-colors">
@@ -1350,7 +1350,7 @@ const Badge = ({ children, color }) => {
   return <span className={`px-3 py-1 rounded-lg text-sm font-semibold ${colors[color] || colors.gray}`}>{children}</span>;
 };
 
-// ─── MAIN PAGE ────────────────────────────────────────────────────────────────
+// ─── MAIN PAGE ────────
 export default function BillingManagementSystem() {
   const [viewOrder,  setViewOrder]  = useState(null);
   const [editOrder,  setEditOrder]  = useState(null);

@@ -29,8 +29,15 @@ const TdsConfirmSchema = new mongoose.Schema({
 }, { _id: false });
 
 const CreditNoteSchema = new mongoose.Schema({
-  date: { type: String, required: true }, // format: DD-MM-YYYY
-  amount: { type: Number, required: true, default: 0 },
+  date: { type: String, required: true },       // Submit date: DD-MM-YYYY
+  periodStart: { type: String, default: '' },   // Period start: DD-MM-YYYY (within billing month)
+  periodEnd: { type: String, default: '' },     // Period end: DD-MM-YYYY (within billing month)
+  amount: { type: Number, required: true, default: 0 }, // Auto-calculated from period
+  cgst: { type: Number, default: 0 },           // CGST amount for this credit note
+  sgst: { type: Number, default: 0 },           // SGST amount for this credit note
+  igst: { type: Number, default: 0 },           // IGST amount for this credit note
+  totalWithGst: { type: Number, default: 0 },   // amount + cgst + sgst + igst
+  invoiceNumber: { type: String, default: '' }, // Pre-filled with current billing month
   notes: { type: String, default: '' }
 }, { _id: false });
 
