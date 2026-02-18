@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { 
-  Calendar, RefreshCw, FileText, Trash2, Edit2, Save, X, ArrowLeft, 
+import {
+  Calendar, RefreshCw, FileText, Trash2, Edit2, Save, X, ArrowLeft,
   Filter, Download, TrendingUp, DollarSign, Calendar as CalendarIcon,
   CheckCircle2, Clock, FileCheck, Eye, Plus, Trash, Receipt, AlertTriangle
 } from 'lucide-react';
@@ -368,7 +368,7 @@ const CreditNotesSection = ({
 
   const monthInfo = useMemo(() => {
     if (!currentMonth) return null;
-    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const [monthName, yearStr] = currentMonth.split(' ');
     const monthIndex = monthNames.indexOf(monthName);
     const year = parseInt(yearStr, 10);
@@ -406,12 +406,12 @@ const CreditNotesSection = ({
     const updated = [...editFormData.creditNotes];
     updated[index] = { ...updated[index], [field]: value };
     const start = field === 'periodStart' ? value : updated[index].periodStart;
-    const end   = field === 'periodEnd'   ? value : updated[index].periodEnd;
+    const end = field === 'periodEnd' ? value : updated[index].periodEnd;
     const calc = calcFromPeriod(start, end);
-    updated[index].amount       = calc.amount;
-    updated[index].cgst         = calc.cgst;
-    updated[index].sgst         = calc.sgst;
-    updated[index].igst         = calc.igst;
+    updated[index].amount = calc.amount;
+    updated[index].cgst = calc.cgst;
+    updated[index].sgst = calc.sgst;
+    updated[index].igst = calc.igst;
     updated[index].totalWithGst = calc.totalWithGst;
     setEditFormData(prev => ({ ...prev, creditNotes: updated }));
   };
@@ -716,7 +716,7 @@ const MonthlyBillGeneratorComp = () => {
 
   const billingsWithBalance = useMemo(() => {
     let runningBalance = 0, cumulativeUnpaid = 0;
-    const monthOrder = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const sorted = [...filteredBillings].sort((a, b) => {
       const pm = (s) => { const [mn, y] = s.split(' '); return new Date(parseInt(y), monthOrder.indexOf(mn)); };
       return pm(a.month) - pm(b.month);
@@ -726,14 +726,14 @@ const MonthlyBillGeneratorComp = () => {
       sum + calculateTotal(b.receivedDetails) + calculateCreditNotesTotal(b.creditNotes, b.isSelfGST) + calculateTotal(b.tdsConfirm), 0);
     let creditPool = totalCreditPool;
     return sorted.map((billing) => {
-      const monthlyReceived    = calculateTotal(billing.receivedDetails);
+      const monthlyReceived = calculateTotal(billing.receivedDetails);
       // ── Credit Notes: always include GST (handles old and new records)
       const monthlyCreditNotes = calculateCreditNotesTotal(billing.creditNotes, billing.isSelfGST);
-      const monthlyMiscSell    = calculateMiscSellTotal(billing.miscellaneousSell);
-      const monthlyTDSProv     = calculateTotal(billing.tdsProvision);
-      const monthlyTDSConf     = calculateTotal(billing.tdsConfirm);
-      const monthlyCredits     = monthlyReceived + monthlyCreditNotes + monthlyTDSConf;
-      const monthlyCharges     = billing.totalWithGst + monthlyMiscSell;
+      const monthlyMiscSell = calculateMiscSellTotal(billing.miscellaneousSell);
+      const monthlyTDSProv = calculateTotal(billing.tdsProvision);
+      const monthlyTDSConf = calculateTotal(billing.tdsConfirm);
+      const monthlyCredits = monthlyReceived + monthlyCreditNotes + monthlyTDSConf;
+      const monthlyCharges = billing.totalWithGst + monthlyMiscSell;
       runningBalance += monthlyCharges - monthlyCredits;
       let totalRemainingAdjustment = 0;
       if (creditPool >= monthlyCharges) { creditPool -= monthlyCharges; totalRemainingAdjustment = cumulativeUnpaid; }
@@ -744,16 +744,16 @@ const MonthlyBillGeneratorComp = () => {
 
   const totals = useMemo(() => ({
     count: billingsWithBalance.length,
-    monthlyBilling:    billingsWithBalance.reduce((s, b) => s + (b.monthlyBilling ?? 0), 0),
-    cgst:              billingsWithBalance.reduce((s, b) => s + (b.cgst ?? 0), 0),
-    sgst:              billingsWithBalance.reduce((s, b) => s + (b.sgst ?? 0), 0),
-    igst:              billingsWithBalance.reduce((s, b) => s + (b.igst ?? 0), 0),
-    totalWithGst:      billingsWithBalance.reduce((s, b) => s + (b.totalWithGst ?? 0), 0),
-    monthlyReceived:   billingsWithBalance.reduce((s, b) => s + (b.monthlyReceived ?? 0), 0),
-    monthlyCreditNotes:billingsWithBalance.reduce((s, b) => s + (b.monthlyCreditNotes ?? 0), 0),
-    monthlyMiscSell:   billingsWithBalance.reduce((s, b) => s + (b.monthlyMiscSell ?? 0), 0),
-    monthlyTDSProv:    billingsWithBalance.reduce((s, b) => s + (b.monthlyTDSProv ?? 0), 0),
-    monthlyTDSConf:    billingsWithBalance.reduce((s, b) => s + (b.monthlyTDSConf ?? 0), 0),
+    monthlyBilling: billingsWithBalance.reduce((s, b) => s + (b.monthlyBilling ?? 0), 0),
+    cgst: billingsWithBalance.reduce((s, b) => s + (b.cgst ?? 0), 0),
+    sgst: billingsWithBalance.reduce((s, b) => s + (b.sgst ?? 0), 0),
+    igst: billingsWithBalance.reduce((s, b) => s + (b.igst ?? 0), 0),
+    totalWithGst: billingsWithBalance.reduce((s, b) => s + (b.totalWithGst ?? 0), 0),
+    monthlyReceived: billingsWithBalance.reduce((s, b) => s + (b.monthlyReceived ?? 0), 0),
+    monthlyCreditNotes: billingsWithBalance.reduce((s, b) => s + (b.monthlyCreditNotes ?? 0), 0),
+    monthlyMiscSell: billingsWithBalance.reduce((s, b) => s + (b.monthlyMiscSell ?? 0), 0),
+    monthlyTDSProv: billingsWithBalance.reduce((s, b) => s + (b.monthlyTDSProv ?? 0), 0),
+    monthlyTDSConf: billingsWithBalance.reduce((s, b) => s + (b.monthlyTDSConf ?? 0), 0),
     finalBalance: billingsWithBalance.length > 0 ? billingsWithBalance[billingsWithBalance.length - 1].totalBalance : 0,
   }), [billingsWithBalance]);
 
@@ -768,6 +768,20 @@ const MonthlyBillGeneratorComp = () => {
       await fetchBillings();
     } catch (e) { alert(`❌ Failed to generate billings:\n${e.message}`); }
     finally { setLoading(false); }
+  };
+  const formatDateToDisplay = (storedDate) => {
+    if (!storedDate) return '';
+    try {
+      const d = new Date(storedDate);
+      if (!isNaN(d.getTime())) {
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        return `${day}-${month}-${d.getFullYear()}`;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return storedDate;
   };
 
   const handleDelete = async (billingId) => {
@@ -877,7 +891,7 @@ const MonthlyBillGeneratorComp = () => {
             <div className="space-y-1"><p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Company Name</p><p className="text-base font-bold text-gray-900">{orderDetails.companyName}</p></div>
             <div className="space-y-1"><p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Entity</p><span className="inline-block px-3 py-1 bg-orange-100 text-orange-700 rounded-lg text-sm font-bold">{orderDetails.entity}</span></div>
             <div className="space-y-1"><p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Product</p><span className="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm font-bold">{orderDetails.product}</span></div>
-            <div className="space-y-1"><p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">PCD Date</p><p className="text-base font-bold text-gray-900 flex items-center gap-1"><CalendarIcon className="w-4 h-4 text-blue-600" />{orderDetails.pcdDate}</p></div>
+            <div className="space-y-1"><p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">PCD Date</p><p className="text-base font-bold text-gray-900 flex items-center gap-1"><CalendarIcon className="w-4 h-4 text-blue-600" />{formatDateToDisplay(orderDetails.pcdDate)}</p></div>
             <div className="space-y-1"><p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Capacity</p><p className="text-base font-bold text-gray-900">{orderDetails.capacity} Mbps</p></div>
             {orderDetails.splitFactor?.isApplicable && (
               <div className="space-y-1"><p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Split Factor</p>
@@ -986,8 +1000,8 @@ const MonthlyBillGeneratorComp = () => {
                         {unpaidAmount === 0 || isFullyPaid
                           ? <button onClick={() => { setViewingBilling(billing); setViewMode('view'); }} className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors font-semibold text-sm"><CheckCircle2 className="w-4 h-4" />Settled</button>
                           : unpaidAmount > 10000
-                            ? <button onClick={() => { setViewingBilling(billing); setViewMode('view'); }} className="inline-flex items-center gap-1 px-3 py-1.5 text-red-700 hover:bg-red-50 rounded-lg transition-colors font-bold text-sm"><X className="w-4 h-4" />₹{unpaidAmount.toLocaleString('en-IN', {minimumFractionDigits:2})}</button>
-                            : <button onClick={() => { setViewingBilling(billing); setViewMode('view'); }} className="inline-flex items-center gap-1 px-3 py-1.5 text-orange-700 hover:bg-orange-50 rounded-lg transition-colors font-bold text-sm"><AlertTriangle className="w-4 h-4" />₹{unpaidAmount.toLocaleString('en-IN', {minimumFractionDigits:2})}</button>
+                            ? <button onClick={() => { setViewingBilling(billing); setViewMode('view'); }} className="inline-flex items-center gap-1 px-3 py-1.5 text-red-700 hover:bg-red-50 rounded-lg transition-colors font-bold text-sm"><X className="w-4 h-4" />₹{unpaidAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</button>
+                            : <button onClick={() => { setViewingBilling(billing); setViewMode('view'); }} className="inline-flex items-center gap-1 px-3 py-1.5 text-orange-700 hover:bg-orange-50 rounded-lg transition-colors font-bold text-sm"><AlertTriangle className="w-4 h-4" />₹{unpaidAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</button>
                         }
                       </td>
                       <td className="px-3 py-4">

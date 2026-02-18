@@ -45,6 +45,8 @@ const getAvailMonths  = (y) => y === getCurrentYear() ? ALL_MONTHS.slice(0, getC
 // ─── Amount helpers ───────────────────────────────────────────
 const sumField  = (arr, field) => (!arr?.length) ? 0 : arr.reduce((s,i) => s+(Number(i[field])||0), 0)
 const sumAmount = (arr) => sumField(arr, 'amount')
+// Credit notes: use totalWithGst (includes GST), fallback to amount
+const sumCreditNotes = (arr) => (!arr?.length) ? 0 : arr.reduce((s,i) => s+(Number(i.totalWithGst)||Number(i.amount)||0), 0)
 const fmt = (n) => (n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})
 
 // ─── Split billing detection ──────────────────────────────────
@@ -91,7 +93,7 @@ const TruncatedText = React.memo(({ text, limit = 18, className = '' }) => {
 TruncatedText.displayName = 'TruncatedText'
 
 // ─── Array Details Popup ──────────────────────────────────────
-const ArrayDetailsPopup = React.memo(({ data, title, onClose }) => {
+const ArrayDetailsPopup = React.memo(({ data, title, onClose, isCreditNote = false }) => {
   useEffect(()=>{
     const h=e=>{if(e.key==='Escape')onClose()}
     document.addEventListener('keydown',h)
@@ -112,6 +114,10 @@ const ArrayDetailsPopup = React.memo(({ data, title, onClose }) => {
     )
   }
 
+  const total = isCreditNote
+    ? data.reduce((s,i)=>s+(Number(i.totalWithGst)||Number(i.amount)||0),0)
+    : data.reduce((s,i)=>s+(Number(i.amount)||0),0)
+
   return (
     <div className="fixed inset-0 bg-black/60 z-[10002] flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[80vh] overflow-auto" onClick={e=>e.stopPropagation()}>
@@ -124,24 +130,49 @@ const ArrayDetailsPopup = React.memo(({ data, title, onClose }) => {
             <thead>
               <tr className="border-b-2 border-slate-200">
                 <th className="px-4 py-3 text-left text-xs font-bold text-slate-700 uppercase">Date</th>
-                <th className="px-4 py-3 text-right text-xs font-bold text-slate-700 uppercase">Amount</th>
+                {isCreditNote && (
+                  <>
+                    <th className="px-4 py-3 text-right text-xs font-bold text-slate-700 uppercase">Base Amount</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold text-slate-700 uppercase">GST</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold text-cyan-700 uppercase">Total (with GST)</th>
+                  </>
+                )}
+                {!isCreditNote && <th className="px-4 py-3 text-right text-xs font-bold text-slate-700 uppercase">Amount</th>}
                 <th className="px-4 py-3 text-left text-xs font-bold text-slate-700 uppercase">Notes</th>
+                {isCreditNote && <th className="px-4 py-3 text-left text-xs font-bold text-slate-700 uppercase">Invoice</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {data.map((item,idx)=>(
-                <tr key={idx} className={idx%2===0?'bg-white':'bg-slate-50'}>
-                  <td className="px-4 py-3 text-sm text-slate-800 font-semibold">{item.date||'-'}</td>
-                  <td className="px-4 py-3 text-sm text-slate-900 font-bold text-right">₹{fmt(item.amount||0)}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{item.notes||'-'}</td>
-                </tr>
-              ))}
+              {data.map((item,idx)=>{
+                const baseAmt  = Number(item.amount)||0
+                const gstAmt   = Number(item.cgst||0)+Number(item.sgst||0)+Number(item.igst||0)
+                const totalAmt = Number(item.totalWithGst)||baseAmt
+                return (
+                  <tr key={idx} className={idx%2===0?'bg-white':'bg-slate-50'}>
+                    <td className="px-4 py-3 text-sm text-slate-800 font-semibold">{item.date||'-'}</td>
+                    {isCreditNote && (
+                      <>
+                        <td className="px-4 py-3 text-sm text-slate-700 text-right">₹{fmt(baseAmt)}</td>
+                        <td className="px-4 py-3 text-sm text-slate-500 text-right">₹{fmt(gstAmt)}</td>
+                        <td className="px-4 py-3 text-sm text-cyan-800 font-bold text-right">₹{fmt(totalAmt)}</td>
+                      </>
+                    )}
+                    {!isCreditNote && (
+                      <td className="px-4 py-3 text-sm text-slate-900 font-bold text-right">₹{fmt(baseAmt)}</td>
+                    )}
+                    <td className="px-4 py-3 text-sm text-slate-600">{item.notes||'-'}</td>
+                    {isCreditNote && <td className="px-4 py-3 text-sm text-slate-500">{item.invoiceNumber||'-'}</td>}
+                  </tr>
+                )
+              })}
             </tbody>
             <tfoot className="bg-slate-100 border-t-2 border-slate-300">
               <tr className="font-bold">
                 <td className="px-4 py-3 text-sm text-slate-900">TOTAL</td>
-                <td className="px-4 py-3 text-sm text-slate-900 text-right">₹{fmt(sumAmount(data))}</td>
+                {isCreditNote && <td colSpan={2} className="px-4 py-3"/>}
+                <td className="px-4 py-3 text-sm text-slate-900 text-right">₹{fmt(total)}</td>
                 <td className="px-4 py-3"/>
+                {isCreditNote && <td className="px-4 py-3"/>}
               </tr>
             </tfoot>
           </table>
@@ -193,7 +224,7 @@ const ReceiptMonthDetailView = ({ monthData, rawData, onClose }) => {
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-green-900">₹{fmt(monthData.received)}</span>
                     {rawData?.receivedDetails?.length > 0 && (
-                      <button onClick={()=>setDetailsPopup({data:rawData.receivedDetails,title:'Payment Received Details'})}
+                      <button onClick={()=>setDetailsPopup({data:rawData.receivedDetails,title:'Payment Received Details',isCreditNote:false})}
                         className="text-xs px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded font-medium">
                         View Details
                       </button>
@@ -201,13 +232,16 @@ const ReceiptMonthDetailView = ({ monthData, rawData, onClose }) => {
                   </div>
                 </div>
 
-                {/* Credit Notes */}
+                {/* Credit Notes — shows totalWithGst */}
                 <div className="flex justify-between items-center py-2 px-3 bg-cyan-50 rounded border border-cyan-100">
-                  <span className="text-sm text-cyan-700 font-semibold">Credit Notes</span>
+                  <div>
+                    <span className="text-sm text-cyan-700 font-semibold">Credit Notes</span>
+                    <span className="ml-2 text-[10px] font-bold text-cyan-500 uppercase bg-cyan-100 px-1.5 py-0.5 rounded">incl. GST</span>
+                  </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-cyan-900">₹{fmt(monthData.creditNotes)}</span>
                     {rawData?.creditNotes?.length > 0 && (
-                      <button onClick={()=>setDetailsPopup({data:rawData.creditNotes,title:'Credit Notes Details'})}
+                      <button onClick={()=>setDetailsPopup({data:rawData.creditNotes,title:'Credit Notes Details (incl. GST)',isCreditNote:true})}
                         className="text-xs px-2 py-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded font-medium">
                         View Details
                       </button>
@@ -221,7 +255,7 @@ const ReceiptMonthDetailView = ({ monthData, rawData, onClose }) => {
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-blue-900">₹{fmt(monthData.tdsConfirm)}</span>
                     {rawData?.tdsConfirm?.length > 0 && (
-                      <button onClick={()=>setDetailsPopup({data:rawData.tdsConfirm,title:'TDS Confirm Details'})}
+                      <button onClick={()=>setDetailsPopup({data:rawData.tdsConfirm,title:'TDS Confirm Details',isCreditNote:false})}
                         className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium">
                         View Details
                       </button>
@@ -235,7 +269,7 @@ const ReceiptMonthDetailView = ({ monthData, rawData, onClose }) => {
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-orange-900">₹{fmt(monthData.tdsProvision)}</span>
                     {rawData?.tdsProvision?.length > 0 && (
-                      <button onClick={()=>setDetailsPopup({data:rawData.tdsProvision,title:'TDS Provision Details'})}
+                      <button onClick={()=>setDetailsPopup({data:rawData.tdsProvision,title:'TDS Provision Details',isCreditNote:false})}
                         className="text-xs px-2 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded font-medium">
                         View Details
                       </button>
@@ -262,7 +296,12 @@ const ReceiptMonthDetailView = ({ monthData, rawData, onClose }) => {
         </div>
       </div>
       {detailsPopup && (
-        <ArrayDetailsPopup data={detailsPopup.data} title={detailsPopup.title} onClose={()=>setDetailsPopup(null)}/>
+        <ArrayDetailsPopup
+          data={detailsPopup.data}
+          title={detailsPopup.title}
+          isCreditNote={detailsPopup.isCreditNote}
+          onClose={()=>setDetailsPopup(null)}
+        />
       )}
     </>
   )
@@ -332,12 +371,14 @@ const loadOrderReceipts = async (order, filterMonths, splitState) => {
 
       if (rec) {
         received     = sumAmount(rec.receivedDetails)
-        creditNotes  = sumAmount(rec.creditNotes)
+        // ✅ FIX: Credit notes use totalWithGst (includes GST amount)
+        creditNotes  = sumCreditNotes(rec.creditNotes)
         tdsConfirm   = sumAmount(rec.tdsConfirm)
         tdsProvision = sumAmount(rec.tdsProvision)
         invoiceNumber = rec.invoiceNumber || '-'
         rawData = {
           receivedDetails: rec.receivedDetails  || [],
+          // ✅ Pass raw credit notes as-is so popup can show base + GST + total
           creditNotes:     rec.creditNotes      || [],
           tdsConfirm:      rec.tdsConfirm       || [],
           tdsProvision:    rec.tdsProvision     || [],
@@ -419,10 +460,10 @@ const ReceiptBreakdownTable = ({ bd, onClose }) => {
             {/* Summary Bar */}
             <div className="grid grid-cols-4 divide-x divide-slate-200 border-b border-slate-200 bg-slate-50">
               {[
-                { label:'Total Received',    value:T.recv,  color:'text-green-700',  bg:'bg-green-50' },
-                { label:'Total Credit Notes',value:T.cn,    color:'text-cyan-700',   bg:'bg-cyan-50'  },
-                { label:'Total TDS Confirm', value:T.tdsc,  color:'text-blue-700',   bg:'bg-blue-50'  },
-                { label:'Total TDS Provision',value:T.tdsp, color:'text-orange-600', bg:'bg-orange-50'},
+                { label:'Total Received',           value:T.recv,  color:'text-green-700',  bg:'bg-green-50' },
+                { label:'Total Credit Notes+GST',value:T.cn,    color:'text-cyan-700',   bg:'bg-cyan-50'  },
+                { label:'Total TDS Confirm',         value:T.tdsc,  color:'text-blue-700',   bg:'bg-blue-50'  },
+                { label:'Total TDS Provision',       value:T.tdsp,  color:'text-orange-600', bg:'bg-orange-50'},
               ].map(({label,value,color,bg})=>(
                 <div key={label} className={`px-5 py-3 ${bg}`}>
                   <p className="text-[10px] font-bold text-slate-500 uppercase">{label}</p>
@@ -438,7 +479,7 @@ const ReceiptBreakdownTable = ({ bd, onClose }) => {
                   <tr className="bg-gradient-to-r from-gray-50 to-emerald-50 border-b-2 border-gray-200">
                     <th className="px-3 py-4 text-left   text-xs font-bold text-gray-700 uppercase tracking-wider">Month</th>
                     <th className="px-3 py-4 text-right  text-xs font-bold text-gray-700 uppercase tracking-wider">Received</th>
-                    <th className="px-3 py-4 text-right  text-xs font-bold text-gray-700 uppercase tracking-wider">Credit Notes</th>
+                    <th className="px-3 py-4 text-right  text-xs font-bold text-gray-700  uppercase tracking-wider">Credit Notes+Gst<br/></th>
                     <th className="px-3 py-4 text-right  text-xs font-bold text-gray-700 uppercase tracking-wider">TDS Confirm</th>
                     <th className="px-3 py-4 text-right  text-xs font-bold text-gray-700 uppercase tracking-wider">TDS Provision</th>
                     <th className="px-3 py-4 text-right  text-xs font-bold text-gray-700 uppercase tracking-wider bg-emerald-50">Total Receipts</th>
@@ -566,7 +607,7 @@ const OrderReceiptRow = React.memo(({ order, filterMonths, splitState, onViewBre
       <td className="px-4 py-3 text-right">
         <span className="text-sm font-extrabold text-green-700">₹{fmt(bd.totalReceived)}</span>
       </td>
-      {/* Credit Notes */}
+      {/* Credit Notes (incl. GST) */}
       <td className="px-4 py-3 text-right">
         <span className="text-sm font-extrabold text-cyan-700">₹{fmt(bd.totalCreditNotes)}</span>
       </td>
@@ -744,7 +785,7 @@ export default function ReceiptSummaryReport() {
             <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
               <Receipt className="w-6 h-6 text-emerald-600"/>Receipt Summary Report
             </h1>
-            <p className="text-sm text-slate-500 mt-0.5">Period-based receipts — Received, Credit Notes &amp; TDS per order</p>
+            <p className="text-sm text-slate-500 mt-0.5">Period-based receipts — Received, Credit Notes (incl. GST) &amp; TDS per order</p>
           </div>
 
           {/* Filters row */}
@@ -789,11 +830,11 @@ export default function ReceiptSummaryReport() {
               <p className="text-2xl font-extrabold text-slate-900">{filteredOrders.length}</p>
             </div>
             {[
-              {label:'Received',    val:totals.received,    color:'text-green-700',  bg:'bg-green-50',  border:'border-green-200'},
-              {label:'Credit Notes',val:totals.creditNotes, color:'text-cyan-700',   bg:'bg-cyan-50',   border:'border-cyan-200'},
-              {label:'TDS Confirm', val:totals.tdsConfirm,  color:'text-blue-700',   bg:'bg-blue-50',   border:'border-blue-200'},
-              {label:'TDS Provision',val:totals.tdsProvision,color:'text-orange-600',bg:'bg-orange-50', border:'border-orange-200'},
-              {label:'Total Receipts',val:totals.total,     color:'text-emerald-700',bg:'bg-emerald-50',border:'border-emerald-300'},
+              {label:'Received',             val:totals.received,    color:'text-green-700',  bg:'bg-green-50',  border:'border-green-200'},
+              {label:'Credit Notes+ Gst', val:totals.creditNotes, color:'text-cyan-700',   bg:'bg-cyan-50',   border:'border-cyan-200'},
+              {label:'TDS Confirm',          val:totals.tdsConfirm,  color:'text-blue-700',   bg:'bg-blue-50',   border:'border-blue-200'},
+              {label:'TDS Provision',        val:totals.tdsProvision,color:'text-orange-600', bg:'bg-orange-50', border:'border-orange-200'},
+              {label:'Total Receipts',       val:totals.total,       color:'text-emerald-700',bg:'bg-emerald-50',border:'border-emerald-300'},
             ].map(({label,val,color,bg,border})=>(
               <div key={label} className={`${bg} border ${border} rounded-xl px-4 py-2.5 text-center min-w-[130px]`}>
                 <p className={`text-[10px] font-bold uppercase ${color} opacity-80`}>{label}</p>
@@ -896,7 +937,9 @@ export default function ReceiptSummaryReport() {
                   <th className="px-4 py-4 text-left   text-xs font-bold text-gray-700 uppercase tracking-wider">Company</th>
                   <th className="px-4 py-4 text-left   text-xs font-bold text-gray-700 uppercase tracking-wider">State</th>
                   <th className="px-4 py-4 text-right  text-xs font-bold text-gray-700 uppercase tracking-wider">Received</th>
-                  <th className="px-4 py-4 text-right  text-xs font-bold text-gray-700 uppercase tracking-wider">Credit Notes</th>
+                  <th className="px-4 py-4 text-right  text-xs font-bold text-gray-700  uppercase tracking-wider">
+                    Credit Notes+Gst<br/>
+                  </th>
                   <th className="px-4 py-4 text-right  text-xs font-bold text-gray-700 uppercase tracking-wider">TDS Confirm</th>
                   <th className="px-4 py-4 text-right  text-xs font-bold text-gray-700 uppercase tracking-wider">TDS Provision</th>
                   <th className="px-4 py-4 text-right  text-xs font-bold text-gray-700 uppercase tracking-wider bg-emerald-50">Total Receipts</th>

@@ -80,37 +80,37 @@ const convertDateForStorage = (inputDate) => {
 const convertDateForInput = (storedDate) => {
   if (!storedDate) return '';
   try {
-    // ISO string (e.g. "2026-02-11T18:30:00.000Z") or any parseable date
     if (storedDate.includes('T') || storedDate.includes('Z') || storedDate.length > 10) {
       const d = new Date(storedDate);
       if (!isNaN(d.getTime())) {
-        // Use UTC parts to avoid timezone shifting the day
-        const y = d.getUTCFullYear();
-        const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-        const day = String(d.getUTCDate()).padStart(2, '0');
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
         return `${y}-${m}-${day}`;
       }
     }
-    // Already "yyyy-mm-dd"
     if (storedDate.includes('-') && storedDate.split('-')[0].length === 4) return storedDate;
-    // "dd-mm-yyyy" → "yyyy-mm-dd"
     const [dd, mm, yyyy] = storedDate.split('-');
     return `${yyyy}-${mm}-${dd}`;
-  } catch { return ''; }
+  } catch {
+    return '';
+  }
 };
+
 
 const formatDateToDisplay = (storedDate) => {
   if (!storedDate) return '';
   try {
     const d = new Date(storedDate);
     if (!isNaN(d.getTime())) {
-      const day = String(d.getUTCDate()).padStart(2, '0');
-      const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-      return `${day}-${month}-${d.getUTCFullYear()}`;
+      const day = String(d.getDate()).padStart(2, '0');      // ✅ local
+      const month = String(d.getMonth() + 1).padStart(2, '0'); // ✅ local
+      return `${day}-${month}-${d.getFullYear()}`; // ✅ local
     }
   } catch(e) { console.error(e); }
   return storedDate;
 };
+
 
 // Converts ANY stored date format → JS Date object for filter comparisons
 const parseStoredDate = (storedDate) => {
