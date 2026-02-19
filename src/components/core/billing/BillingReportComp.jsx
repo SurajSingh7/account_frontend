@@ -918,9 +918,9 @@ export default function BillingReportSummary() {
               <p className="text-2xl font-extrabold text-slate-900">{filteredOrders.length}</p>
             </div>
             {[
-              {label:'Total Billing',       val:totals.totalBilling,         color:'text-indigo-700', bg:'bg-indigo-50',  border:'border-indigo-200'},
+              {label:'Billing',       val:totals.totalBilling,         color:'text-indigo-700', bg:'bg-indigo-50',  border:'border-indigo-200'},
               {label:'Billing + Misc',      val:totals.totalBillingWithMisc, color:'text-purple-700', bg:'bg-purple-50',  border:'border-purple-200'},
-              {label:'Credit Notes (w/GST)',val:totals.totalCreditNotes,     color:'text-cyan-700',   bg:'bg-cyan-50',    border:'border-cyan-200'},
+              {label:'Credit Notes +GST',val:totals.totalCreditNotes,     color:'text-cyan-700',   bg:'bg-cyan-50',    border:'border-cyan-200'},
               {label:'Net Billing',         val:totals.totalNetBilling,      color:'text-rose-700',   bg:'bg-rose-50',    border:'border-rose-300'},
             ].map(({label,val,color,bg,border})=>(
               <div key={label} className={`${bg} border ${border} rounded-xl px-4 py-2.5 text-center min-w-[155px]`}>
