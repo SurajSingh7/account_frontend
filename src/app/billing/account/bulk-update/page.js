@@ -1,8 +1,11 @@
+import BulkUpdate from '@/components/core/billing/BlukUpdate';
 import React from 'react'
 
 const page = () => {
   return (
-    <div>page</div>
+    <div>
+      <BulkUpdate/>
+    </div>
   )
 }
 

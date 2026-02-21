@@ -692,7 +692,7 @@ const BreakdownTable = ({ bd, onClose }) => {
                       <td className="px-3 py-3 text-right font-bold text-cyan-600">₹{fmt(m.creditNotes)}</td>
                       <td className="px-3 py-3 text-right font-bold text-blue-600">₹{fmt(m.tdsConfirm)}</td>
                       <td className="px-3 py-3 text-right font-bold text-orange-500">₹{fmt(m.tdsProvision)}</td>
-                      <td className={`px-3 py-3 text-right font-extrabold bg-yellow-50 ${m.running >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                      <td className={`px-3 py-3 text-right font-extrabold bg-yellow-50 ${m.running >= 0 ? 'text-red-700' : 'text-green-700'}`}>
                         ₹{fmt(m.running)}
                       </td>
                       <td className={`px-3 py-3 text-center font-bold bg-green-50 ${m.remAdj > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
@@ -731,13 +731,15 @@ const BreakdownTable = ({ bd, onClose }) => {
                     <td className="px-3 py-4 text-right text-sm text-cyan-700">₹{fmt(T.cn)}</td>
                     <td className="px-3 py-4 text-right text-sm text-blue-700">₹{fmt(T.tdsc)}</td>
                     <td className="px-3 py-4 text-right text-sm text-orange-600">₹{fmt(T.tdsp)}</td>
-                    <td className={`px-3 py-4 text-right text-lg font-extrabold bg-yellow-100 ${rows[rows.length - 1]?.running >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                    <td className={`px-3 py-4 text-right text-lg font-extrabold bg-yellow-100 ${rows[rows.length - 1]?.running >= 0 ? 'text-red-700' : 'text-green-700'}`}>
                       ₹{fmt(rows[rows.length - 1]?.running || 0)}
                     </td>
                     <td className="px-3 py-4 bg-green-100" colSpan="2"></td>
                   </tr>
                 </tfoot>
               </table>
+
+
             </div>
           </div>
         </div>
@@ -814,7 +816,7 @@ const OrderRow = React.memo(({ order, toDateStr, splitState, onViewBreakdown, on
       </td>
       <td className="px-4 py-3 text-right bg-yellow-50/60">
         <div className="flex items-center justify-end gap-2">
-          <span className={`text-base font-extrabold ${bal >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+          <span className={`text-base font-extrabold ${bal >= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
             ₹{fmt(bal)}
           </span>
           <button
@@ -1030,17 +1032,29 @@ export default function OutstandingReportComp() {
               <p className="text-[10px] font-bold text-slate-400 uppercase">Orders</p>
               <p className="text-2xl font-extrabold text-slate-900">{filteredOrders.length}</p>
             </div>
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 text-center min-w-[160px]">
-              <p className="text-[10px] font-bold text-emerald-500 uppercase">Total Balance</p>
-              {isCalc ? (
-                <div className="flex items-center justify-center gap-2 mt-1">
-                  <div className="animate-spin h-5 w-5 rounded-full border-b-2 border-emerald-600" />
-                  <span className="text-sm font-semibold text-emerald-600">Calculating…</span>
-                </div>
-              ) : (
-                <p className="text-xl font-extrabold text-emerald-700">₹{fmt(totalBalance)}</p>
-              )}
-            </div>
+          <div className={`rounded-xl px-4 py-2.5 text-center min-w-[160px] 
+  ${totalBalance < 0 
+    ? 'bg-emerald-50 border border-emerald-200' 
+    : 'bg-rose-50 border border-rose-200'
+  }`}>
+  
+  <p className={`text-[10px] font-bold uppercase 
+    ${totalBalance < 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+    Total Balance
+  </p>
+
+  {isCalc ? (
+    <div className="flex items-center justify-center gap-2 mt-1">
+      <div className="animate-spin h-5 w-5 rounded-full border-b-2 border-slate-600" />
+      <span className="text-sm font-semibold text-slate-600">Calculating…</span>
+    </div>
+  ) : (
+    <p className={`text-xl font-extrabold 
+      ${totalBalance < 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+      ₹{fmt(totalBalance)}
+    </p>
+  )}
+</div>
           </div>
 
           {/* Tabs */}
