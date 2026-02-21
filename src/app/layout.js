@@ -8,7 +8,6 @@ import Footer from "@/components/common/Footer";
 import Header from "@/components/common/header/Header";
 import { ZoomProvider } from "@/components/common/header/zoom/ZoomProvider";
 
-
 const inter = Inter({ subsets: ["latin"] });
 
 export default function RootLayout({ children }) {

@@ -70,7 +70,7 @@ const LoginComponent = () => {
                     }
 
                     toast.success(result.message);
-                    window.location.href = "/dsr/list/";
+                    window.location.href = "/billing/account/outstanding-report";
                 } else {
                     toast.error(result.message || "Login failed");
                 }

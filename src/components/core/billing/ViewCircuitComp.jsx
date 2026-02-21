@@ -3,48 +3,70 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Trash2, Eye, Plus, Search, Filter, X, ChevronDown, Edit2, Info } from 'lucide-react';
 import { Suspense } from 'react';
-import Loading from './loading';
 
 // --- CONSTANTS & CONFIG ---
-const ENTITIES = ["WIBRO", "GTEL", "GISPL"];
-const PRODUCTS = ["ILL", "NLD", "DIA"];
-const STATUSES = ["PCD", "Terminate"];
-const ORDER_TYPES = ["NEW-ORDER", "UPGRADE", "DOWNGRADE"];
-const INDIAN_STATES = [
-  "Delhi", "Maharashtra", "Karnataka", "Tamil Nadu", "Uttar Pradesh",
-  "Haryana", "Punjab", "Gujarat", "West Bengal", "Rajasthan", "Other"
+const ENTITIES   = ["WIBRO", "GTEL", "GISPL"];
+const PRODUCTS   = ["ILL", "NLD", "DIA"];
+const STATUSES   = ["PCD", "Terminate"];
+const ORDER_TYPES= ["NEW-ORDER", "UPGRADE", "DOWNGRADE"];
+
+export const INDIAN_STATES = [
+  { key: "AP", name: "Andhra Pradesh",          code: "28" },
+  { key: "AR", name: "Arunachal Pradesh",        code: "12" },
+  { key: "AS", name: "Assam",                    code: "18" },
+  { key: "BR", name: "Bihar",                    code: "10" },
+  { key: "CG", name: "Chhattisgarh",             code: "22" },
+  { key: "GA", name: "Goa",                      code: "30" },
+  { key: "GJ", name: "Gujarat",                  code: "24" },
+  { key: "HR", name: "Haryana",                  code: "06" },
+  { key: "HP", name: "Himachal Pradesh",         code: "02" },
+  { key: "JH", name: "Jharkhand",                code: "20" },
+  { key: "KA", name: "Karnataka",                code: "29" },
+  { key: "KL", name: "Kerala",                   code: "32" },
+  { key: "MP", name: "Madhya Pradesh",           code: "23" },
+  { key: "MH", name: "Maharashtra",              code: "27" },
+  { key: "MN", name: "Manipur",                  code: "14" },
+  { key: "ML", name: "Meghalaya",                code: "17" },
+  { key: "MZ", name: "Mizoram",                  code: "15" },
+  { key: "NL", name: "Nagaland",                 code: "13" },
+  { key: "OD", name: "Odisha",                   code: "21" },
+  { key: "PB", name: "Punjab",                   code: "03" },
+  { key: "RJ", name: "Rajasthan",                code: "08" },
+  { key: "SK", name: "Sikkim",                   code: "11" },
+  { key: "TN", name: "Tamil Nadu",               code: "33" },
+  { key: "TS", name: "Telangana",                code: "36" },
+  { key: "TR", name: "Tripura",                  code: "16" },
+  { key: "UP", name: "Uttar Pradesh",            code: "09" },
+  { key: "UK", name: "Uttarakhand",              code: "05" },
+  { key: "WB", name: "West Bengal",              code: "19" },
+  { key: "DL", name: "Delhi",                    code: "07" },
+  { key: "JK", name: "Jammu & Kashmir",          code: "01" },
+  { key: "LA", name: "Ladakh",                   code: "38" },
+  { key: "CH", name: "Chandigarh",               code: "04" },
+  { key: "DN", name: "Dadra & Nagar Haveli and Daman & Diu", code: "26" },
+  { key: "LD", name: "Lakshadweep",              code: "31" },
+  { key: "AN", name: "Andaman & Nicobar Islands",code: "35" },
+  { key: "PY", name: "Puducherry",               code: "34" },
 ];
 
-const ALL_MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+const ALL_MONTHS  = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+const getCurrentYear  = () => new Date().getFullYear();
+const getCurrentMonth = () => new Date().getMonth();
+const getCurrentDay   = () => new Date().getDate();
+const YEAR_OPTIONS    = ["All", ...Array.from({ length: 8 }, (_, i) => getCurrentYear() - i)];
 
-// Get current year and month
-const getCurrentYear = () => 2026;
-const getCurrentMonth = () => 0;
-const getCurrentDay = () => 29;
-
-// Generate year options (current year + 5 previous years)
-const YEAR_OPTIONS = ["All", ...Array.from({ length: 6 }, (_, i) => getCurrentYear() - i)];
-
-// Get available months based on selected year
 const getAvailableMonths = (selectedYear) => {
-  const currentYear = getCurrentYear();
-  const currentMonthIndex = getCurrentMonth();
-
-  if (selectedYear === currentYear) {
-    return ALL_MONTHS.slice(0, currentMonthIndex + 1);
-  } else {
-    return ALL_MONTHS;
-  }
+  if (selectedYear === getCurrentYear()) return ALL_MONTHS.slice(0, getCurrentMonth() + 1);
+  return ALL_MONTHS;
 };
 
-// Get default date range for current year
 const getDefaultDateRange = () => {
-  const year = getCurrentYear();
+  const year  = getCurrentYear();
   const month = getCurrentMonth() + 1;
-  const day = getCurrentDay();
+  const day   = getCurrentDay();
   return {
     fromDate: `${year}-01-01`,
-    toDate: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    toDate:   `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`,
   };
 };
 
@@ -54,88 +76,147 @@ const convertDateForStorage = (inputDate) => {
   const [year, month, day] = inputDate.split('-');
   return `${day}-${month}-${year}`;
 };
-
+// Converts ANY date format → "yyyy-mm-dd" string for <input type="date">
 const convertDateForInput = (storedDate) => {
   if (!storedDate) return '';
-  if (storedDate.includes('-') && storedDate.split('-')[0].length === 4) {
-    return storedDate;
+  try {
+    if (storedDate.includes('T') || storedDate.includes('Z') || storedDate.length > 10) {
+      const d = new Date(storedDate);
+      if (!isNaN(d.getTime())) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      }
+    }
+    if (storedDate.includes('-') && storedDate.split('-')[0].length === 4) return storedDate;
+    const [dd, mm, yyyy] = storedDate.split('-');
+    return `${yyyy}-${mm}-${dd}`;
+  } catch {
+    return '';
   }
-  const [day, month, year] = storedDate.split('-');
-  return `${year}-${month}-${day}`;
 };
+
 
 const formatDateToDisplay = (storedDate) => {
   if (!storedDate) return '';
-  if (storedDate.includes('-') && storedDate.split('-')[0].length <= 2) {
-    return storedDate;
-  }
-  const [year, month, day] = storedDate.split('-');
-  return `${day}-${month}-${year}`;
+  try {
+    const d = new Date(storedDate);
+    if (!isNaN(d.getTime())) {
+      const day = String(d.getDate()).padStart(2, '0');      // ✅ local
+      const month = String(d.getMonth() + 1).padStart(2, '0'); // ✅ local
+      return `${day}-${month}-${d.getFullYear()}`; // ✅ local
+    }
+  } catch(e) { console.error(e); }
+  return storedDate;
 };
 
-// Parse stored date to Date object
+
+// Converts ANY stored date format → JS Date object for filter comparisons
 const parseStoredDate = (storedDate) => {
   if (!storedDate) return null;
-  const [day, month, year] = storedDate.split('-');
-  return new Date(year, month - 1, day);
+  try {
+    // ISO string or anything new Date() can parse
+    if (storedDate.includes('T') || storedDate.includes('Z') || storedDate.length > 10) {
+      const d = new Date(storedDate);
+      if (!isNaN(d.getTime())) return d;
+    }
+    // "dd-mm-yyyy"
+    if (storedDate.includes('-') && storedDate.split('-')[0].length <= 2) {
+      const [day, month, year] = storedDate.split('-');
+      return new Date(Number(year), Number(month) - 1, Number(day));
+    }
+    // "yyyy-mm-dd"
+    if (storedDate.includes('-') && storedDate.split('-')[0].length === 4) {
+      const d = new Date(storedDate);
+      if (!isNaN(d.getTime())) return d;
+    }
+  } catch { return null; }
+  return null;
 };
 
-// Info Icon with Tooltip Component
+// ─── Info Tooltip ────────────────────────────────────────────────────────────
 const InfoTooltip = ({ formula }) => {
   const [show, setShow] = useState(false);
-
   return (
     <div className="relative inline-block ml-1">
-      <Info
-        className="w-5 h-5 text-blue-500 cursor-help inline"
+      <Info className="w-5 h-5 text-blue-500 cursor-help inline"
         onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
-      />
+        onMouseLeave={() => setShow(false)} />
       {show && (
         <div className="absolute z-50 p-2.5 text-sm font-semibold text-white bg-gray-800 rounded-lg shadow-lg -top-10 left-0 min-w-[150px] whitespace-nowrap">
           {formula}
-          <div className="absolute w-2 h-2 bg-gray-800 transform rotate-45 -bottom-1 left-2"></div>
+          <div className="absolute w-2 h-2 bg-gray-800 transform rotate-45 -bottom-1 left-2" />
         </div>
       )}
     </div>
   );
 };
 
-// Billing Address Popup Component
-const BillingPopup = ({ billing, onClose }) => {
-  if (!billing) return null;
+// ─── Split Factor Form ────────────────────────────────────────────────────────
+const SplitFactorForm = ({ splitFactor, onChange, billing1State, billing2State, isNLD }) => {
+  const areStatesDifferent = isNLD && billing1State && billing2State && billing1State !== billing2State;
+  if (!areStatesDifferent) return null;
+
+  const handlePercentageChange = (field, value) => {
+    const numValue = parseFloat(value) || 0;
+    const otherField = field === 'state1Percentage' ? 'state2Percentage' : 'state1Percentage';
+    onChange({ ...splitFactor, [field]: numValue, [otherField]: 100 - numValue });
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 border border-gray-200" onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-between items-center p-5 border-b border-gray-200 bg-gray-50">
-          <h3 className="text-xl font-semibold text-gray-900">Billing Address</h3>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-gray-600" />
-          </button>
+    <div className="border border-amber-300 p-5 rounded-lg bg-gradient-to-br from-amber-50 to-orange-50">
+      <h3 className="font-semibold text-gray-900 mb-4 text-base uppercase flex items-center gap-2">
+        <span className="text-amber-600">📊</span> Split Factor Details
+        <span className="text-sm font-normal text-amber-700 bg-amber-100 px-3 py-1 rounded-full">
+          NLD - Different States Detected
+        </span>
+      </h3>
+      <div className="space-y-4">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-sm font-semibold text-blue-900">
+            ℹ️ Since billing states are different ({billing1State} &amp; {billing2State}),
+            the amount will be split. Please specify the percentage for each state.
+          </p>
         </div>
-        <div className="p-6 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <p className="text-sm font-semibold text-gray-500 uppercase mb-1">Address</p>
-            <p className="text-base font-semibold text-gray-900">{billing.address || '-'}</p>
+            <label className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2 block">
+              {billing1State} - State 1 (%)
+            </label>
+            <input type="number" value={splitFactor.state1Percentage}
+              onChange={(e) => handlePercentageChange('state1Percentage', e.target.value)}
+              className="input-field bg-green-50 font-semibold text-lg"
+              placeholder="40" step="0.01" min="0" max="100" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-500 uppercase mb-1">Area</p>
-            <p className="text-base font-semibold text-gray-900">{billing.area || '-'}</p>
+            <label className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2 block">
+              {billing2State} - State 2 (%)
+            </label>
+            <input type="number" value={splitFactor.state2Percentage}
+              onChange={(e) => handlePercentageChange('state2Percentage', e.target.value)}
+              className="input-field bg-blue-50 font-semibold text-lg"
+              placeholder="60" step="0.01" min="0" max="100" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-sm font-semibold text-gray-500 uppercase mb-1">City</p>
-              <p className="text-base font-semibold text-gray-900">{billing.city || '-'}</p>
+        </div>
+        {Math.abs(splitFactor.state1Percentage + splitFactor.state2Percentage - 100) > 0.01 && (
+          <div className="bg-red-50 border border-red-300 rounded-lg p-3">
+            <p className="text-sm font-semibold text-red-700">
+              ⚠️ Total must equal 100%. Current: {(splitFactor.state1Percentage + splitFactor.state2Percentage).toFixed(2)}%
+            </p>
+          </div>
+        )}
+        <div className="bg-white p-4 rounded-lg border border-gray-200">
+          <p className="text-sm font-semibold text-gray-600 mb-2">Split Summary:</p>
+          <div className="grid grid-cols-2 gap-4 text-sm font-semibold">
+            <div className="flex justify-between">
+              <span className="text-gray-700">{billing1State}:</span>
+              <span className="text-green-600 font-bold">{splitFactor.state1Percentage}%</span>
             </div>
-            <div>
-              <p className="text-sm font-semibold text-gray-500 uppercase mb-1">Pincode</p>
-              <p className="text-base font-semibold text-gray-900">{billing.pincode || '-'}</p>
+            <div className="flex justify-between">
+              <span className="text-gray-700">{billing2State}:</span>
+              <span className="text-blue-600 font-bold">{splitFactor.state2Percentage}%</span>
             </div>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-500 uppercase mb-1">State</p>
-            <p className="text-base font-semibold text-gray-900">{billing.state || '-'}</p>
           </div>
         </div>
       </div>
@@ -143,18 +224,39 @@ const BillingPopup = ({ billing, onClose }) => {
   );
 };
 
-// End Address Popup Component
+// ─── Billing Address Popup ───────────────────────────────────────────────────
+const BillingPopup = ({ billing, onClose }) => {
+  if (!billing) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 border border-gray-200" onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-center p-5 border-b border-gray-200 bg-gray-50">
+          <h3 className="text-xl font-semibold text-gray-900">Billing Address</h3>
+          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg"><X className="w-5 h-5 text-gray-600" /></button>
+        </div>
+        <div className="p-6 space-y-4">
+          {[['Address', billing.address], ['Area', billing.area], ['City', billing.city],
+            ['Pincode', billing.pincode], ['State', billing.state], ['State Code', billing.stateCode]].map(([label, value]) => (
+            <div key={label}>
+              <p className="text-sm font-semibold text-gray-500 uppercase mb-1">{label}</p>
+              <p className="text-base font-semibold text-gray-900">{value || '-'}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── End Address Popup ───────────────────────────────────────────────────────
 const EndAddressPopup = ({ endLabel, endAddress, onClose }) => {
   if (!endAddress) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 border border-gray-200" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 border border-gray-200" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center p-5 border-b border-gray-200 bg-gray-50">
           <h3 className="text-xl font-semibold text-gray-900">{endLabel} Address</h3>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-gray-600" />
-          </button>
+          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg"><X className="w-5 h-5 text-gray-600" /></button>
         </div>
         <div className="p-6">
           <p className="text-base font-semibold text-gray-900 leading-relaxed">{endAddress}</p>
@@ -164,415 +266,59 @@ const EndAddressPopup = ({ endLabel, endAddress, onClose }) => {
   );
 };
 
-// Company Name Popup Component
 const CompanyNamePopup = ({ companyName, onClose }) => {
   if (!companyName) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 border border-gray-200" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 border border-gray-200" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center p-5 border-b border-gray-200 bg-gray-50">
           <h3 className="text-xl font-semibold text-gray-900">Company Name</h3>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-gray-600" />
-          </button>
+          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg"><X className="w-5 h-5 text-gray-600" /></button>
         </div>
         <div className="p-6">
-          <p className="text-base font-semibold text-gray-900 leading-relaxed">{companyName}</p>
+          <p className="text-base font-semibold text-gray-900">{companyName}</p>
         </div>
       </div>
     </div>
   );
 };
 
-// ✅ UPDATED Collection Popup Component - WITH SPLIT SUPPORT
-const CollectionPopup = ({ order, onClose, splitInfo }) => {
-  // Create unique storage key based on order ID, state, and split key
-  const storageKey = splitInfo 
-    ? `collections_${order.id}_${splitInfo.state}_${splitInfo.splitKey}`
-    : `collections_${order.id}`;
-  
-  const [collections, setCollections] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(storageKey);
-      return stored ? JSON.parse(stored) : [];
-    }
-    return [];
-  });
-  
-  const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({
-    amount: '',
-    date: '',
-    state: splitInfo?.state || '',
-    splitKey: splitInfo?.splitKey || '100'
-  });
-
-  // Save to localStorage whenever collections change
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(storageKey, JSON.stringify(collections));
-    }
-  }, [collections, storageKey]);
-
-  const pcdDate = parseStoredDate(order.pcdDate);
-  const terminateDate = parseStoredDate(order.terminateDate);
-  const maxDate = terminateDate || new Date();
-
-  const handleSubmit = () => {
-    if (!formData.amount || !formData.date) {
-      alert("Please fill in all fields");
-      return;
-    }
-
-    const collectionData = {
-      amount: formData.amount,
-      date: formData.date,
-      state: splitInfo?.state || '',
-      splitKey: splitInfo?.splitKey || '100',
-      invoiceNumber: '', // Will be linked later if needed
-    };
-
-    if (editingId !== null) {
-      setCollections(collections.map(c => c.id === editingId ? { ...collectionData, id: editingId } : c));
-      setEditingId(null);
-    } else {
-      setCollections([...collections, { ...collectionData, id: Date.now() }]);
-    }
-    setFormData({ amount: '', date: '', state: splitInfo?.state || '', splitKey: splitInfo?.splitKey || '100' });
-  };
-
-  const handleEdit = (collection) => {
-    setFormData({ 
-      amount: collection.amount, 
-      date: collection.date,
-      state: collection.state || '',
-      splitKey: collection.splitKey || '100'
-    });
-    setEditingId(collection.id);
-  };
-
-  const handleDelete = (id) => {
-    setCollections(collections.filter(c => c.id !== id));
-  };
-
-  const dateInputValue = formData.date ? convertDateForInput(formData.date) : '';
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl m-4 border border-gray-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-between items-center p-5 border-b border-gray-200 bg-gray-50 sticky top-0">
-          <div>
-            <h3 className="text-xl font-semibold text-gray-900">Collection Details</h3>
-            {splitInfo && (
-              <p className="text-sm font-semibold text-blue-600 mt-1">
-                Split: {splitInfo.splitKey}% • State: {splitInfo.state}
-              </p>
-            )}
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-gray-600" />
-          </button>
-        </div>
-        
-        <div className="p-6 space-y-6">
-          {/* Input Form */}
-          <div className="bg-gray-50 p-5 rounded-lg border border-gray-200 space-y-4">
-            <h4 className="font-semibold text-gray-900">Add Collection</h4>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <InputGroup label="Amount">
-                <input
-                  type="number"
-                  placeholder="Enter amount"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  className="input-field"
-                />
-              </InputGroup>
-              
-              <InputGroup label="Date">
-                <input
-                  type="date"
-                  value={dateInputValue}
-                  min={pcdDate ? pcdDate.toISOString().split('T')[0] : ''}
-                  max={maxDate.toISOString().split('T')[0]}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  className="input-field"
-                />
-              </InputGroup>
-            </div>
-
-            <button
-              onClick={handleSubmit}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition-colors"
-            >
-              {editingId !== null ? 'Update Collection' : 'Add Collection'}
-            </button>
-          </div>
-
-          {/* Collections List */}
-          {collections.length > 0 && (
-            <div className="space-y-3">
-              <h4 className="font-semibold text-gray-900">Collections</h4>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">Amount</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">Date</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">State</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">Split</th>
-                      <th className="px-4 py-2 text-center font-semibold text-gray-700">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {collections.map(collection => (
-                      <tr key={collection.id} className="border-b border-gray-200 hover:bg-gray-50">
-                        <td className="px-4 py-3 font-semibold text-gray-900">₹{collection.amount}</td>
-                        <td className="px-4 py-3 font-semibold text-gray-900">{collection.date}</td>
-                        <td className="px-4 py-3 font-semibold text-gray-900">{collection.state || '-'}</td>
-                        <td className="px-4 py-3 font-semibold text-gray-900">{collection.splitKey}%</td>
-                        <td className="px-4 py-3 text-center">
-                          <div className="flex justify-center gap-2">
-                            <button
-                              onClick={() => handleEdit(collection)}
-                              className="p-1 hover:bg-blue-50 rounded transition-colors"
-                            >
-                              <Edit2 className="w-4 h-4 text-blue-600" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(collection.id)}
-                              className="p-1 hover:bg-red-50 rounded transition-colors"
-                            >
-                              <Trash2 className="w-4 h-4 text-red-600" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ✅ UPDATED Account Popup Component - WITH SPLIT SUPPORT
-const AccountPopup = ({ order, onClose, splitInfo }) => {
-  // Create unique storage key based on order ID, state, and split key
-  const storageKey = splitInfo 
-    ? `accounts_${order.id}_${splitInfo.state}_${splitInfo.splitKey}`
-    : `accounts_${order.id}`;
-  
-  const [accounts, setAccounts] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(storageKey);
-      return stored ? JSON.parse(stored) : [];
-    }
-    return [];
-  });
-  
-  const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({
-    invoiceNumber: '',
-    date: '',
-    state: splitInfo?.state || '',
-    splitKey: splitInfo?.splitKey || '100'
-  });
-
-  // Save to localStorage whenever accounts change
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(storageKey, JSON.stringify(accounts));
-    }
-  }, [accounts, storageKey]);
-
-  const pcdDate = parseStoredDate(order.pcdDate);
-  const terminateDate = parseStoredDate(order.terminateDate);
-  const maxDate = terminateDate || new Date();
-
-  const dateInputValue = formData.date ? convertDateForInput(formData.date) : '';
-  const minDateString = pcdDate ? pcdDate.toISOString().split('T')[0] : '';
-  const maxDateString = maxDate.toISOString().split('T')[0];
-
-  const handleSubmit = () => {
-    if (!formData.invoiceNumber || !formData.date) {
-      alert("Please fill in all fields");
-      return;
-    }
-
-    const accountData = {
-      invoiceNumber: formData.invoiceNumber,
-      date: formData.date,
-      state: splitInfo?.state || '',
-      splitKey: splitInfo?.splitKey || '100',
-    };
-
-    if (editingId !== null) {
-      setAccounts(accounts.map(a => a.id === editingId ? { ...accountData, id: editingId } : a));
-      setEditingId(null);
-    } else {
-      setAccounts([...accounts, { ...accountData, id: Date.now() }]);
-    }
-    setFormData({ invoiceNumber: '', date: '', state: splitInfo?.state || '', splitKey: splitInfo?.splitKey || '100' });
-  };
-
-  const handleEdit = (account) => {
-    setFormData({ 
-      invoiceNumber: account.invoiceNumber, 
-      date: account.date,
-      state: account.state || '',
-      splitKey: account.splitKey || '100'
-    });
-    setEditingId(account.id);
-  };
-
-  const handleDelete = (id) => {
-    setAccounts(accounts.filter(a => a.id !== id));
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl m-4 border border-gray-200 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-between items-center p-5 border-b border-gray-200 bg-gray-50 sticky top-0">
-          <div>
-            <h3 className="text-xl font-semibold text-gray-900">Invoice Details</h3>
-            {splitInfo && (
-              <p className="text-sm font-semibold text-purple-600 mt-1">
-                Split: {splitInfo.splitKey}% • State: {splitInfo.state}
-              </p>
-            )}
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-gray-600" />
-          </button>
-        </div>
-        
-        <div className="p-6 space-y-6">
-          {/* Input Form */}
-          <div className="bg-gray-50 p-5 rounded-lg border border-gray-200 space-y-4">
-            <h4 className="font-semibold text-gray-900">Add Invoice</h4>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <InputGroup label="Invoice Number">
-                <input
-                  type="text"
-                  placeholder="Enter invoice number"
-                  value={formData.invoiceNumber}
-                  onChange={(e) => setFormData({ ...formData, invoiceNumber: e.target.value })}
-                  className="input-field"
-                />
-              </InputGroup>
-              
-              <InputGroup label="Date">
-                <input
-                  type="date"
-                  value={dateInputValue}
-                  min={minDateString}
-                  max={maxDateString}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  className="input-field"
-                />
-              </InputGroup>
-            </div>
-
-            <button
-              onClick={handleSubmit}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition-colors"
-            >
-              {editingId !== null ? 'Update Invoice' : 'Add Invoice'}
-            </button>
-          </div>
-
-          {/* Accounts List */}
-          {accounts.length > 0 && (
-            <div className="space-y-3">
-              <h4 className="font-semibold text-gray-900">Invoices</h4>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">Invoice Number</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">Date</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">State</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">Split</th>
-                      <th className="px-4 py-2 text-center font-semibold text-gray-700">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {accounts.map(account => (
-                      <tr key={account.id} className="border-b border-gray-200 hover:bg-gray-50">
-                        <td className="px-4 py-3 font-semibold text-gray-900">{account.invoiceNumber}</td>
-                        <td className="px-4 py-3 font-semibold text-gray-900">{account.date}</td>
-                        <td className="px-4 py-3 font-semibold text-gray-900">{account.state || '-'}</td>
-                        <td className="px-4 py-3 font-semibold text-gray-900">{account.splitKey}%</td>
-                        <td className="px-4 py-3 text-center">
-                          <div className="flex justify-center gap-2">
-                            <button
-                              onClick={() => handleEdit(account)}
-                              className="p-1 hover:bg-blue-50 rounded transition-colors"
-                            >
-                              <Edit2 className="w-4 h-4 text-blue-600" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(account.id)}
-                              className="p-1 hover:bg-red-50 rounded transition-colors"
-                            >
-                              <Trash2 className="w-4 h-4 text-red-600" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// --- SUB-COMPONENTS ---
+// ─── ViewDetailsModal ────────────────────────────────────────────────────────
 const ViewDetailsModal = ({ order, onClose }) => {
   if (!order) return null;
+  // Resolve GST details for display
+  const gst1 = order.gstDetails1 || order.gstDetails || {};
+  const gst2 = order.gstDetails2 || {};
+  const isNLD = order.product === 'NLD';
+  const diffStates = isNLD && order.billing1?.state && order.billing2?.state &&
+    order.billing1.state !== order.billing2.state;
+  const showSplitGST = diffStates && order.splitFactor?.isApplicable;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto m-4 border border-gray-200">
         <div className="flex justify-between items-center p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h2 className="text-2xl font-semibold text-gray-900">Order Details: {order.orderId}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <X className="w-6 h-6 text-gray-600" />
-          </button>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-6 h-6 text-gray-600" /></button>
         </div>
-
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
           <Section title="Basic Info">
-            <Detail label="Company" value={order.companyName} />
-            <Detail label="Entity" value={order.entity} />
-            <Detail label="Product" value={order.product} />
-            <Detail label="Order Type" value={order.orderType} />
-            <Detail label="Status" value={order.status} />
+            <Detail label="Company"     value={order.companyName} />
+            <Detail label="Company Group" value={order.companyGroup} />
+            <Detail label="Entity"      value={order.entity} />
+            <Detail label="Product"     value={order.product} />
+            <Detail label="Order Type"  value={order.orderType} />
+            <Detail label="Status"      value={order.status} />
             <div className="grid grid-cols-2 gap-3">
-              <Detail label="PCD Date" value={formatDateToDisplay(order.pcdDate)} />
+              <Detail label="PCD Date"        value={formatDateToDisplay(order.pcdDate)} />
               <Detail label="Termination Date" value={formatDateToDisplay(order.terminateDate)} />
             </div>
           </Section>
-
           <Section title="Technical Details">
-            <Detail label="LSI ID" value={order.lsiId} />
+            <Detail label="LSI ID"         value={order.lsiId} />
             <Detail label="Capacity (Mbps)" value={order.capacity} />
             <Detail label="Capacity (Kbps)" value={Number(order.capacity) * 1024} />
           </Section>
-
           <Section title="Endpoints" className="md:col-span-2">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -587,21 +333,28 @@ const ViewDetailsModal = ({ order, onClose }) => {
               )}
             </div>
           </Section>
-
           <Section title="Billing Details" className="md:col-span-2">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <BillingBlock title={order.product === 'NLD' ? "Billing 1" : "Billing Address"} data={order.billing1} />
-              {order.product === 'NLD' && (
-                <BillingBlock title="Billing 2" data={order.billing2} />
-              )}
+              <BillingBlock title={isNLD ? "Billing 1" : "Billing Address"} data={order.billing1} />
+              {isNLD && <BillingBlock title="Billing 2" data={order.billing2} />}
             </div>
           </Section>
+
+          {/* ─── GST Details (split or single) ─────────────────────────── */}
+          {showSplitGST ? (
+            <>
+              <GSTViewSection title={`GST Details – ${order.billing1.state} (State 1)`} gst={gst1} className="md:col-span-1" />
+              <GSTViewSection title={`GST Details – ${order.billing2.state} (State 2)`} gst={gst2} className="md:col-span-1" />
+            </>
+          ) : (
+            <GSTViewSection title="GST Details" gst={gst1} className="md:col-span-2" />
+          )}
 
           <Section title="Financials" className="md:col-span-2">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Detail label="Rate / Mbps" value={`₹${order.amount}`} />
-              <Detail label="Total Base" value={`₹${order.amount * order.capacity}`} />
-              <Detail label="GST (18%)" value={`₹${(order.amount * order.capacity * 0.18).toFixed(2)}`} />
+              <Detail label="Total Base"  value={`₹${order.amount * order.capacity}`} />
+              <Detail label="GST (18%)"   value={`₹${(order.amount * order.capacity * 0.18).toFixed(2)}`} />
               <Detail label="Grand Total" value={`₹${(order.amount * order.capacity * 1.18).toFixed(2)}`} />
             </div>
           </Section>
@@ -611,181 +364,331 @@ const ViewDetailsModal = ({ order, onClose }) => {
   );
 };
 
+// Helper: GST section inside ViewDetailsModal
+const GSTViewSection = ({ title, gst, className = "" }) => (
+  <Section title={title} className={className}>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Detail label="Transaction Type" value={gst.isSelfGST ? "Intra-state (Same State)" : "Inter-state (Different State)"} />
+      <Detail label="GST State"      value={gst.gstState} />
+      <Detail label="GST State Code" value={gst.gstStateCode} />
+      {gst.isSelfGST ? (
+        <>
+          <Detail label="CGST (%)"      value={gst.cgst} />
+          <Detail label="SGST (%)"      value={gst.sgst} />
+          <Detail label="Total GST (%)" value={((gst.cgst || 0) + (gst.sgst || 0)).toFixed(2)} />
+        </>
+      ) : (
+        <Detail label="IGST (%)" value={gst.igst} />
+      )}
+    </div>
+  </Section>
+);
+
 const Section = ({ title, children, className = "" }) => (
   <div className={`border border-gray-200 p-5 rounded-lg bg-gray-50 ${className}`}>
     <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4 pb-2 border-b border-gray-200">{title}</h3>
     <div className="space-y-3">{children}</div>
   </div>
 );
-
 const Detail = ({ label, value }) => (
   <div className="flex flex-col">
     <span className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">{label}</span>
-    <span className="font-semibold text-gray-900 text-base">{value || '-'}</span>
+    <span className="font-semibold text-gray-900 text-base">{value ?? '-'}</span>
   </div>
 );
-
 const BillingBlock = ({ title, data }) => (
   <div className="bg-white p-4 rounded-lg border border-gray-200">
     <p className="font-semibold text-sm text-blue-600 mb-2 uppercase">{title}</p>
-    <p className="text-base font-semibold text-gray-700 leading-relaxed">{data?.address}, {data?.area}</p>
+    <p className="text-base font-semibold text-gray-700">{data?.address}, {data?.area}</p>
     <p className="text-base font-semibold text-gray-600 mt-1">{data?.city}, {data?.state} - {data?.pincode}</p>
+    <p className="text-base font-semibold text-gray-600 mt-1">State Code: {data?.stateCode || '-'}</p>
   </div>
 );
 
-const CreateOrderForm = ({ onAddOrder }) => {
-  const initialBilling = { address: '', area: '', city: '', pincode: '', state: '' };
+// ─── GSTDetailsForm ──────────────────────────────────────────────────────────
+// title   = string shown in the header (e.g. "GST Details – Maharashtra (State 1)")
+// stateTag = optional badge text
+const GSTDetailsForm = ({ gstDetails, onChange, title = "GST Details", stateTag = null }) => {
+  const handleRadioChange = (value) => {
+    const isSelfGST = value === 'yes';
+    onChange({
+      ...gstDetails,
+      isSelfGST,
+      igst: isSelfGST ? 0 : 18,
+      cgst: isSelfGST ? 9 : 0,
+      sgst: isSelfGST ? 9 : 0,
+    });
+  };
 
+  const handleStateChange = (e) => {
+    const selectedStateName = e.target.value;
+    const selectedState = INDIAN_STATES.find(s => s.name === selectedStateName);
+    onChange({ ...gstDetails, gstState: selectedStateName, gstStateCode: selectedState ? selectedState.code : '' });
+  };
+
+  return (
+    <div className="border border-gray-200 p-5 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50">
+      <h3 className="font-semibold text-gray-900 mb-4 text-base uppercase flex items-center gap-2">
+        <span className="text-blue-600">📋</span> {title}
+        {stateTag && (
+          <span className="text-sm font-normal text-blue-700 bg-blue-100 px-3 py-1 rounded-full">{stateTag}</span>
+        )}
+      </h3>
+      <div className="space-y-4">
+        {/* Same State? */}
+        <div className="bg-white p-4 rounded-lg border border-gray-200">
+          <label className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3 block">
+            Same State Transaction (Self GST)?
+          </label>
+          <div className="flex gap-6">
+            {[['yes','Yes (Intra-state - CGST + SGST)'],['no','No (Inter-state - IGST)']].map(([val, label]) => (
+              <label key={val} className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name={`isSelfGST-${title}`} value={val}
+                  checked={val === 'yes' ? gstDetails.isSelfGST === true : gstDetails.isSelfGST === false}
+                  onChange={() => handleRadioChange(val)}
+                  className="w-5 h-5 text-blue-600" />
+                <span className="text-base font-semibold text-gray-700">{label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Tax rates */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {!gstDetails.isSelfGST && (
+            <div className="md:col-span-3">
+              <label className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2 block">IGST (%)</label>
+              <input type="number" value={gstDetails.igst}
+                onChange={e => onChange({ ...gstDetails, igst: parseFloat(e.target.value) || 0 })}
+                className="input-field bg-blue-50 font-semibold" placeholder="18" step="0.01" min="0" max="100" />
+            </div>
+          )}
+          {gstDetails.isSelfGST && (
+            <>
+              <div>
+                <label className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2 block">CGST (%)</label>
+                <input type="number" value={gstDetails.cgst}
+                  onChange={e => onChange({ ...gstDetails, cgst: parseFloat(e.target.value) || 0 })}
+                  className="input-field bg-green-50 font-semibold" placeholder="9" step="0.01" min="0" max="100" />
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2 block">SGST (%)</label>
+                <input type="number" value={gstDetails.sgst}
+                  onChange={e => onChange({ ...gstDetails, sgst: parseFloat(e.target.value) || 0 })}
+                  className="input-field bg-green-50 font-semibold" placeholder="9" step="0.01" min="0" max="100" />
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* GST State */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2 block">GST State</label>
+            <select value={gstDetails.gstState} onChange={handleStateChange} className="input-field font-semibold">
+              <option value="">Select GST State</option>
+              {INDIAN_STATES.map(s => <option key={s.key} value={s.name}>{s.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2 block">GST State Code</label>
+            <input type="text" value={gstDetails.gstStateCode} readOnly
+              className="input-field bg-gray-100 cursor-not-allowed font-semibold" placeholder="Auto-filled" />
+          </div>
+        </div>
+
+        {/* Summary */}
+        <div className="bg-white p-4 rounded-lg border border-gray-200">
+          <p className="text-sm font-semibold text-gray-600 mb-2">GST Summary:</p>
+          {gstDetails.isSelfGST ? (
+            <div className="text-sm font-semibold text-gray-700">
+              <span className="text-green-600">Intra-state:</span> CGST {gstDetails.cgst}% + SGST {gstDetails.sgst}% = Total {((gstDetails.cgst||0)+(gstDetails.sgst||0)).toFixed(2)}%
+            </div>
+          ) : (
+            <div className="text-sm font-semibold text-gray-700">
+              <span className="text-blue-600">Inter-state:</span> IGST {gstDetails.igst}%
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── CreateOrderForm ─────────────────────────────────────────────────────────
+const defaultBilling = () => ({ address:'',area:'',city:'',pincode:'',state:'',stateCode:'' });
+const defaultGST     = () => ({ isSelfGST:false, igst:18, cgst:0, sgst:0, gstState:'', gstStateCode:'' });
+const defaultSplit   = () => ({ isApplicable:false, state1Percentage:50, state2Percentage:50 });
+
+const CreateOrderForm = ({ onAddOrder }) => {
   const [formData, setFormData] = useState({
-    product: 'ILL',
-    endA: '',
-    endB: '',
-    billing1: { ...initialBilling },
-    billing2: { ...initialBilling },
-    orderId: '',
-    companyName: '',
-    entity: ENTITIES[0],
-    capacity: '',
-    lsiId: '',
-    amount: '',
-    status: STATUSES[0],
-    orderType: ORDER_TYPES[0],
-    pcdDate: '',
-    terminateDate: ''
+    product: 'ILL', endA:'', endB:'',
+    billing1: defaultBilling(), billing2: defaultBilling(),
+    gstDetails1: defaultGST(), gstDetails2: defaultGST(),
+    splitFactor: defaultSplit(),
+    orderId:'', companyName:'', companyGroup:'',
+    entity: ENTITIES[0], capacity:'', lsiId:'', amount:'',
+    status: STATUSES[0], orderType: ORDER_TYPES[0],
+    pcdDate:'', terminateDate:'',
   });
 
-  const handleInputChange = (e, section = null, field = null) => {
-    if (section) {
-      setFormData(prev => ({
-        ...prev,
-        [section]: { ...prev[section], [field]: e.target.value }
-      }));
+  const isNLD = formData.product === 'NLD';
+  const showEndB = ['ILL','NLD'].includes(formData.product);
+  const areStatesDifferent = isNLD && formData.billing1.state && formData.billing2.state &&
+    formData.billing1.state !== formData.billing2.state;
+
+  const handleBillingChange = (e, section, field) => {
+    const value = e.target.value;
+    if (field === 'state') {
+      const s = INDIAN_STATES.find(st => st.name === value);
+      setFormData(prev => ({ ...prev, [section]: { ...prev[section], state: value, stateCode: s ? s.code : '' } }));
     } else {
-      setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+      setFormData(prev => ({ ...prev, [section]: { ...prev[section], [field]: value } }));
     }
+  };
+
+  const handleInputChange = (e, section = null, field = null) => {
+    if (section) { handleBillingChange(e, section, field); }
+    else { setFormData(prev => ({ ...prev, [e.target.name]: e.target.value })); }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.companyName || !formData.orderId) return alert("Please fill required fields");
-
     if (formData.pcdDate && formData.terminateDate) {
-      const pcd = new Date(formData.pcdDate);
-      const terminate = new Date(formData.terminateDate);
-      if (pcd >= terminate) {
+      if (new Date(formData.pcdDate) >= new Date(formData.terminateDate))
         return alert("PCD Date must be earlier than Termination Date");
-      }
+    }
+    if (areStatesDifferent) {
+      const total = formData.splitFactor.state1Percentage + formData.splitFactor.state2Percentage;
+      if (Math.abs(total - 100) > 0.01) return alert("Split factor percentages must total 100%");
     }
 
-    const orderData = {
+    const payload = {
       ...formData,
-      pcdDate: convertDateForStorage(formData.pcdDate),
+      pcdDate:       convertDateForStorage(formData.pcdDate),
       terminateDate: convertDateForStorage(formData.terminateDate),
-      id: Date.now()
+      splitFactor: { ...formData.splitFactor, isApplicable: areStatesDifferent },
+      // keep legacy gstDetails in sync with gstDetails1
+      gstDetails: formData.gstDetails1,
     };
-
-    onAddOrder(orderData);
-    alert("Order Created Successfully!");
+    onAddOrder(payload);
+    setFormData({
+      product:'ILL', endA:'', endB:'',
+      billing1: defaultBilling(), billing2: defaultBilling(),
+      gstDetails1: defaultGST(), gstDetails2: defaultGST(),
+      splitFactor: defaultSplit(),
+      orderId:'', companyName:'', companyGroup:'',
+      entity: ENTITIES[0], capacity:'', lsiId:'', amount:'',
+      status: STATUSES[0], orderType: ORDER_TYPES[0],
+      pcdDate:'', terminateDate:'',
+    });
   };
-
-  const showEndB = ['ILL', 'NLD'].includes(formData.product);
-  const isNLD = formData.product === 'NLD';
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-md mb-6 border border-gray-200">
       <h2 className="text-2xl font-semibold mb-6 flex items-center gap-3 text-gray-900">
-        <div className="p-2.5 bg-blue-600 rounded-lg">
-          <Plus className="w-6 h-6 text-white" />
-        </div>
+        <div className="p-2.5 bg-blue-600 rounded-lg"><Plus className="w-6 h-6 text-white" /></div>
         Create New Order
       </h2>
-
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Row 1: Core Selection */}
+        {/* Row 1: product / entity / orderType / status */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <InputGroup label="Product">
             <select name="product" value={formData.product} onChange={handleInputChange} className="input-field">
-              {PRODUCTS.map(p => <option key={p} value={p}>{p}</option>)}
+              {PRODUCTS.map(p => <option key={p}>{p}</option>)}
             </select>
           </InputGroup>
           <InputGroup label="Entity">
             <select name="entity" value={formData.entity} onChange={handleInputChange} className="input-field">
-              {ENTITIES.map(e => <option key={e} value={e}>{e}</option>)}
+              {ENTITIES.map(e => <option key={e}>{e}</option>)}
             </select>
           </InputGroup>
           <InputGroup label="Order Type">
             <select name="orderType" value={formData.orderType} onChange={handleInputChange} className="input-field">
-              {ORDER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              {ORDER_TYPES.map(t => <option key={t}>{t}</option>)}
             </select>
           </InputGroup>
           <InputGroup label="Status">
             <select name="status" value={formData.status} onChange={handleInputChange} className="input-field">
-              {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+              {STATUSES.map(s => <option key={s}>{s}</option>)}
             </select>
           </InputGroup>
         </div>
 
-        {/* Row 2: Basic Info */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <InputGroup label="Order ID">
-            <input type="text" name="orderId" value={formData.orderId} onChange={handleInputChange} className="input-field" required />
-          </InputGroup>
-          <InputGroup label="Company Name">
-            <input type="text" name="companyName" value={formData.companyName} onChange={handleInputChange} className="input-field" required />
-          </InputGroup>
-          <InputGroup label="LSI ID">
-            <input type="text" name="lsiId" value={formData.lsiId} onChange={handleInputChange} className="input-field" />
-          </InputGroup>
+        {/* Row 2: ids */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <InputGroup label="Order ID"><input type="text" name="orderId" value={formData.orderId} onChange={handleInputChange} className="input-field" required /></InputGroup>
+          <InputGroup label="Company Name"><input type="text" name="companyName" value={formData.companyName} onChange={handleInputChange} className="input-field" required /></InputGroup>
+          <InputGroup label="Company Group"><input type="text" name="companyGroup" value={formData.companyGroup} onChange={handleInputChange} className="input-field" /></InputGroup>
+          <InputGroup label="LSI ID"><input type="text" name="lsiId" value={formData.lsiId} onChange={handleInputChange} className="input-field" /></InputGroup>
         </div>
 
-        {/* Dates */}
+        {/* Row 3: dates */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <InputGroup label="PCD Date">
-            <input type="date" name="pcdDate" value={formData.pcdDate} onChange={handleInputChange} className="input-field" />
-          </InputGroup>
-          <InputGroup label="Termination Date">
-            <input type="date" name="terminateDate" value={formData.terminateDate} onChange={handleInputChange} className="input-field" />
-          </InputGroup>
+          <InputGroup label="PCD Date"><input type="date" name="pcdDate" value={formData.pcdDate} onChange={handleInputChange} className="input-field" /></InputGroup>
+          <InputGroup label="Termination Date"><input type="date" name="terminateDate" value={formData.terminateDate} onChange={handleInputChange} className="input-field" /></InputGroup>
         </div>
 
-        {/* Technical & Financial */}
+        {/* Row 4: capacity / amount */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <InputGroup label="Capacity (Mbps)">
-            <input type="number" name="capacity" value={formData.capacity} onChange={handleInputChange} className="input-field" placeholder="e.g., 50" />
-          </InputGroup>
-          <InputGroup label="Amount (Per Mbps/Month)">
-            <input type="number" name="amount" value={formData.amount} onChange={handleInputChange} className="input-field" placeholder="e.g., 45" />
-          </InputGroup>
+          <InputGroup label="Capacity (Mbps)"><input type="number" name="capacity" value={formData.capacity} onChange={handleInputChange} className="input-field" /></InputGroup>
+          <InputGroup label="Amount (Per Mbps/Month)"><input type="number" name="amount" value={formData.amount} onChange={handleInputChange} className="input-field" /></InputGroup>
         </div>
 
         {/* Endpoints */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 bg-gray-50 rounded-lg border border-gray-200">
-          <InputGroup label="End A Address">
-            <textarea name="endA" value={formData.endA} onChange={handleInputChange} className="input-field h-24 resize-none" />
-          </InputGroup>
-          {showEndB && (
-            <InputGroup label="End B Address">
-              <textarea name="endB" value={formData.endB} onChange={handleInputChange} className="input-field h-24 resize-none" />
-            </InputGroup>
-          )}
+          <InputGroup label="End A Address"><textarea name="endA" value={formData.endA} onChange={handleInputChange} className="input-field h-24 resize-none" /></InputGroup>
+          {showEndB && <InputGroup label="End B Address"><textarea name="endB" value={formData.endB} onChange={handleInputChange} className="input-field h-24 resize-none" /></InputGroup>}
         </div>
 
-        {/* Billing Sections */}
+        {/* Billing */}
         <div className="space-y-4">
-          <BillingForm
-            title={isNLD ? "Billing Details 1" : "Billing Details"}
-            data={formData.billing1}
-            onChange={(e, field) => handleInputChange(e, 'billing1', field)}
-          />
-
-          {isNLD && (
-            <BillingForm
-              title="Billing Details 2"
-              data={formData.billing2}
-              onChange={(e, field) => handleInputChange(e, 'billing2', field)}
-            />
-          )}
+          <BillingForm title={isNLD ? "Billing Details 1" : "Billing Details"} data={formData.billing1}
+            onChange={(e,field) => handleInputChange(e,'billing1',field)} />
+          {isNLD && <BillingForm title="Billing Details 2" data={formData.billing2}
+            onChange={(e,field) => handleInputChange(e,'billing2',field)} />}
         </div>
+
+        {/* ─── GST Details ─── */}
+        {areStatesDifferent ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <span className="text-amber-700 font-semibold text-sm">
+                📋 NLD with different states detected — please fill GST details for each state separately.
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <GSTDetailsForm
+                gstDetails={formData.gstDetails1}
+                onChange={v => setFormData(prev => ({ ...prev, gstDetails1: v }))}
+                title="GST Details – State 1"
+                stateTag={formData.billing1.state}
+              />
+              <GSTDetailsForm
+                gstDetails={formData.gstDetails2}
+                onChange={v => setFormData(prev => ({ ...prev, gstDetails2: v }))}
+                title="GST Details – State 2"
+                stateTag={formData.billing2.state}
+              />
+            </div>
+          </div>
+        ) : (
+          <GSTDetailsForm
+            gstDetails={formData.gstDetails1}
+            onChange={v => setFormData(prev => ({ ...prev, gstDetails1: v }))}
+            title="GST Details"
+          />
+        )}
+
+        {/* Split factor */}
+        <SplitFactorForm
+          splitFactor={formData.splitFactor}
+          onChange={v => setFormData(prev => ({ ...prev, splitFactor: v }))}
+          billing1State={formData.billing1.state}
+          billing2State={formData.billing2.state}
+          isNLD={isNLD}
+        />
 
         <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 rounded-lg transition-colors shadow-sm text-base">
           Create Order
@@ -799,14 +702,16 @@ const BillingForm = ({ title, data, onChange }) => (
   <div className="border border-gray-200 p-5 rounded-lg bg-gray-50">
     <h3 className="font-semibold text-gray-900 mb-4 text-base uppercase">{title}</h3>
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <input placeholder="Complete Address" value={data.address} onChange={(e) => onChange(e, 'address')} className="input-field md:col-span-3" />
-      <input placeholder="Area" value={data.area} onChange={(e) => onChange(e, 'area')} className="input-field" />
-      <input placeholder="City" value={data.city} onChange={(e) => onChange(e, 'city')} className="input-field" />
-      <input placeholder="Pincode" value={data.pincode} onChange={(e) => onChange(e, 'pincode')} className="input-field" />
-      <select value={data.state} onChange={(e) => onChange(e, 'state')} className="input-field">
+      <input placeholder="Complete Address" value={data.address} onChange={e => onChange(e,'address')} className="input-field md:col-span-3" />
+      <input placeholder="Area"    value={data.area}    onChange={e => onChange(e,'area')}    className="input-field" />
+      <input placeholder="City"    value={data.city}    onChange={e => onChange(e,'city')}    className="input-field" />
+      <input placeholder="Pincode" value={data.pincode} onChange={e => onChange(e,'pincode')} className="input-field" />
+      <select value={data.state} onChange={e => onChange(e,'state')} className="input-field">
         <option value="">Select State</option>
-        {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+        {INDIAN_STATES.map(s => <option key={s.key} value={s.name}>{s.name}</option>)}
       </select>
+      <input placeholder="State Code" value={data.stateCode} readOnly
+        className="input-field bg-gray-100 cursor-not-allowed" />
     </div>
   </div>
 );
@@ -818,22 +723,32 @@ const InputGroup = ({ label, children }) => (
   </div>
 );
 
+// ─── EditOrderModal ──────────────────────────────────────────────────────────
 const EditOrderModal = ({ order, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     ...order,
-    pcdDate: convertDateForInput(order.pcdDate),
-    terminateDate: convertDateForInput(order.terminateDate)
+    pcdDate:       convertDateForInput(order.pcdDate),
+    terminateDate: convertDateForInput(order.terminateDate),
+    // Prefer gstDetails1; fall back to legacy gstDetails for old records
+    gstDetails1: order.gstDetails1 || order.gstDetails || defaultGST(),
+    gstDetails2: order.gstDetails2 || defaultGST(),
+    splitFactor: order.splitFactor || defaultSplit(),
   });
 
   if (!order) return null;
 
+  const isNLD = formData.product === 'NLD';
+  const showEndB = ['ILL','NLD'].includes(formData.product);
+  const areStatesDifferent = isNLD && formData.billing1?.state && formData.billing2?.state &&
+    formData.billing1.state !== formData.billing2.state;
+
   const handleInputChange = (e, billingKey = null, billingField = null) => {
     const { name, value } = e.target;
-    if (billingKey) {
-      setFormData(prev => ({
-        ...prev,
-        [billingKey]: { ...prev[billingKey], [billingField]: value }
-      }));
+    if (billingKey && billingField === 'state') {
+      const s = INDIAN_STATES.find(st => st.name === value);
+      setFormData(prev => ({ ...prev, [billingKey]: { ...prev[billingKey], state: value, stateCode: s ? s.code : '' } }));
+    } else if (billingKey) {
+      setFormData(prev => ({ ...prev, [billingKey]: { ...prev[billingKey], [billingField]: value } }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -841,129 +756,119 @@ const EditOrderModal = ({ order, onClose, onSave }) => {
 
   const handleSave = () => {
     if (formData.pcdDate && formData.terminateDate) {
-      const pcd = new Date(formData.pcdDate);
-      const terminate = new Date(formData.terminateDate);
-      if (pcd >= terminate) {
+      if (new Date(formData.pcdDate) >= new Date(formData.terminateDate))
         return alert("PCD Date must be earlier than Termination Date");
-      }
     }
-
-    const updatedData = {
+    if (areStatesDifferent) {
+      const total = formData.splitFactor.state1Percentage + formData.splitFactor.state2Percentage;
+      if (Math.abs(total - 100) > 0.01) return alert("Split factor percentages must total 100%");
+    }
+    onSave({
       ...formData,
-      pcdDate: convertDateForStorage(formData.pcdDate),
-      terminateDate: convertDateForStorage(formData.terminateDate)
-    };
-    onSave(updatedData);
-    onClose();
+      pcdDate:       convertDateForStorage(formData.pcdDate),
+      terminateDate: convertDateForStorage(formData.terminateDate),
+      splitFactor: { ...formData.splitFactor, isApplicable: areStatesDifferent },
+      gstDetails: formData.gstDetails1, // keep legacy field in sync
+    });
   };
 
-  const isNLD = formData.product === 'NLD';
-  const showEndB = ['ILL', 'NLD'].includes(formData.product);
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto m-4 border border-gray-200">
         <div className="flex justify-between items-center p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h2 className="text-2xl font-semibold text-gray-900">Edit Order: {order.orderId}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <X className="w-6 h-6 text-gray-600" />
-          </button>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-6 h-6 text-gray-600" /></button>
         </div>
-
         <div className="p-6 space-y-5">
-          {/* Core Selection */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <InputGroup label="Product">
               <select name="product" value={formData.product} onChange={handleInputChange} className="input-field">
-                {PRODUCTS.map(p => <option key={p} value={p}>{p}</option>)}
+                {PRODUCTS.map(p => <option key={p}>{p}</option>)}
               </select>
             </InputGroup>
             <InputGroup label="Entity">
               <select name="entity" value={formData.entity} onChange={handleInputChange} className="input-field">
-                {ENTITIES.map(e => <option key={e} value={e}>{e}</option>)}
+                {ENTITIES.map(e => <option key={e}>{e}</option>)}
               </select>
             </InputGroup>
             <InputGroup label="Order Type">
               <select name="orderType" value={formData.orderType} onChange={handleInputChange} className="input-field">
-                {ORDER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                {ORDER_TYPES.map(t => <option key={t}>{t}</option>)}
               </select>
             </InputGroup>
             <InputGroup label="Status">
               <select name="status" value={formData.status} onChange={handleInputChange} className="input-field">
-                {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                {STATUSES.map(s => <option key={s}>{s}</option>)}
               </select>
             </InputGroup>
           </div>
-
-          {/* Basic Info */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <InputGroup label="Order ID">
-              <input type="text" name="orderId" value={formData.orderId} onChange={handleInputChange} className="input-field" required />
-            </InputGroup>
-            <InputGroup label="Company Name">
-              <input type="text" name="companyName" value={formData.companyName} onChange={handleInputChange} className="input-field" required />
-            </InputGroup>
-            <InputGroup label="LSI ID">
-              <input type="text" name="lsiId" value={formData.lsiId} onChange={handleInputChange} className="input-field" />
-            </InputGroup>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <InputGroup label="Order ID"><input type="text" name="orderId" value={formData.orderId} onChange={handleInputChange} className="input-field" required /></InputGroup>
+            <InputGroup label="Company Name"><input type="text" name="companyName" value={formData.companyName} onChange={handleInputChange} className="input-field" required /></InputGroup>
+            <InputGroup label="Company Group"><input type="text" name="companyGroup" value={formData.companyGroup||''} onChange={handleInputChange} className="input-field" /></InputGroup>
+            <InputGroup label="LSI ID"><input type="text" name="lsiId" value={formData.lsiId} onChange={handleInputChange} className="input-field" /></InputGroup>
           </div>
-
-          {/* Dates */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InputGroup label="PCD Date">
-              <input type="date" name="pcdDate" value={formData.pcdDate} onChange={handleInputChange} className="input-field" />
-            </InputGroup>
-            <InputGroup label="Termination Date">
-              <input type="date" name="terminateDate" value={formData.terminateDate} onChange={handleInputChange} className="input-field" />
-            </InputGroup>
+            <InputGroup label="PCD Date"><input type="date" name="pcdDate" value={formData.pcdDate} onChange={handleInputChange} className="input-field" /></InputGroup>
+            <InputGroup label="Termination Date"><input type="date" name="terminateDate" value={formData.terminateDate} onChange={handleInputChange} className="input-field" /></InputGroup>
           </div>
-
-          {/* Technical & Financial */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InputGroup label="Capacity (Mbps)">
-              <input type="number" name="capacity" value={formData.capacity} onChange={handleInputChange} className="input-field" />
-            </InputGroup>
-            <InputGroup label="Amount (Per Mbps/Month)">
-              <input type="number" name="amount" value={formData.amount} onChange={handleInputChange} className="input-field" />
-            </InputGroup>
+            <InputGroup label="Capacity (Mbps)"><input type="number" name="capacity" value={formData.capacity} onChange={handleInputChange} className="input-field" /></InputGroup>
+            <InputGroup label="Amount (Per Mbps/Month)"><input type="number" name="amount" value={formData.amount} onChange={handleInputChange} className="input-field" /></InputGroup>
           </div>
-
-          {/* Endpoints */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 bg-gray-50 rounded-lg border border-gray-200">
-            <InputGroup label="End A Address">
-              <textarea name="endA" value={formData.endA} onChange={handleInputChange} className="input-field h-24 resize-none" />
-            </InputGroup>
-            {showEndB && (
-              <InputGroup label="End B Address">
-                <textarea name="endB" value={formData.endB} onChange={handleInputChange} className="input-field h-24 resize-none" />
-              </InputGroup>
-            )}
+            <InputGroup label="End A Address"><textarea name="endA" value={formData.endA} onChange={handleInputChange} className="input-field h-24 resize-none" /></InputGroup>
+            {showEndB && <InputGroup label="End B Address"><textarea name="endB" value={formData.endB} onChange={handleInputChange} className="input-field h-24 resize-none" /></InputGroup>}
           </div>
-
-          {/* Billing Sections */}
           <div className="space-y-4">
-            <BillingForm
-              title={isNLD ? "Billing Details 1" : "Billing Details"}
-              data={formData.billing1}
-              onChange={(e, field) => handleInputChange(e, 'billing1', field)}
-            />
-            {isNLD && (
-              <BillingForm
-                title="Billing Details 2"
-                data={formData.billing2}
-                onChange={(e, field) => handleInputChange(e, 'billing2', field)}
-              />
-            )}
+            <BillingForm title={isNLD ? "Billing Details 1" : "Billing Details"} data={formData.billing1}
+              onChange={(e,field) => handleInputChange(e,'billing1',field)} />
+            {isNLD && <BillingForm title="Billing Details 2" data={formData.billing2}
+              onChange={(e,field) => handleInputChange(e,'billing2',field)} />}
           </div>
 
-          {/* Action Buttons */}
+          {/* ─── GST Details ─── */}
+          {areStatesDifferent ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <span className="text-amber-700 font-semibold text-sm">
+                  📋 NLD with different states detected — GST details filled separately for each state.
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <GSTDetailsForm
+                  gstDetails={formData.gstDetails1}
+                  onChange={v => setFormData(prev => ({ ...prev, gstDetails1: v }))}
+                  title="GST Details – State 1"
+                  stateTag={formData.billing1?.state}
+                />
+                <GSTDetailsForm
+                  gstDetails={formData.gstDetails2}
+                  onChange={v => setFormData(prev => ({ ...prev, gstDetails2: v }))}
+                  title="GST Details – State 2"
+                  stateTag={formData.billing2?.state}
+                />
+              </div>
+            </div>
+          ) : (
+            <GSTDetailsForm
+              gstDetails={formData.gstDetails1}
+              onChange={v => setFormData(prev => ({ ...prev, gstDetails1: v }))}
+              title="GST Details"
+            />
+          )}
+
+          <SplitFactorForm
+            splitFactor={formData.splitFactor}
+            onChange={v => setFormData(prev => ({ ...prev, splitFactor: v }))}
+            billing1State={formData.billing1?.state}
+            billing2State={formData.billing2?.state}
+            isNLD={isNLD}
+          />
+
           <div className="flex gap-3 justify-end pt-5 border-t border-gray-200">
-            <button onClick={onClose} className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors text-base">
-              Cancel
-            </button>
-            <button onClick={handleSave} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow-sm text-base">
-              Save Changes
-            </button>
+            <button onClick={onClose} className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors text-base">Cancel</button>
+            <button onClick={handleSave} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow-sm text-base">Save Changes</button>
           </div>
         </div>
       </div>
@@ -971,297 +876,198 @@ const EditOrderModal = ({ order, onClose, onSave }) => {
   );
 };
 
+// ─── OrderList ────────────────────────────────────────────────────────────────
 const OrderList = ({ orders, onView, onEdit, onDelete }) => {
   const defaultDateRange = getDefaultDateRange();
-
   const [filters, setFilters] = useState({
-    company: '',
-    state: '',
-    entity: '',
-    statusFilter: 'active',
-    periodType: 'period',
-    selectedYear: getCurrentYear(),
+    company:'', state:'', entity:'', statusFilter:'active',
+    periodType:'period', selectedYear: getCurrentYear(),
     selectedMonth: ALL_MONTHS[getCurrentMonth()],
-    fromDate: defaultDateRange.fromDate,
-    toDate: defaultDateRange.toDate
+    fromDate: defaultDateRange.fromDate, toDate: defaultDateRange.toDate,
   });
-
-  const getPeriodLabel = () => {
-    if (filters.selectedYear === 'All') {
-      return 'All';
-    }
-    if (filters.selectedMonth === 'All') {
-      return `All ${filters.selectedYear}`;
-    }
-    return `${filters.selectedMonth} ${filters.selectedYear}`;
-  };
 
   const handleYearChange = (year) => {
     if (year === 'All') {
-      setFilters(prev => ({
-        ...prev,
-        selectedYear: year,
-        selectedMonth: 'All'
-      }));
+      setFilters(prev => ({ ...prev, selectedYear: year, selectedMonth: 'All' }));
     } else {
-      const yearNum = parseInt(year);
-      const currentYear = getCurrentYear();
-
+      const y = parseInt(year);
       setFilters(prev => ({
-        ...prev,
-        selectedYear: year,
-        selectedMonth: yearNum === currentYear ? ALL_MONTHS[getCurrentMonth()] : 'DEC'
+        ...prev, selectedYear: year,
+        selectedMonth: y === getCurrentYear() ? ALL_MONTHS[getCurrentMonth()] : 'DEC',
       }));
     }
   };
 
-  const availableMonths = useMemo(() => {
-    if (filters.selectedYear === 'All') {
-      return [];
-    }
-    return getAvailableMonths(parseInt(filters.selectedYear));
-  }, [filters.selectedYear]);
+  const availableMonths = useMemo(() =>
+    filters.selectedYear === 'All' ? [] : getAvailableMonths(parseInt(filters.selectedYear)),
+    [filters.selectedYear]
+  );
+
+  const isAnyFilterActive = () => {
+    const d = getDefaultDateRange();
+    return filters.company !== '' || filters.state !== '' || filters.entity !== '' ||
+      filters.statusFilter !== 'active' || filters.selectedYear !== getCurrentYear() ||
+      filters.selectedMonth !== ALL_MONTHS[getCurrentMonth()] ||
+      filters.periodType !== 'period' || filters.fromDate !== d.fromDate || filters.toDate !== d.toDate;
+  };
+
+  const handleClearFilters = () => {
+    const d = getDefaultDateRange();
+    setFilters({ company:'', state:'', entity:'', statusFilter:'active', periodType:'period',
+      selectedYear: getCurrentYear(), selectedMonth: ALL_MONTHS[getCurrentMonth()],
+      fromDate: d.fromDate, toDate: d.toDate });
+  };
 
   const filteredOrders = useMemo(() => {
     return orders.filter(order => {
       const matchCompany = order.companyName.toLowerCase().includes(filters.company.toLowerCase());
-      const matchEntity = filters.entity ? order.entity === filters.entity : true;
-      const matchState = filters.state
-        ? (order.billing1?.state?.includes(filters.state) || order.billing2?.state?.includes(filters.state))
-        : true;
-
+      const matchEntity  = filters.entity ? order.entity === filters.entity : true;
+      const matchState   = filters.state
+        ? (order.billing1?.state?.includes(filters.state) || order.billing2?.state?.includes(filters.state)) : true;
       let matchStatus = true;
-      if (filters.statusFilter === 'active') {
-        matchStatus = order.status === 'PCD';
-      } else {
-        matchStatus = order.status === 'Terminate';
-      }
+      if (filters.statusFilter === 'active') matchStatus = order.status === 'PCD';
+      else if (filters.statusFilter === 'inactive') matchStatus = order.status === 'Terminate';
 
-      let matchDateFilter = true;
-      const relevantDateField = (filters.statusFilter === 'inactive' && order.status === 'Terminate')
-        ? order.terminateDate
-        : order.pcdDate;
+      const relevantDate = (filters.statusFilter === 'inactive' && order.status === 'Terminate')
+        ? order.terminateDate : order.pcdDate;
+      const orderDate = parseStoredDate(relevantDate);
+      let matchDate = true;
 
-      const orderDate = parseStoredDate(relevantDateField);
+      if (orderDate && !isNaN(orderDate.getTime())) {
+        // Use UTC parts so "2026-01-08T18:30:00Z" stays Jan 8, not Jan 9 (IST)
+        const orderYear  = orderDate.getUTCFullYear();
+        const orderMonth = orderDate.getUTCMonth(); // 0-indexed
 
-      if (orderDate) {
         if (filters.periodType === 'period') {
           if (filters.selectedYear !== 'All') {
-            const selectedYearNum = parseInt(filters.selectedYear);
-
+            const y = parseInt(filters.selectedYear);
             if (filters.selectedMonth === 'All') {
-              matchDateFilter = orderDate.getFullYear() === selectedYearNum;
+              matchDate = orderYear === y;
             } else {
-              const monthIndex = ALL_MONTHS.indexOf(filters.selectedMonth);
-              matchDateFilter = orderDate.getFullYear() === selectedYearNum && orderDate.getMonth() === monthIndex;
+              const m = ALL_MONTHS.indexOf(filters.selectedMonth); // 0-indexed
+              matchDate = orderYear === y && orderMonth === m;
             }
           }
+          // selectedYear === 'All' → no date filter, matchDate stays true
         } else if (filters.periodType === 'dateRange') {
           if (filters.fromDate && filters.toDate) {
-            const fromDate = new Date(filters.fromDate);
-            const toDate = new Date(filters.toDate);
-            toDate.setHours(23, 59, 59, 999);
-            matchDateFilter = orderDate >= fromDate && orderDate <= toDate;
+            // Build UTC boundaries from the yyyy-mm-dd picker values
+            const [fy, fm, fd] = filters.fromDate.split('-').map(Number);
+            const [ty, tm, td] = filters.toDate.split('-').map(Number);
+            const from = new Date(Date.UTC(fy, fm - 1, fd, 0, 0, 0));
+            const to   = new Date(Date.UTC(ty, tm - 1, td, 23, 59, 59, 999));
+            // Compare using UTC timestamp
+            const orderUTC = Date.UTC(orderYear, orderMonth, orderDate.getUTCDate());
+            matchDate = orderUTC >= from.getTime() && orderUTC <= to.getTime();
           }
         }
       }
 
-      return matchCompany && matchEntity && matchState && matchStatus && matchDateFilter;
+      return matchCompany && matchEntity && matchState && matchStatus && matchDate;
     });
   }, [orders, filters]);
 
   return (
     <div className="space-y-5">
-      {/* Search & Filter Toolbar */}
+      {/* Filters bar */}
       <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 space-y-4">
-        {/* First Row: Search, State, Entity, Status */}
         <div className="flex flex-wrap gap-4 items-center">
           <div className="flex items-center gap-2 flex-1 min-w-[200px] border border-gray-300 rounded-lg px-4 py-3 bg-white focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100">
             <Search className="w-5 h-5 text-gray-400" />
-            <input
-              placeholder="Search Company..."
-              className="bg-transparent outline-none text-base font-semibold w-full text-gray-700 placeholder-gray-400"
-              value={filters.company}
-              onChange={(e) => setFilters(prev => ({ ...prev, company: e.target.value }))}
-            />
+            <input placeholder="Search Company..." className="bg-transparent outline-none text-base font-semibold w-full text-gray-700 placeholder-gray-400"
+              value={filters.company} onChange={e => setFilters(prev => ({ ...prev, company: e.target.value }))} />
           </div>
-
-          <div className="flex items-center gap-2 flex-1 min-w-[200px] border border-gray-300 rounded-lg px-4 py-3 bg-white focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100">
+          <div className="flex items-center gap-2 flex-1 min-w-[200px] border border-gray-300 rounded-lg px-4 py-3 bg-white">
             <Filter className="w-5 h-5 text-gray-400" />
-            <select
-              className="bg-transparent outline-none text-base font-semibold w-full text-gray-700"
-              value={filters.state}
-              onChange={(e) => setFilters(prev => ({ ...prev, state: e.target.value }))}
-            >
+            <select className="bg-transparent outline-none text-base font-semibold w-full text-gray-700"
+              value={filters.state} onChange={e => setFilters(prev => ({ ...prev, state: e.target.value }))}>
               <option value="">Filter by State</option>
-              {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+              {INDIAN_STATES.map(s => <option key={s.key} value={s.name}>{s.name}</option>)}
             </select>
           </div>
-
-          <div className="flex items-center gap-2 flex-1 min-w-[200px] border border-gray-300 rounded-lg px-4 py-3 bg-white focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100">
+          <div className={`flex items-center gap-2 flex-1 min-w-[200px] border rounded-lg px-4 py-3 transition-all ${filters.entity ? 'bg-gradient-to-r from-orange-50 to-amber-50 border-orange-400 ring-2 ring-orange-200' : 'bg-white border-gray-300'}`}>
             <ChevronDown className="w-5 h-5 text-gray-400" />
-            <select
-              className="bg-transparent outline-none text-base font-semibold w-full text-gray-700"
-              value={filters.entity}
-              onChange={(e) => setFilters(prev => ({ ...prev, entity: e.target.value }))}
-            >
+            <select className="bg-transparent outline-none text-base font-semibold w-full text-gray-700"
+              value={filters.entity} onChange={e => setFilters(prev => ({ ...prev, entity: e.target.value }))}>
               <option value="">Filter by Entity</option>
-              {ENTITIES.map(e => <option key={e} value={e}>{e}</option>)}
+              {ENTITIES.map(e => <option key={e}>{e}</option>)}
             </select>
           </div>
-
-          <div className="flex items-center gap-2 flex-1 min-w-[200px] border border-gray-300 rounded-lg px-4 py-3 bg-white focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100">
+          <div className="flex items-center gap-2 flex-1 min-w-[200px] border border-gray-300 rounded-lg px-4 py-3 bg-white">
             <Filter className="w-5 h-5 text-gray-400" />
-            <select
-              className="bg-transparent outline-none text-base font-semibold w-full text-gray-700"
-              value={filters.statusFilter}
-              onChange={(e) => setFilters(prev => ({ ...prev, statusFilter: e.target.value }))}
-            >
+            <select className="bg-transparent outline-none text-base font-semibold w-full text-gray-700"
+              value={filters.statusFilter} onChange={e => setFilters(prev => ({ ...prev, statusFilter: e.target.value }))}>
               <option value="active">Active (PCD)</option>
               <option value="inactive">Inactive (Terminate)</option>
             </select>
           </div>
+          {isAnyFilterActive() && (
+            <button onClick={handleClearFilters} className="flex items-center gap-2 px-4 py-3 bg-red-50 border-2 border-red-500 text-red-600 font-semibold rounded-lg hover:bg-red-100 transition-all shadow-sm">
+              <X className="w-5 h-5" /> Clear Filter
+            </button>
+          )}
         </div>
-
-        {/* Second Row: Period Filters - Tab Style */}
+        {/* Period / date range tabs */}
         <div className="border-t border-gray-200 pt-4">
           <div className="flex gap-2 mb-4 border-b border-gray-200">
-            <button
-              onClick={() => {
-                const defaultRange = getDefaultDateRange();
-                setFilters(prev => ({
-                  ...prev,
-                  periodType: 'period',
-                  fromDate: defaultRange.fromDate,
-                  toDate: defaultRange.toDate
-                }));
-              }}
-              className={`px-5 py-2.5 font-semibold text-sm transition-all border-b-2 ${filters.periodType === 'period'
-                ? 'border-teal-600 text-teal-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
-                }`}
-            >
-              Period Selector
-            </button>
-            <button
-              onClick={() => {
-                const defaultRange = getDefaultDateRange();
-                setFilters(prev => ({
-                  ...prev,
-                  periodType: 'dateRange',
-                  fromDate: defaultRange.fromDate,
-                  toDate: defaultRange.toDate
-                }));
-              }}
-              className={`px-5 py-2.5 font-semibold text-sm transition-all border-b-2 ${filters.periodType === 'dateRange'
-                ? 'border-teal-600 text-teal-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
-                }`}
-            >
-              Date Range
-            </button>
+            {[['period','Period Selector'],['dateRange','Date Range']].map(([t,label]) => (
+              <button key={t} onClick={() => { const d=getDefaultDateRange(); setFilters(prev=>({...prev, periodType:t, fromDate:d.fromDate, toDate:d.toDate})); }}
+                className={`px-5 py-2.5 font-semibold text-sm transition-all border-b-2 ${filters.periodType===t ? 'border-teal-600 text-teal-600' : 'border-transparent text-gray-600 hover:text-gray-900'}`}>
+                {label}
+              </button>
+            ))}
           </div>
-
-          <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg">
-            {filters.periodType === 'period' && (
-              <div className="flex flex-wrap items-center gap-6">
-                <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
-                  <label className="text-sm font-semibold text-gray-600">
-                    Year
-                  </label>
-                  <select
-                    className="border border-gray-300 rounded-lg px-4 py-2 text-sm font-semibold text-gray-700 bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-teal-400 min-w-[120px]"
-                    value={filters.selectedYear}
-                    onChange={(e) => handleYearChange(e.target.value)}
-                  >
-                    {YEAR_OPTIONS.map(year => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {filters.selectedYear !== 'All' && (
-                  <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 shadow-sm flex-1 min-w-[420px]">
-                    <label className="text-sm font-semibold text-gray-600 whitespace-nowrap">
-                      Month
-                    </label>
-
-                    <div className="flex gap-2 flex-wrap justify-center">
-                      <button
-                        onClick={() => setFilters(prev => ({ ...prev, selectedMonth: 'All' }))}
-                        className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${filters.selectedMonth === 'All'
-                          ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-md scale-105'
-                          : 'bg-white text-gray-700 border border-gray-200 hover:border-teal-300 hover:shadow-sm'
-                          }`}
-                      >
-                        All
-                      </button>
-
-                      {ALL_MONTHS.map(month => {
-                        const isAvailable = availableMonths.includes(month);
-                        return (
-                          <button
-                            key={month}
-                            onClick={() =>
-                              isAvailable &&
-                              setFilters(prev => ({ ...prev, selectedMonth: month }))
-                            }
-                            disabled={!isAvailable}
-                            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${filters.selectedMonth === month
-                              ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-md scale-105'
-                              : isAvailable
-                                ? 'bg-white text-gray-700 border border-gray-200 hover:border-teal-300 hover:shadow-sm'
-                                : 'bg-gray-100 text-gray-300 border border-gray-200 cursor-not-allowed'
-                              }`}
-                          >
-                            {month}
-                          </button>
-                        );
-                      })}
-                    </div>
+          {filters.periodType === 'period' && (
+            <div className="flex flex-wrap items-center gap-6">
+              <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
+                <label className="text-sm font-semibold text-gray-600">Year</label>
+                <select className="border border-gray-300 rounded-lg px-4 py-2 text-sm font-semibold text-gray-700 bg-white"
+                  value={filters.selectedYear} onChange={e => handleYearChange(e.target.value)}>
+                  {YEAR_OPTIONS.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+              {filters.selectedYear !== 'All' && (
+                <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 shadow-sm flex-1 min-w-[420px]">
+                  <label className="text-sm font-semibold text-gray-600 whitespace-nowrap">Month</label>
+                  <div className="flex gap-2 flex-wrap justify-center">
+                    <button onClick={() => setFilters(prev=>({...prev, selectedMonth:'All'}))}
+                      className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${filters.selectedMonth==='All' ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-md scale-105' : 'bg-white text-gray-700 border border-gray-200 hover:border-teal-300'}`}>
+                      All
+                    </button>
+                    {ALL_MONTHS.map(month => {
+                      const avail = availableMonths.includes(month);
+                      return (
+                        <button key={month} onClick={() => avail && setFilters(prev=>({...prev,selectedMonth:month}))} disabled={!avail}
+                          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${filters.selectedMonth===month ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-md scale-105' : avail ? 'bg-white text-gray-700 border border-gray-200 hover:border-teal-300' : 'bg-gray-100 text-gray-300 border border-gray-200 cursor-not-allowed'}`}>
+                          {month}
+                        </button>
+                      );
+                    })}
                   </div>
-                )}
+                </div>
+              )}
+            </div>
+          )}
+          {filters.periodType === 'dateRange' && (
+            <div className="flex flex-wrap items-center gap-6">
+              {[['From Date:','fromDate'],['To Date:','toDate']].map(([lbl,key]) => (
+                <div key={key} className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
+                  <label className="text-sm font-semibold text-gray-600 whitespace-nowrap">{lbl}</label>
+                  <input type="date" className="border border-gray-300 rounded-lg px-4 py-2 text-sm font-semibold text-gray-700 bg-white"
+                    value={filters[key]} onChange={e => setFilters(prev=>({...prev,[key]:e.target.value}))} />
+                </div>
+              ))}
+              <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <span className="text-sm font-semibold text-blue-700">
+                  {new Date(filters.fromDate).toLocaleDateString('en-IN')} – {new Date(filters.toDate).toLocaleDateString('en-IN')}
+                </span>
               </div>
-            )}
-
-            {filters.periodType === 'dateRange' && (
-              <div className="flex flex-wrap items-center gap-6">
-                <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
-                  <label className="text-sm font-semibold text-gray-600 whitespace-nowrap">
-                    From Date:
-                  </label>
-                  <input
-                    type="date"
-                    className="border border-gray-300 rounded-lg px-4 py-2 text-sm font-semibold text-gray-700 bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-teal-400"
-                    value={filters.fromDate}
-                    onChange={(e) => setFilters(prev => ({ ...prev, fromDate: e.target.value }))}
-                  />
-                </div>
-
-                <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
-                  <label className="text-sm font-semibold text-gray-600 whitespace-nowrap">
-                    To Date:
-                  </label>
-                  <input
-                    type="date"
-                    className="border border-gray-300 rounded-lg px-4 py-2 text-sm font-semibold text-gray-700 bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-teal-400"
-                    value={filters.toDate}
-                    onChange={(e) => setFilters(prev => ({ ...prev, toDate: e.target.value }))}
-                  />
-                </div>
-
-                <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-                  <span className="text-sm font-semibold text-blue-700">
-                    Showing: {new Date(filters.fromDate).toLocaleDateString('en-IN')} - {new Date(filters.toDate).toLocaleDateString('en-IN')}
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Cards Render */}
+      {/* Order cards */}
       <div className="space-y-5">
         {filteredOrders.length === 0 ? (
           <div className="text-center text-gray-500 py-20 bg-white rounded-lg border border-gray-200 border-dashed">
@@ -1270,7 +1076,7 @@ const OrderList = ({ orders, onView, onEdit, onDelete }) => {
           </div>
         ) : (
           filteredOrders.map(order => (
-            <OrderCard key={order.id} order={order} onView={onView} onEdit={onEdit} onDelete={onDelete} />
+            <OrderCard key={order.id || order._id} order={order} onView={onView} onEdit={onEdit} onDelete={onDelete} />
           ))
         )}
       </div>
@@ -1278,24 +1084,22 @@ const OrderList = ({ orders, onView, onEdit, onDelete }) => {
   );
 };
 
-// ✅ UPDATED OrderCard Component - WITH SPLIT-AWARE BUTTONS
+// ─── OrderCard ────────────────────────────────────────────────────────────────
 const OrderCard = ({ order, onView, onEdit, onDelete }) => {
   const [showBillingPopup, setShowBillingPopup] = useState(null);
-  const [showEndPopup, setShowEndPopup] = useState(null);
+  const [showEndPopup,     setShowEndPopup]     = useState(null);
   const [showCompanyPopup, setShowCompanyPopup] = useState(false);
-  const [showCollectionPopup, setShowCollectionPopup] = useState(false);
-  const [showAccountPopup, setShowAccountPopup] = useState(false);
-  const [activeSplitInfo, setActiveSplitInfo] = useState(null);
 
-  const isNLD = order.product === "NLD";
-  const state1 = order.billing1?.state || "";
-  const state2 = order.billing2?.state || "";
-  const areStatesDifferent = isNLD && state1 !== state2 && state2 !== "";
+  const isNLD = order.product === 'NLD';
+  const state1 = order.billing1?.state || '';
+  const state2 = order.billing2?.state || '';
+  const areStatesDifferent = isNLD && state1 !== state2 && state2 !== '';
+  const isSplitApplicable  = areStatesDifferent && order.splitFactor?.isApplicable;
 
-  const capacityMbps = Number(order.capacity) || 0;
-  const capacityKbps = capacityMbps * 1024;
-  const baseRate = Number(order.amount) || 0;
-  const totalAmountLink = baseRate * capacityMbps;
+  const capacityMbps   = Number(order.capacity) || 0;
+  const capacityKbps   = capacityMbps * 1024;
+  const baseRate       = Number(order.amount) || 0;
+  const totalAmountLink= baseRate * capacityMbps;
 
   const truncateEndText = (text, limit = 50) => {
     if (!text) return '-';
@@ -1303,29 +1107,41 @@ const OrderCard = ({ order, onView, onEdit, onDelete }) => {
     return (
       <>
         {text.substring(0, limit)}
-        <span
-          className="text-blue-600 cursor-pointer hover:underline ml-1 font-semibold"
-          onClick={() => setShowEndPopup(text)}
-        >
-          ...more
-        </span>
+        <span className="text-blue-600 cursor-pointer hover:underline ml-1 font-semibold"
+          onClick={() => setShowEndPopup(text)}>...more</span>
       </>
     );
   };
 
-  // ✅ FIXED renderRow - Always includes state information
-  const renderRow = (billingObj, splitFactor = 1, billingLabel) => {
-    const splitAmount = baseRate / splitFactor;
-    const rowTotalAmount = totalAmountLink / splitFactor;
-    const gstAmount = rowTotalAmount * 0.18;
-    const finalTotal = rowTotalAmount + gstAmount;
-    const arcTotal = finalTotal * 12;
+  // ─── renderRow ───────────────────────────────────────────────────────────────
+  // New column layout (% rate embedded in header label):
+  //   CGST+SGST case  →  CGST {n}%  |  SGST {n}%  |  CGST+SGST Amt
+  //   IGST case       →  IGST {n}%
+  //   Mixed           →  CGST {n}%  |  SGST {n}%  |  CGST+SGST Amt  |  IGST {n}%
+  //                      (row fills its own cols, dashes the other)
+  const renderRow = (billingObj, gstObj, splitPercentage = 100, showAllCols = false) => {
+    const pct        = splitPercentage / 100;
+    const rowBase    = totalAmountLink * pct;
+    const splitRate  = baseRate * pct;
+    const isSelf     = gstObj?.isSelfGST || false;
 
-    // ✅ FIXED: Always include state information, even for 100% split
-    const splitInfo = {
-      state: billingObj.state || '',
-      splitKey: splitFactor === 2 ? '50' : '100'
-    };
+    let cgstAmt = 0, sgstAmt = 0, igstAmt = 0, cgstSgstAmt = 0, totalGST = 0;
+
+    if (isSelf) {
+      const cgstPct = gstObj?.cgst || 9;
+      const sgstPct = gstObj?.sgst || 9;
+      cgstAmt     = (rowBase * cgstPct) / 100;
+      sgstAmt     = (rowBase * sgstPct) / 100;
+      cgstSgstAmt = cgstAmt + sgstAmt;
+      totalGST    = cgstSgstAmt;
+    } else {
+      const igstPct = gstObj?.igst || 18;
+      igstAmt  = (rowBase * igstPct) / 100;
+      totalGST = igstAmt;
+    }
+
+    const grandTotal = rowBase + totalGST;
+    const arcTotal   = rowBase * 12;
 
     return (
       <tr className="border-t border-gray-200 text-base hover:bg-gray-50 transition-colors">
@@ -1333,111 +1149,148 @@ const OrderCard = ({ order, onView, onEdit, onDelete }) => {
         <td className="py-4 px-4 font-semibold text-gray-600">{order.lsiId}</td>
         <td className="py-4 px-4 font-semibold text-gray-700">{capacityMbps} Mbps</td>
         <td className="py-4 px-4 font-semibold text-gray-600">{capacityKbps.toLocaleString()}</td>
-        <td className="py-4 px-4 font-semibold text-gray-600">{truncateEndText(billingObj.address, 20)}</td>
-        <td className="py-4 px-4 font-semibold text-gray-900">{billingObj.state || '-'}</td>
-        <td className="py-4 px-4 font-bold text-blue-700">₹{splitAmount.toFixed(2)}</td>
-        <td className="py-4 px-4 font-bold text-blue-600">₹{rowTotalAmount.toFixed(0)}</td>
-        <td className="py-4 px-4 text-sm font-semibold text-gray-600">18%</td>
-        <td className="py-4 px-4 font-semibold text-gray-700">₹{gstAmount.toFixed(0)}</td>
-        <td className="py-4 px-4 font-bold text-green-700">₹{finalTotal.toFixed(0)}</td>
+        <td className="py-4 px-4 font-semibold text-gray-600">{truncateEndText(billingObj?.address, 20)}</td>
+        <td className="py-4 px-4 font-semibold text-gray-900">{billingObj?.state || '-'}</td>
+        <td className="py-4 px-4 font-bold text-blue-700">₹{splitRate.toFixed(2)}</td>
+        <td className="py-4 px-4 font-bold text-blue-600">₹{rowBase.toFixed(0)}</td>
+
+        {/* GST amount cells — no separate % cells, rate lives in the <th> */}
+        {showAllCols ? (
+          // Mixed types: show all 4 cols, dash unused ones
+          <>
+            <td className="py-4 px-4 font-semibold text-green-700">{isSelf  ? `₹${cgstAmt.toFixed(0)}`     : '–'}</td>
+            <td className="py-4 px-4 font-semibold text-green-700">{isSelf  ? `₹${sgstAmt.toFixed(0)}`     : '–'}</td>
+            <td className="py-4 px-4 font-semibold text-purple-700">{isSelf ? `₹${cgstSgstAmt.toFixed(0)}` : '–'}</td>
+            <td className="py-4 px-4 font-semibold text-green-700">{!isSelf ? `₹${igstAmt.toFixed(0)}`     : '–'}</td>
+          </>
+        ) : isSelf ? (
+          // Intra-state only: CGST Amt | SGST Amt | CGST+SGST Amt
+          <>
+            <td className="py-4 px-4 font-semibold text-green-700">₹{cgstAmt.toFixed(0)}</td>
+            <td className="py-4 px-4 font-semibold text-green-700">₹{sgstAmt.toFixed(0)}</td>
+            <td className="py-4 px-4 font-semibold text-purple-700">₹{cgstSgstAmt.toFixed(0)}</td>
+          </>
+        ) : (
+          // Inter-state only: IGST Amt
+          <td className="py-4 px-4 font-semibold text-green-700">₹{igstAmt.toFixed(0)}</td>
+        )}
+
+        <td className="py-4 px-4 font-bold text-green-700">₹{grandTotal.toFixed(0)}</td>
         <td className="py-4 px-4 font-bold text-purple-700">₹{arcTotal.toFixed(0)}</td>
         <td className="py-4 px-4 text-center">
-          <span className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${splitFactor === 2 ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-gray-100 text-gray-700 border border-gray-200'}`}>
-            {splitFactor === 2 ? '50%' : '100%'}
+          <span className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${isSplitApplicable ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-gray-100 text-gray-700 border border-gray-200'}`}>
+            {splitPercentage.toFixed(0)}%
           </span>
         </td>
         <td className="py-4 px-4">
           <div className="flex items-center justify-center gap-2">
-            <button
-              onClick={() => onView(order)}
-              className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
-              title="View Order"
-            >
-              <Eye className="w-5 h-5 text-blue-600" />
-            </button>
-            <button
-              onClick={() => onEdit(order)}
-              className="p-2 hover:bg-amber-50 rounded-lg transition-colors"
-              title="Edit Order"
-            >
-              <Edit2 className="w-5 h-5 text-amber-600" />
-            </button>
-            <button
-              onClick={() => onDelete(order.id)}
-              className="p-2 hover:bg-red-50 rounded-lg transition-colors"
-              title="Delete Order"
-            >
-              <Trash2 className="w-5 h-5 text-red-600" />
-            </button>
-            <button
-              onClick={() => {
-                setActiveSplitInfo(splitInfo);
-                setShowCollectionPopup(true);
-              }}
-              className="p-2 hover:bg-green-50 rounded-lg transition-colors font-semibold text-green-600"
-              title={`Collection Details - ${splitInfo.state} (${splitInfo.splitKey}%)`}
-            >
-              C
-            </button>
-            <button
-              onClick={() => {
-                setActiveSplitInfo(splitInfo);
-                setShowAccountPopup(true);
-              }}
-              className="p-2 hover:bg-purple-50 rounded-lg transition-colors font-semibold text-purple-600"
-              title={`Invoice Details - ${splitInfo.state} (${splitInfo.splitKey}%)`}
-            >
-              A
-            </button>
+            <button onClick={() => onView(order)} className="p-2 hover:bg-blue-50 rounded-lg" title="View"><Eye className="w-5 h-5 text-blue-600" /></button>
+            <button onClick={() => onEdit(order)} className="p-2 hover:bg-amber-50 rounded-lg" title="Edit"><Edit2 className="w-5 h-5 text-amber-600" /></button>
+            <button onClick={() => onDelete(order.id || order._id)} className="p-2 hover:bg-red-50 rounded-lg" title="Delete"><Trash2 className="w-5 h-5 text-red-600" /></button>
           </div>
         </td>
       </tr>
     );
   };
 
+  // Resolve GST objects
+  const gst1 = order.gstDetails1 || order.gstDetails || {};
+  const gst2 = order.gstDetails2 || order.gstDetails || {};
+  const isSelf1 = gst1?.isSelfGST || false;
+  const isSelf2 = gst2?.isSelfGST || false;
+  // When split rows have DIFFERENT GST types, show all columns in one table
+  const mixedGSTTypes = isSplitApplicable && isSelf1 !== isSelf2;
+
+  // Derive rates for header labels
+  // For mixed: the isSelf row supplies CGST/SGST rates; the non-isSelf row supplies IGST rate
+  const selfGst  = isSelf1 ? gst1 : gst2;   // whichever row is intra-state
+  const interGst = isSelf1 ? gst2 : gst1;   // whichever row is inter-state
+  const cgstRate = selfGst?.cgst  || 9;
+  const sgstRate = selfGst?.sgst  || 9;
+  const igstRate = interGst?.igst || 18;
+
+  // ─── Single unified header — rate is embedded in the <th> label ───────────
+  const buildHeaders = () => (
+    <tr>
+      <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">Order ID</th>
+      <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">LSI ID</th>
+      <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">Cap (Mb)</th>
+      <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">Cap (Kb)</th>
+      <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">Billing</th>
+      <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">State</th>
+      <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">Rate</th>
+      <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">Total Basic</th>
+
+      {mixedGSTTypes ? (
+        // Mixed: CGST {n}% | SGST {n}% | CGST+SGST Amt | IGST {n}%
+        <>
+          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">CGST {cgstRate}%</th>
+          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">SGST {sgstRate}%</th>
+          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">CGST+SGST Amt</th>
+          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">IGST {igstRate}%</th>
+        </>
+      ) : isSelf1 ? (
+        // Intra-state: CGST {n}% | SGST {n}% | CGST+SGST Amt
+        <>
+          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">CGST {gst1.cgst || 9}%</th>
+          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">SGST {gst1.sgst || 9}%</th>
+          <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">CGST+SGST Amt</th>
+        </>
+      ) : (
+        // Inter-state: IGST {n}%
+        <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">IGST {gst1.igst || 18}%</th>
+      )}
+
+      <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">Grand Total</th>
+      <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">ARC Total</th>
+      <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">Split</th>
+      <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">Actions</th>
+    </tr>
+  );
+
   return (
     <>
       <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200 border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
-        {/* Card Header */}
+        {/* Header */}
         <div className="bg-gray-50 px-6 py-5 border-b border-gray-200 flex flex-col md:flex-row justify-between md:items-center gap-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2 flex-wrap">
                 <span className="text-gray-600 font-semibold text-base">Order Id:</span>
-                <span className="px-3 py-1 bg-purple-100 text-purple-900 rounded-lg text-base font-bold border border-purple-200">
-                  {order.orderId}
-                </span>
-                <span className="text-gray-400 text-base">•</span>
-                <span className="text-gray-600 font-semibold text-base">Company:</span>
-                <span className="px-2.5 py-0.5 bg-blue-100 text-blue-900 rounded-lg text-base font-semibold border border-blue-200">
-                  {truncateEndText(order.companyName, 50)}
-                </span>
-              </h3>
-
-              <p className="text-sm font-semibold text-gray-600 mt-3 flex items-center gap-2 flex-wrap">
-                <span className="font-semibold text-gray-600">End A:</span>
-                <span className="bg-amber-50 border-amber-200 border-1 rounded-full px-2.5 py-1">{truncateEndText(order.endA, 30)}</span>
+                <span className="px-3 py-1 bg-purple-100 text-purple-900 rounded-lg text-base font-bold border border-purple-200">{order.orderId}</span>
                 <span className="text-gray-400">•</span>
-                <span className="font-semibold text-gray-600">End B:</span>
-                <span className="bg-green-100 border-1 border-green-200 rounded-full px-2.5 py-1">{truncateEndText(order.endB, 30)}</span>
+                <span className="text-gray-600 font-semibold text-base">Company:</span>
+                <span className="px-2.5 py-0.5 bg-blue-100 text-blue-900 rounded-lg text-base font-semibold border border-blue-200">{truncateEndText(order.companyName, 50)}</span>
+                {order.companyGroup && (
+                  <>
+                    <span className="text-gray-400">•</span>
+                    <span className="text-gray-600 font-semibold text-base">Group:</span>
+                    <span className="px-2.5 py-0.5 bg-green-100 text-green-900 rounded-lg text-base font-semibold border border-green-200">{truncateEndText(order.companyGroup, 30)}</span>
+                  </>
+                )}
+              </h3>
+              <p className="text-sm font-semibold text-gray-600 mt-3 flex items-center gap-2 flex-wrap">
+                <span className="font-semibold">End A:</span>
+                <span className="bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1">{truncateEndText(order.endA, 30)}</span>
+                <span className="text-gray-400">•</span>
+                <span className="font-semibold">End B:</span>
+                <span className="bg-green-100 border border-green-200 rounded-full px-2.5 py-1">{truncateEndText(order.endB, 30)}</span>
               </p>
             </div>
           </div>
-
           <div className="flex flex-col items-end gap-2 text-right">
             <div className="flex gap-2 items-center flex-wrap justify-end">
               <span className="text-sm text-gray-600 font-semibold bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200">
-                PCD: {formatDateToDisplay(order.pcdDate) || '-'}
+                PCD: {order.pcdDate ? formatDateToDisplay(order.pcdDate) : '-'}
               </span>
-
               {order.terminateDate && (
                 <span className="text-sm text-red-600 font-semibold bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">
                   Terminate: {formatDateToDisplay(order.terminateDate)}
                 </span>
               )}
             </div>
-
             <div className="flex flex-wrap gap-2 justify-end">
+              <Badge color="orange">{order.entity}</Badge>
               <Badge color="blue">{order.orderType}</Badge>
               <Badge color="purple">{order.product}</Badge>
               <Badge color={order.status === 'PCD' ? 'green' : 'red'}>{order.status}</Badge>
@@ -1445,93 +1298,45 @@ const OrderCard = ({ order, onView, onEdit, onDelete }) => {
           </div>
         </div>
 
-        {/* Data Table */}
+        {/* ─── Always ONE table ─── */}
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="text-sm font-semibold text-gray-700 uppercase bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-4 py-4 font-semibold text-gray-700">Order ID</th>
-                <th className="px-4 py-4 font-semibold text-gray-700">LSI ID</th>
-                <th className="px-4 py-4 font-semibold text-gray-700">Cap (Mb)</th>
-                <th className="px-4 py-4 font-semibold text-gray-700">Cap (Kb)</th>
-                <th className="px-4 py-4 font-semibold text-gray-700">Billing</th>
-                <th className="px-4 py-4 font-semibold text-gray-700">State</th>
-                <th className="px-4 py-4 font-semibold text-gray-700">Rate</th>
-                <th className="px-4 py-4 font-semibold text-gray-700">Total</th>
-                <th className="px-4 py-4 font-semibold text-gray-700">GST</th>
-                <th className="px-4 py-4 font-semibold text-gray-700">GST Amt</th>
-                <th className="px-4 py-4 font-semibold text-gray-700">Grand Total</th>
-                <th className="px-4 py-4 font-semibold text-gray-700">ARC Total</th>
-                <th className="px-4 py-4 font-semibold text-gray-700">Split</th>
-                <th className="px-4 py-4 font-semibold text-gray-700">Actions</th>
-              </tr>
+              {buildHeaders()}
             </thead>
             <tbody>
-              {areStatesDifferent ? (
+              {isSplitApplicable ? (
                 <>
-                  {renderRow(order.billing1, 2, "Billing 1")}
-                  {renderRow(order.billing2, 2, "Billing 2")}
+                  {/* ── State 1 label row ── */}
+                  {/* <tr className="bg-green-50 border-t border-green-200">
+                    <td colSpan={99} className="px-4 py-2 text-xs font-bold text-green-800 uppercase tracking-widest">
+                      State 1 – {state1} ({isSelf1 ? 'CGST + SGST' : 'IGST'})
+                    </td>
+                  </tr> */}
+                  {renderRow(order.billing1, gst1, order.splitFactor.state1Percentage, mixedGSTTypes)}
+
+                  {/* ── State 2 label row ── */}
+                  {/* <tr className="bg-blue-50 border-t border-blue-200">
+                    <td colSpan={99} className="px-4 py-2 text-xs font-bold text-blue-800 uppercase tracking-widest">
+                      State 2 – {state2} ({isSelf2 ? 'CGST + SGST' : 'IGST'})
+                    </td>
+                  </tr> */}
+                  {renderRow(order.billing2, gst2, order.splitFactor.state2Percentage, mixedGSTTypes)}
                 </>
               ) : (
-                renderRow(order.billing1, 1, "Billing")
+                renderRow(order.billing1, gst1, 100, false)
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Billing Popup */}
-      {showBillingPopup && (
-        <BillingPopup
-          billing={showBillingPopup}
-          onClose={() => setShowBillingPopup(null)}
-        />
-      )}
-
-      {/* End Address Popup */}
-      {showEndPopup && (
-        <EndAddressPopup
-          endLabel={showEndPopup === order.endA ? "End A" : "End B"}
-          endAddress={showEndPopup}
-          onClose={() => setShowEndPopup(null)}
-        />
-      )}
-
-      {/* Company Name Popup */}
-      {showCompanyPopup && (
-        <CompanyNamePopup
-          companyName={order.companyName}
-          onClose={() => setShowCompanyPopup(false)}
-        />
-      )}
-
-      {/* Collection Popup with Split Info */}
-      {showCollectionPopup && (
-        <CollectionPopup
-          order={order}
-          splitInfo={activeSplitInfo}
-          onClose={() => {
-            setShowCollectionPopup(false);
-            setActiveSplitInfo(null);
-          }}
-        />
-      )}
-
-      {/* Account Popup with Split Info */}
-      {showAccountPopup && (
-        <AccountPopup
-          order={order}
-          splitInfo={activeSplitInfo}
-          onClose={() => {
-            setShowAccountPopup(false);
-            setActiveSplitInfo(null);
-          }}
-        />
-      )}
+      {showBillingPopup && <BillingPopup billing={showBillingPopup} onClose={() => setShowBillingPopup(null)} />}
+      {showEndPopup     && <EndAddressPopup endLabel={showEndPopup === order.endA ? "End A" : "End B"} endAddress={showEndPopup} onClose={() => setShowEndPopup(null)} />}
+      {showCompanyPopup && <CompanyNamePopup companyName={order.companyName} onClose={() => setShowCompanyPopup(false)} />}
     </>
   );
 };
-
 
 const Badge = ({ children, color }) => {
   const colors = {
@@ -1540,88 +1345,87 @@ const Badge = ({ children, color }) => {
     red: "bg-red-100 text-red-800 border border-red-200",
     purple: "bg-purple-100 text-purple-800 border border-purple-200",
     gray: "bg-gray-100 text-gray-800 border border-gray-200",
+    orange: "bg-orange-200 text-gray-800 border border-gray-200",
   };
   return <span className={`px-3 py-1 rounded-lg text-sm font-semibold ${colors[color] || colors.gray}`}>{children}</span>;
 };
 
-// --- MAIN PAGE COMPONENT ---
+// ─── MAIN PAGE ────────
 export default function BillingManagementSystem() {
-  const [viewOrder, setViewOrder] = useState(null);
-  const [editOrder, setEditOrder] = useState(null);
-  const [activeTab, setActiveTab] = useState('list');
+  const [viewOrder,  setViewOrder]  = useState(null);
+  const [editOrder,  setEditOrder]  = useState(null);
+  const [activeTab,  setActiveTab]  = useState('list');
+  const [orders,     setOrders]     = useState([]);
+  const [loading,    setLoading]    = useState(true);
 
-  const [orders, setOrders] = useState([]);
-  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => { fetchOrders(); }, []);
 
-  useEffect(() => {
-    const stored = localStorage.getItem("app_orders");
-    if (stored) {
-      setOrders(JSON.parse(stored));
-    }
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem("app_orders", JSON.stringify(orders));
-  }, [orders, hydrated]);
-
-  const addOrder = (newOrder) => {
-    setOrders(prev => [newOrder, ...prev]);
-    setActiveTab('list');
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const res    = await fetch('/api/billing/orders');
+      const result = await res.json();
+      if (result.success) setOrders(result.data.map(o => ({ ...o, id: o._id })));
+    } catch (err) { console.error(err); alert('Failed to fetch orders'); }
+    finally { setLoading(false); }
   };
 
-  const handleEditOrder = (order) => {
-    setEditOrder(order);
+  const addOrder = async (newOrder) => {
+    try {
+      const res    = await fetch('/api/billing/orders', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(newOrder) });
+      const result = await res.json();
+      if (result.success) { await fetchOrders(); setActiveTab('list'); alert("Order Created Successfully!"); }
+      else alert('Failed to create order: ' + result.error);
+    } catch (err) { console.error(err); alert('Failed to create order'); }
   };
 
-  const handleSaveEdit = (updatedOrder) => {
-    setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
-    setEditOrder(null);
+  const handleSaveEdit = async (updatedOrder) => {
+    try {
+      const { id, _id, ...orderData } = updatedOrder;
+      const orderId = id || _id;
+      const res    = await fetch(`/api/billing/orders/${orderId}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(orderData) });
+      const result = await res.json();
+      if (result.success) { await fetchOrders(); setEditOrder(null); alert('Order updated successfully!'); }
+      else alert('Failed to update order: ' + result.error);
+    } catch (err) { console.error(err); alert('Failed to update order'); }
   };
 
-  const handleDeleteOrder = (orderId) => {
-    if (confirm("Are you sure you want to delete this order?")) {
-      setOrders(prev => prev.filter(o => o.id !== orderId));
-    }
+  const handleDeleteOrder = async (orderId) => {
+    if (!confirm("Are you sure you want to delete this order?")) return;
+    try {
+      const res    = await fetch(`/api/billing/orders/${orderId}`, { method:'DELETE' });
+      const result = await res.json();
+      if (result.success) { await fetchOrders(); alert('Order deleted successfully!'); }
+      else alert('Failed to delete order: ' + result.error);
+    } catch (err) { console.error(err); alert('Failed to delete order'); }
   };
 
-  const handleClearAll = () => {
-    if (confirm("Are you sure you want to delete all data?")) {
-      setOrders([]);
-      localStorage.removeItem('app_orders');
-    }
+  const handleClearAll = async () => {
+    if (!confirm("Are you sure you want to delete ALL data?")) return;
+    try {
+      const res    = await fetch('/api/billing/orders', { method:'DELETE' });
+      const result = await res.json();
+      if (result.success) { setOrders([]); alert('All orders deleted!'); }
+      else alert('Failed: ' + result.error);
+    } catch (err) { console.error(err); alert('Failed to delete all orders'); }
   };
+
+  if (loading) return <div>loading...</div>;
 
   return (
     <div className="min-h-screen bg-gray-50 p-5 md:p-6" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
       <header className="mx-auto mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900">
-            PCD Closure Overview
-          </h1>
+          <h1 className="text-3xl font-semibold text-gray-900">PCD Closure Overview</h1>
           <p className="text-gray-600 text-base font-semibold mt-2">
             Centralized dashboard to monitor, track, and complete all PCD closure and billing operations seamlessly.
           </p>
         </div>
-
         <div className="flex gap-3">
-          <button
-            onClick={() => setActiveTab('list')}
-            className={`px-6 py-3 rounded-lg font-semibold transition-colors text-base ${activeTab === 'list' ? 'bg-gray-900 text-white shadow-sm' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'}`}
-          >
-            View List
-          </button>
-          <button
-            onClick={() => setActiveTab('create')}
-            className={`px-6 py-3 rounded-lg font-semibold transition-colors text-base ${activeTab === 'create' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'}`}
-          >
-            + Create Order
-          </button>
+          <button onClick={() => setActiveTab('list')} className={`px-6 py-3 rounded-lg font-semibold transition-colors text-base ${activeTab==='list' ? 'bg-gray-900 text-white shadow-sm' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'}`}>View List</button>
+          <button onClick={() => setActiveTab('create')} className={`px-6 py-3 rounded-lg font-semibold transition-colors text-base ${activeTab==='create' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'}`}>+ Create Order</button>
           {orders.length > 0 && (
-            <button onClick={handleClearAll} className="p-3 text-red-500 hover:bg-red-50 rounded-lg border border-red-200 transition-colors" title="Clear All Data">
-              <Trash2 className="w-5 h-5" />
-            </button>
+            <button onClick={handleClearAll} className="p-3 text-red-500 hover:bg-red-50 rounded-lg border border-red-200" title="Clear All Data"><Trash2 className="w-5 h-5" /></button>
           )}
         </div>
       </header>
@@ -1630,30 +1434,14 @@ export default function BillingManagementSystem() {
         {activeTab === 'create' ? (
           <CreateOrderForm onAddOrder={addOrder} />
         ) : (
-          <Suspense fallback={<Loading />}>
-            <OrderList
-              orders={orders}
-              onView={setViewOrder}
-              onEdit={handleEditOrder}
-              onDelete={handleDeleteOrder}
-            />
+          <Suspense fallback={<div>Loading...</div>}>
+            <OrderList orders={orders} onView={setViewOrder} onEdit={setEditOrder} onDelete={handleDeleteOrder} />
           </Suspense>
         )}
       </main>
 
-      {viewOrder && (
-        <ViewDetailsModal order={viewOrder} onClose={() => setViewOrder(null)} />
-      )}
-
-      {editOrder && (
-        <EditOrderModal order={editOrder} onClose={() => setEditOrder(null)} onSave={handleSaveEdit} />
-      )}
-
-      <style jsx global>{`
-        .input-field {
-          @apply w-full px-4 py-2.5 border border-gray-300 rounded-lg text-base font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all;
-        }
-      `}</style>
+      {viewOrder && <ViewDetailsModal order={viewOrder} onClose={() => setViewOrder(null)} />}
+      {editOrder && <EditOrderModal order={editOrder} onClose={() => setEditOrder(null)} onSave={handleSaveEdit} />}
     </div>
   );
 }
