@@ -45,7 +45,6 @@ const getAvailMonths  = (y) => y === getCurrentYear() ? ALL_MONTHS.slice(0, getC
 // ─── Amount helpers ───────────────────────────────────────────
 const sumField        = (arr, field) => (!arr?.length) ? 0 : arr.reduce((s,i) => s+(Number(i[field])||0), 0)
 const sumAmount       = (arr) => sumField(arr, 'amount')
-// Credit notes: always use totalWithGst (includes GST), fallback to amount
 const sumCreditNotes  = (arr) => (!arr?.length) ? 0 : arr.reduce((s,i) => s+(Number(i.totalWithGst)||Number(i.amount)||0), 0)
 const sumTotalWithGst = (arr) => (!arr?.length) ? 0 : arr.reduce((s,i) => s+(Number(i.totalWithGst)||Number(i.amount)||0), 0)
 
@@ -163,7 +162,6 @@ const ArrayDetailsPopup = React.memo(({ data, title, onClose, isCreditNote = fal
                     <td className="px-4 py-3 text-sm text-slate-800 font-semibold whitespace-nowrap">{item.date||'-'}</td>
                     {isCreditNote ? (
                       <>
-                        {/* ✅ Period column */}
                         <td className="px-4 py-3 text-sm text-slate-700">
                           {hasPeriod ? (
                             <div className="flex flex-col gap-0.5">
@@ -241,7 +239,6 @@ const MonthDetailView = ({ monthData, rawData, onClose }) => {
             <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg"><X className="w-5 h-5 text-white"/></button>
           </div>
           <div className="p-6 space-y-6">
-            {/* Basic Info */}
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
                 <p className="text-xs font-bold text-slate-500 uppercase mb-1">Billing Days</p>
@@ -261,7 +258,6 @@ const MonthDetailView = ({ monthData, rawData, onClose }) => {
               </div>
             </div>
 
-            {/* Billing Details */}
             <div>
               <h4 className="text-sm font-bold text-slate-700 uppercase mb-3 pb-2 border-b border-slate-200">Billing Amounts</h4>
               <div className="grid grid-cols-2 gap-3">
@@ -303,7 +299,6 @@ const MonthDetailView = ({ monthData, rawData, onClose }) => {
                     )}
                   </div>
                 </div>
-                {/* Credit Notes row in detail */}
                 <div className="flex justify-between items-center py-2 px-3 bg-cyan-50 rounded border border-cyan-100">
                   <div>
                     <span className="text-sm text-cyan-700 font-semibold">Credit Notes</span>
@@ -319,7 +314,6 @@ const MonthDetailView = ({ monthData, rawData, onClose }) => {
                     )}
                   </div>
                 </div>
-                {/* Net Billing row */}
                 <div className="flex justify-between items-center py-2 px-3 bg-rose-50 rounded border-2 border-rose-200">
                   <span className="text-sm font-bold text-rose-700">Net Billing:</span>
                   <span className="text-sm font-bold text-rose-900">₹{fmt(monthData.netBilling)}</span>
@@ -327,7 +321,6 @@ const MonthDetailView = ({ monthData, rawData, onClose }) => {
               </div>
             </div>
 
-            {/* Invoice Info */}
             {monthData.invoiceNumber && monthData.invoiceNumber !== '-' && (
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                 <p className="text-xs font-bold text-blue-600 uppercase mb-1">Invoice Number</p>
@@ -352,9 +345,9 @@ const loadOrderBilling = async (order, filterMonths, splitState) => {
   const breakdownBase = {
     months: [],
     totalBilling: 0,
-    totalBillingWithMisc: 0,
-    totalCreditNotes: 0,    // ✅ NEW
-    totalNetBilling: 0,     // ✅ NEW
+    totalMisc: 0,          // ✅ CHANGED: only misc amount (not billing + misc)
+    totalCreditNotes: 0,
+    totalNetBilling: 0,
     orderDetails: {
       orderId: order.orderId,
       lsiId: order.lsiId,
@@ -372,7 +365,6 @@ const loadOrderBilling = async (order, filterMonths, splitState) => {
 
   if (!pcdDate) return breakdownBase
 
-  // Fetch billing records
   let billingData = []
   try {
     const r = await fetch(`/api/billing/monthly?orderId=${order.orderId}`)
@@ -382,7 +374,6 @@ const loadOrderBilling = async (order, filterMonths, splitState) => {
     console.error(`[loadBilling] fetch exception:`, e)
   }
 
-  // Determine service window
   let serviceEnd = new Date()
   if (termDate) {
     const lastServiceDay = new Date(termDate)
@@ -413,7 +404,6 @@ const loadOrderBilling = async (order, filterMonths, splitState) => {
         sgst           = Number(rec.sgst)           || 0
         igst           = Number(rec.igst)           || 0
         miscSell       = sumTotalWithGst(rec.miscellaneousSell)
-        // ✅ Credit notes use totalWithGst (includes GST)
         creditNotes    = sumCreditNotes(rec.creditNotes)
         invoiceNumber  = rec.invoiceNumber || '-'
         billingDays    = rec.billingDays   || getDaysInMonth(m, y)
@@ -451,14 +441,13 @@ const loadOrderBilling = async (order, filterMonths, splitState) => {
         invoiceNumber  = '-'
       }
 
-      // Net Billing = (totalWithGst + miscSell) - creditNotes
       const netBilling = (totalWithGst + miscSell) - creditNotes
 
       breakdownBase.months.push({
         monthYear: monthName, month: m, year: y, billingDays, startDay, endDay,
         monthlyBilling, cgst, sgst, igst, totalWithGst, miscSell,
-        creditNotes,   // ✅ NEW — credit notes with GST
-        netBilling,    // ✅ NEW — net billing
+        creditNotes,
+        netBilling,
         invoiceNumber,
         rawData
       })
@@ -468,10 +457,10 @@ const loadOrderBilling = async (order, filterMonths, splitState) => {
     cur = new Date(y, m+1, 1)
   }
 
-  breakdownBase.totalBilling         = breakdownBase.months.reduce((s,m)=>s+m.totalWithGst, 0)
-  breakdownBase.totalBillingWithMisc = breakdownBase.months.reduce((s,m)=>s+m.totalWithGst+m.miscSell, 0)
-  breakdownBase.totalCreditNotes     = breakdownBase.months.reduce((s,m)=>s+m.creditNotes, 0)  // ✅
-  breakdownBase.totalNetBilling      = breakdownBase.months.reduce((s,m)=>s+m.netBilling, 0)   // ✅
+  breakdownBase.totalBilling     = breakdownBase.months.reduce((s,m)=>s+m.totalWithGst, 0)
+  breakdownBase.totalMisc        = breakdownBase.months.reduce((s,m)=>s+m.miscSell, 0)   // ✅ CHANGED: only misc
+  breakdownBase.totalCreditNotes = breakdownBase.months.reduce((s,m)=>s+m.creditNotes, 0)
+  breakdownBase.totalNetBilling  = breakdownBase.months.reduce((s,m)=>s+m.netBilling, 0)
 
   return breakdownBase
 }
@@ -494,8 +483,8 @@ const BillingBreakdownTable = ({ bd, onClose }) => {
     igst:  a.igst  + (m.igst||0),
     total: a.total + m.totalWithGst,
     misc:  a.misc  + m.miscSell,
-    cn:    a.cn    + m.creditNotes,   // ✅
-    net:   a.net   + m.netBilling,    // ✅
+    cn:    a.cn    + m.creditNotes,
+    net:   a.net   + m.netBilling,
   }),{mb:0,cgst:0,sgst:0,igst:0,total:0,misc:0,cn:0,net:0})
 
   return (
@@ -535,13 +524,13 @@ const BillingBreakdownTable = ({ bd, onClose }) => {
               </div>
             </div>
 
-            {/* Summary Bar */}
+            {/* Summary Bar — ✅ CHANGED: "Total Misc" instead of "Total Billing + Misc" */}
             <div className="grid grid-cols-4 divide-x divide-slate-200 border-b border-slate-200 bg-slate-50">
               {[
-                {label:'Total Billing',       val:T.total, color:'text-indigo-700', bg:'bg-indigo-50'},
-                {label:'Total Billing + Misc', val:T.total+T.misc, color:'text-purple-700', bg:'bg-purple-50'},
-                {label:'Credit Notes (w/GST)', val:T.cn,   color:'text-cyan-700',   bg:'bg-cyan-50'},
-                {label:'Net Billing',          val:T.net,  color:'text-rose-700',   bg:'bg-rose-50'},
+                {label:'Total Billing',       val:T.total,  color:'text-indigo-700', bg:'bg-indigo-50'},
+                {label:'Total Misc',           val:T.misc,   color:'text-purple-700', bg:'bg-purple-50'},  // ✅ CHANGED
+                {label:'Credit Notes (w/GST)', val:T.cn,    color:'text-cyan-700',   bg:'bg-cyan-50'},
+                {label:'Net Billing',          val:T.net,   color:'text-rose-700',   bg:'bg-rose-50'},
               ].map(({label,val,color,bg})=>(
                 <div key={label} className={`px-5 py-3 ${bg}`}>
                   <p className="text-[10px] font-bold text-slate-500 uppercase">{label}</p>
@@ -563,7 +552,7 @@ const BillingBreakdownTable = ({ bd, onClose }) => {
                     {hasSGST && <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase">SGST (9%)</th>}
                     {hasIGST && <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase">IGST (18%)</th>}
                     <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase">Basic+GST</th>
-                    <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase">Misc+GST</th>
+                    <th className="px-3 py-4 text-right text-xs font-bold text-purple-700 uppercase">Misc+GST</th>{/* ✅ label unchanged, already says Misc */}
                     <th className="px-3 py-4 text-right text-xs font-bold text-cyan-700 uppercase">
                       Credit Notes<br/><span className="text-[9px] font-normal normal-case text-cyan-500">(incl. GST)</span>
                     </th>
@@ -587,7 +576,6 @@ const BillingBreakdownTable = ({ bd, onClose }) => {
                       {hasIGST && <td className="px-3 py-3 text-right text-slate-600">₹{fmt(m.igst||0)}</td>}
                       <td className="px-3 py-3 text-right font-bold text-indigo-700">₹{fmt(m.totalWithGst)}</td>
                       <td className="px-3 py-3 text-right font-bold text-purple-600">₹{fmt(m.miscSell)}</td>
-                      {/* ✅ Credit Notes col */}
                       <td className="px-3 py-3 text-right font-bold text-cyan-700">
                         <div className="flex items-center justify-end gap-1">
                           <span>₹{fmt(m.creditNotes)}</span>
@@ -599,7 +587,6 @@ const BillingBreakdownTable = ({ bd, onClose }) => {
                           )}
                         </div>
                       </td>
-                      {/* ✅ Net Billing col */}
                       <td className="px-3 py-3 text-right font-extrabold text-rose-700 bg-rose-50">₹{fmt(m.netBilling)}</td>
                       <td className="px-3 py-3 text-center text-xs text-slate-600">{m.invoiceNumber}</td>
                       <td className="px-3 py-3">
@@ -651,10 +638,10 @@ const OrderBillingRow = React.memo(({ order, filterMonths, splitState, onViewBre
       setBd(result)
       setLoading(false)
       onDataReady?.(rowKey, {
-        billing:         result.totalBilling,
-        billingWithMisc: result.totalBillingWithMisc,
-        creditNotes:     result.totalCreditNotes,   // ✅
-        netBilling:      result.totalNetBilling,    // ✅
+        billing:     result.totalBilling,
+        misc:        result.totalMisc,        // ✅ CHANGED: was billingWithMisc, now just misc
+        creditNotes: result.totalCreditNotes,
+        netBilling:  result.totalNetBilling,
       })
     })()
     return ()=>{ cancelled=true }
@@ -709,15 +696,15 @@ const OrderBillingRow = React.memo(({ order, filterMonths, splitState, onViewBre
       <td className="px-4 py-3 text-right">
         <span className="text-base font-extrabold text-indigo-600">₹{fmt(bd.totalBilling)}</span>
       </td>
-      {/* Billing + Misc */}
+      {/* ✅ CHANGED: Show only Misc (not Billing + Misc) */}
       <td className="px-4 py-3 text-right bg-purple-50/60">
-        <span className="text-base font-extrabold text-purple-600">₹{fmt(bd.totalBillingWithMisc)}</span>
+        <span className="text-base font-extrabold text-purple-600">₹{fmt(bd.totalMisc)}</span>
       </td>
-      {/* ✅ Credit Notes + GST */}
+      {/* Credit Notes + GST */}
       <td className="px-4 py-3 text-right bg-cyan-50/60">
         <span className="text-base font-extrabold text-cyan-700">₹{fmt(bd.totalCreditNotes)}</span>
       </td>
-      {/* ✅ Net Billing — only column with breakdown button */}
+      {/* Net Billing */}
       <td className="px-4 py-3 text-right bg-rose-50/80">
         <div className="flex items-center justify-end gap-2">
           <span className="text-base font-extrabold text-rose-700">₹{fmt(bd.totalNetBilling)}</span>
@@ -845,10 +832,10 @@ export default function BillingReportSummary() {
   const totals = useMemo(()=>{
     const d=Object.values(rowData)
     return {
-      totalBilling:         d.reduce((s,v)=>s+(v.billing||0),         0),
-      totalBillingWithMisc: d.reduce((s,v)=>s+(v.billingWithMisc||0), 0),
-      totalCreditNotes:     d.reduce((s,v)=>s+(v.creditNotes||0),     0),  // ✅
-      totalNetBilling:      d.reduce((s,v)=>s+(v.netBilling||0),      0),  // ✅
+      totalBilling:     d.reduce((s,v)=>s+(v.billing||0),     0),
+      totalMisc:        d.reduce((s,v)=>s+(v.misc||0),        0),  // ✅ CHANGED: was totalBillingWithMisc
+      totalCreditNotes: d.reduce((s,v)=>s+(v.creditNotes||0), 0),
+      totalNetBilling:  d.reduce((s,v)=>s+(v.netBilling||0),  0),
     }
   },[rowData])
 
@@ -912,16 +899,16 @@ export default function BillingReportSummary() {
             )}
             <div className="flex-1"/>
 
-            {/* ✅ Stats chips — Orders + 4 totals */}
+            {/* ✅ Stats chips — Orders + 4 totals (CHANGED: "Billing + Misc" → "Misc") */}
             <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-center">
               <p className="text-[10px] font-bold text-slate-400 uppercase">Orders</p>
               <p className="text-2xl font-extrabold text-slate-900">{filteredOrders.length}</p>
             </div>
             {[
-              {label:'Billing',       val:totals.totalBilling,         color:'text-indigo-700', bg:'bg-indigo-50',  border:'border-indigo-200'},
-              {label:'Billing + Misc',      val:totals.totalBillingWithMisc, color:'text-purple-700', bg:'bg-purple-50',  border:'border-purple-200'},
-              {label:'Credit Notes +GST',val:totals.totalCreditNotes,     color:'text-cyan-700',   bg:'bg-cyan-50',    border:'border-cyan-200'},
-              {label:'Net Billing',         val:totals.totalNetBilling,      color:'text-rose-700',   bg:'bg-rose-50',    border:'border-rose-300'},
+              {label:'Billing',           val:totals.totalBilling,     color:'text-indigo-700', bg:'bg-indigo-50',  border:'border-indigo-200'},
+              {label:'Misc',              val:totals.totalMisc,        color:'text-purple-700', bg:'bg-purple-50',  border:'border-purple-200'},  // ✅ CHANGED
+              {label:'Credit Notes +GST', val:totals.totalCreditNotes, color:'text-cyan-700',   bg:'bg-cyan-50',    border:'border-cyan-200'},
+              {label:'Net Billing',       val:totals.totalNetBilling,  color:'text-rose-700',   bg:'bg-rose-50',    border:'border-rose-300'},
             ].map(({label,val,color,bg,border})=>(
               <div key={label} className={`${bg} border ${border} rounded-xl px-4 py-2.5 text-center min-w-[155px]`}>
                 <p className={`text-[10px] font-bold uppercase ${color} opacity-80`}>{label}</p>
@@ -1024,8 +1011,8 @@ export default function BillingReportSummary() {
                   <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Company</th>
                   <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">State</th>
                   <th className="px-4 py-4 text-right text-xs font-bold text-indigo-700 uppercase tracking-wider">Billing</th>
-                  <th className="px-4 py-4 text-right text-xs font-bold text-purple-700 uppercase tracking-wider bg-purple-50">Billing + Misc</th>
-                  {/* ✅ New columns */}
+                  {/* ✅ CHANGED: "Billing + Misc" → "Misc" */}
+                  <th className="px-4 py-4 text-right text-xs font-bold text-purple-700 uppercase tracking-wider bg-purple-50">Misc</th>
                   <th className="px-4 py-4 text-right text-xs font-bold text-cyan-700 uppercase tracking-wider bg-cyan-50">
                     Credit Notes<br/><span className="text-[9px] font-normal normal-case text-cyan-500">(incl. GST)</span>
                   </th>
