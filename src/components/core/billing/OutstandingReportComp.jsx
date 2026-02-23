@@ -1032,29 +1032,29 @@ export default function OutstandingReportComp() {
               <p className="text-[10px] font-bold text-slate-400 uppercase">Orders</p>
               <p className="text-2xl font-extrabold text-slate-900">{filteredOrders.length}</p>
             </div>
-          <div className={`rounded-xl px-4 py-2.5 text-center min-w-[160px] 
-  ${totalBalance < 0 
-    ? 'bg-emerald-50 border border-emerald-200' 
-    : 'bg-rose-50 border border-rose-200'
-  }`}>
-  
-  <p className={`text-[10px] font-bold uppercase 
-    ${totalBalance < 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-    Total Balance
-  </p>
+            <div className={`rounded-xl px-4 py-2.5 text-center min-w-[160px] 
+  ${totalBalance < 0
+                ? 'bg-emerald-50 border border-emerald-200'
+                : 'bg-rose-50 border border-rose-200'
+              }`}>
 
-  {isCalc ? (
-    <div className="flex items-center justify-center gap-2 mt-1">
-      <div className="animate-spin h-5 w-5 rounded-full border-b-2 border-slate-600" />
-      <span className="text-sm font-semibold text-slate-600">Calculating…</span>
-    </div>
-  ) : (
-    <p className={`text-xl font-extrabold 
+              <p className={`text-[10px] font-bold uppercase 
+    ${totalBalance < 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                Total Balance
+              </p>
+
+              {isCalc ? (
+                <div className="flex items-center justify-center gap-2 mt-1">
+                  <div className="animate-spin h-5 w-5 rounded-full border-b-2 border-slate-600" />
+                  <span className="text-sm font-semibold text-slate-600">Calculating…</span>
+                </div>
+              ) : (
+                <p className={`text-xl font-extrabold 
       ${totalBalance < 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-      ₹{fmt(totalBalance)}
-    </p>
-  )}
-</div>
+                  ₹{fmt(totalBalance)}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Tabs */}
