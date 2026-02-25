@@ -185,25 +185,17 @@ const loadMonthlyDataForRow = async (order, state, toDateStr) => {
   return { balance: running, months: monthsWithRunning }
 }
 
-// ─── Helper: compute remAdj per month for a single row (same pool logic as MonthlyBreakdownPopup) ───
-// remAdj = how much of each month is still unpaid AFTER existing payments (received+creditNotes+tdsConfirm) are applied.
-// This is the ACTUAL amount we need to pay per month — not netCharges which may include months already covered by existing credits.
+// ─── Helper: compute remAdj per month ─────────────────────────
 const computeRemAdjPerMonth = (monthlyData) => {
   const sorted = [...monthlyData].sort((a, b) => new Date(a.year, a.month) - new Date(b.year, b.month))
-  // existingPool = sum of all already-recorded payments across all months
   const existingPool = sorted.reduce((s, m) => s + m.received + m.creditNotes + m.tdsConfirm, 0)
   let pool = existingPool
   const result = []
   for (const m of sorted) {
     const charges = m.totalWithGst + m.miscSell
     let remAdj = 0
-    if (pool >= charges) {
-      pool -= charges
-      remAdj = 0
-    } else {
-      remAdj = charges - pool
-      pool = 0
-    }
+    if (pool >= charges) { pool -= charges; remAdj = 0 }
+    else { remAdj = charges - pool; pool = 0 }
     result.push({ year: m.year, month: m.month, monthYear: m.monthYear, remAdj })
   }
   console.log(`[computeRemAdjPerMonth] Pool started at ₹${fmt(existingPool)}, per-month remAdj:`,
@@ -211,26 +203,16 @@ const computeRemAdjPerMonth = (monthlyData) => {
   return result
 }
 
-// ─── Auto-Split Algorithm ─────────────────────────────────────────────────────
-// KEY LOGIC:
-//   1. For each row, pre-compute remAdj per month using existing pool (received+creditNotes+tdsConfirm).
-//      remAdj[month] = how much is ACTUALLY still owed for that month after existing credits.
-//      (Sep 2025 for 33333-UP has remAdj=0 because existing credits covered it → skip it!)
-//   2. Go month by month chronologically across ALL checked rows.
-//   3. For each month, collect ONLY rows whose remAdj > 0 (skip months already covered).
-//   4. If budget >= total remAdj for all rows this month → fully cover all, advance to next month.
-//   5. If partial → fill smallest remAdj first, then stop.
+// ─── Auto-Split Algorithm ─────────────────────────────────────
 const computeAutoSplitAmounts = (rows, totalAmount) => {
   const toPaise = (n) => Math.round(n * 100)
   const fromPaise = (p) => Math.round(p) / 100
 
-  // Only process checked rows with loaded data and positive balance
   const checkedRows = rows.filter(r => {
     if (!r.checked || !r.monthlyData?.length || r.balanceLoading) return false
     return toPaise(r.balance || 0) > 0
   })
 
-  // Initialize allocated amounts for ALL checked rows
   const allocated = {}
   rows.filter(r => r.checked).forEach(r => { allocated[r.rowKey] = 0 })
 
@@ -239,13 +221,9 @@ const computeAutoSplitAmounts = (rows, totalAmount) => {
     return allocated
   }
 
-  // Step 1: Pre-compute remAdj per month for each checked row
-  const rowRemAdj = {} // rowKey → array of { year, month, monthYear, remAdj }
-  checkedRows.forEach(r => {
-    rowRemAdj[r.rowKey] = computeRemAdjPerMonth(r.monthlyData)
-  })
+  const rowRemAdj = {}
+  checkedRows.forEach(r => { rowRemAdj[r.rowKey] = computeRemAdjPerMonth(r.monthlyData) })
 
-  // Step 2: Gather all unique month keys across all checked rows, sorted chronologically
   const allMonthKeys = new Set()
   checkedRows.forEach(r => {
     r.monthlyData.forEach(md => {
@@ -273,17 +251,16 @@ const computeAutoSplitAmounts = (rows, totalAmount) => {
     const [y, m] = monthKey.split('-').map(Number)
     const monthIdx = m - 1
 
-    // Step 3: For this month, find all rows with remAdj > 0
     const monthItems = checkedRows
       .map(r => {
         const remAdjEntry = rowRemAdj[r.rowKey].find(e => e.year === y && e.month === monthIdx)
         const remAdjPaise = remAdjEntry ? Math.max(0, toPaise(remAdjEntry.remAdj)) : 0
         return { rowKey: r.rowKey, orderId: r.orderId, remAdjPaise, monthYear: remAdjEntry?.monthYear || monthKey }
       })
-      .filter(x => x.remAdjPaise > 0) // ← ONLY months that actually need payment
+      .filter(x => x.remAdjPaise > 0)
 
     if (!monthItems.length) {
-      console.log(`[AutoSplit] Month ${monthKey}: remAdj=0 for ALL rows (already covered by existing credits) — SKIP`)
+      console.log(`[AutoSplit] Month ${monthKey}: remAdj=0 for ALL rows — SKIP`)
       continue
     }
 
@@ -294,7 +271,6 @@ const computeAutoSplitAmounts = (rows, totalAmount) => {
     console.log(`  Total needed: ₹${fromPaise(totalNeededPaise)}, Budget remaining: ₹${fromPaise(remainingPaise)}`)
 
     if (remainingPaise >= totalNeededPaise) {
-      // ✅ Full coverage: pay ALL rows' remAdj for this month, advance to next
       monthItems.forEach(({ rowKey, remAdjPaise }) => {
         allocatedPaise[rowKey] += remAdjPaise
         console.log(`  ✅ ${rowKey}: fully paid ₹${fromPaise(remAdjPaise)} for ${monthKey}`)
@@ -302,10 +278,8 @@ const computeAutoSplitAmounts = (rows, totalAmount) => {
       remainingPaise -= totalNeededPaise
       console.log(`  Month ${monthKey} done. Budget left: ₹${fromPaise(remainingPaise)}`)
     } else {
-      // ⚡ Partial: fill by Order ID ascending, stop after this month
       const sorted = [...monthItems].sort((a, b) => a.orderId.localeCompare(b.orderId))
       console.log(`  ⚡ PARTIAL month ${monthKey} — filling by Order ID asc:`, sorted.map(x => `${x.rowKey}=₹${fromPaise(x.remAdjPaise)}`))
-
       for (const { rowKey, remAdjPaise } of sorted) {
         if (remainingPaise <= 0) break
         const cover = Math.min(remAdjPaise, remainingPaise)
@@ -313,11 +287,10 @@ const computeAutoSplitAmounts = (rows, totalAmount) => {
         remainingPaise -= cover
         console.log(`  ⚡ ${rowKey}: paid ₹${fromPaise(cover)} of ₹${fromPaise(remAdjPaise)} for ${monthKey}`)
       }
-      break // Stop — don't go to next month on partial
+      break
     }
   }
 
-  // If budget exceeded total outstanding (overpayment), assign leftover to last allocated row
   if (remainingPaise > 0) {
     const lastRow = checkedRows.slice().reverse().find(r => allocatedPaise[r.rowKey] > 0) || checkedRows[checkedRows.length - 1]
     if (lastRow) {
@@ -326,7 +299,6 @@ const computeAutoSplitAmounts = (rows, totalAmount) => {
     }
   }
 
-  // Convert paise → rupees
   Object.entries(allocatedPaise).forEach(([k, v]) => { allocated[k] = fromPaise(v) })
 
   console.log('[AutoSplit] ── Final allocation ──')
@@ -400,7 +372,7 @@ const ArrayDetailsPopup = React.memo(({ data, title, onClose }) => {
 })
 ArrayDetailsPopup.displayName = 'ArrayDetailsPopup'
 
-// ─── Month Detail View (eye per row) ──────────────────────────
+// ─── Month Detail View ─────────────────────────────────────────
 const MonthDetailView = ({ monthData, rawData, onClose }) => {
   const [detailsPopup, setDetailsPopup] = useState(null)
   useEffect(() => {
@@ -420,7 +392,6 @@ const MonthDetailView = ({ monthData, rawData, onClose }) => {
             <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg"><X className="w-5 h-5 text-white" /></button>
           </div>
           <div className="p-6 space-y-6">
-            {/* Basic Info */}
             <div className="grid grid-cols-3 gap-4">
               {[
                 { label: 'Billing Days', val: monthData.billingDays, big: true },
@@ -433,7 +404,6 @@ const MonthDetailView = ({ monthData, rawData, onClose }) => {
                 </div>
               ))}
             </div>
-            {/* Billing */}
             <div>
               <h4 className="text-sm font-bold text-slate-700 uppercase mb-3 pb-2 border-b border-slate-200">Billing Amounts</h4>
               <div className="grid grid-cols-2 gap-4">
@@ -457,7 +427,6 @@ const MonthDetailView = ({ monthData, rawData, onClose }) => {
                 </div>
               </div>
             </div>
-            {/* Payments */}
             <div>
               <h4 className="text-sm font-bold text-slate-700 uppercase mb-3 pb-2 border-b border-slate-200">Payments & Adjustments</h4>
               <div className="grid grid-cols-2 gap-4">
@@ -477,7 +446,6 @@ const MonthDetailView = ({ monthData, rawData, onClose }) => {
                 ))}
               </div>
             </div>
-            {/* Balances */}
             <div>
               <h4 className="text-sm font-bold text-slate-700 uppercase mb-3 pb-2 border-b border-slate-200">Balance Summary</h4>
               <div className="grid grid-cols-2 gap-4">
@@ -505,10 +473,7 @@ const MonthDetailView = ({ monthData, rawData, onClose }) => {
   )
 }
 
-// ─── Monthly Breakdown Popup ──────────────────────────────────────────────────
-// KEY FIX: Pass `allocatedForRow` (the amount currently allocated to this row in the
-// distribution table) so Remaining Adj correctly shows what will still be unpaid
-// AFTER this new payment is applied.
+// ─── Monthly Breakdown Popup ───────────────────────────────────
 const MonthlyBreakdownPopup = React.memo(({ rowInfo, onClose }) => {
   const { orderId, state, companyName, months, balance, order, allocatedAmount } = rowInfo
   const [viewingMonth, setViewingMonth] = useState(null)
@@ -519,63 +484,33 @@ const MonthlyBreakdownPopup = React.memo(({ rowInfo, onClose }) => {
   }, [onClose])
 
   const sorted = useMemo(() => [...months].sort((a, b) => new Date(a.year, a.month) - new Date(b.year, b.month)), [months])
-
   const hasCGST = sorted.some(m => (m.cgst || 0) > 0)
   const hasSGST = sorted.some(m => (m.sgst || 0) > 0)
   const hasIGST = sorted.some(m => (m.igst || 0) > 0)
 
-  // ── FIXED pool algorithm ──────────────────────────────────────────────────
-  // existingPool  = sum of all existing payments already recorded (received, credit notes, tds confirm)
-  // pendingPayment = the new amount being allocated to this specific row right now
-  // Total available = existingPool + pendingPayment
-  // We then apply this total pool chronologically to determine Remaining Adj per month.
   const rows = useMemo(() => {
     const existingPool = sorted.reduce((s, m) => s + m.received + m.creditNotes + m.tdsConfirm, 0)
     const pendingPayment = Number(allocatedAmount) || 0
     const totalPool = existingPool + pendingPayment
-
     console.log(`[MonthlyBreakdownPopup] orderId=${orderId} state=${state}`)
     console.log(`  existingPool=₹${fmt(existingPool)}, pendingPayment=₹${fmt(pendingPayment)}, totalPool=₹${fmt(totalPool)}`)
-
-    let pool = totalPool
-    let running = 0
-    let cumUnpaid = 0
-
+    let pool = totalPool, running = 0, cumUnpaid = 0
     return sorted.map(m => {
       const charges = m.totalWithGst + m.miscSell
       const credits = m.received + m.creditNotes + m.tdsConfirm
       running += charges - credits
-
       let remAdj = 0
-      if (pool >= charges) {
-        // Pool covers this month fully
-        pool -= charges
-        remAdj = 0
-        cumUnpaid = 0 // reset since this month is fully covered
-      } else {
-        // Pool partially or fully insufficient for this month
-        const uncovered = charges - pool
-        pool = 0
-        cumUnpaid += uncovered
-        remAdj = cumUnpaid
-      }
-
+      if (pool >= charges) { pool -= charges; remAdj = 0; cumUnpaid = 0 }
+      else { const uncovered = charges - pool; pool = 0; cumUnpaid += uncovered; remAdj = cumUnpaid }
       console.log(`  Month ${m.monthYear}: charges=₹${fmt(charges)}, pool after=₹${fmt(pool)}, remAdj=₹${fmt(remAdj)}`)
       return { ...m, running, remAdj }
     })
   }, [sorted, allocatedAmount, orderId, state])
 
   const T = rows.reduce((a, m) => ({
-    mb: a.mb + m.monthlyBilling,
-    cgst: a.cgst + (m.cgst || 0),
-    sgst: a.sgst + (m.sgst || 0),
-    igst: a.igst + (m.igst || 0),
-    total: a.total + m.totalWithGst,
-    misc: a.misc + m.miscSell,
-    recv: a.recv + m.received,
-    cn: a.cn + m.creditNotes,
-    tdsc: a.tdsc + m.tdsConfirm,
-    tdsp: a.tdsp + m.tdsProvision,
+    mb: a.mb + m.monthlyBilling, cgst: a.cgst + (m.cgst || 0), sgst: a.sgst + (m.sgst || 0),
+    igst: a.igst + (m.igst || 0), total: a.total + m.totalWithGst, misc: a.misc + m.miscSell,
+    recv: a.recv + m.received, cn: a.cn + m.creditNotes, tdsc: a.tdsc + m.tdsConfirm, tdsp: a.tdsp + m.tdsProvision,
   }), { mb: 0, cgst: 0, sgst: 0, igst: 0, total: 0, misc: 0, recv: 0, cn: 0, tdsc: 0, tdsp: 0 })
 
   const capacity = order?.capacity || 0
@@ -586,8 +521,6 @@ const MonthlyBreakdownPopup = React.memo(({ rowInfo, onClose }) => {
     <>
       <div className="fixed inset-0 bg-black/60 z-[10002] flex items-center justify-center p-2" onClick={onClose}>
         <div className="bg-white rounded-2xl shadow-2xl w-full max-h-[95vh] overflow-hidden flex flex-col" style={{ maxWidth: '1750px' }} onClick={e => e.stopPropagation()}>
-
-          {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-6">
               <div>
@@ -616,7 +549,6 @@ const MonthlyBreakdownPopup = React.memo(({ rowInfo, onClose }) => {
             </button>
           </div>
 
-          {/* Table */}
           <div className="overflow-auto flex-1">
             {rows.length === 0 ? (
               <div className="p-12 text-center text-slate-400">No monthly data available</div>
@@ -665,7 +597,7 @@ const MonthlyBreakdownPopup = React.memo(({ rowInfo, onClose }) => {
                       <td className="px-3 py-3 text-right font-bold text-blue-600">₹{fmt(m.tdsConfirm)}</td>
                       <td className="px-3 py-3 text-right font-bold text-orange-500">₹{fmt(m.tdsProvision)}</td>
                       <td className={`px-3 py-3 text-right font-extrabold bg-yellow-50 ${m.running >= 0 ? 'text-red-700' : 'text-green-700'}`}>₹{fmt(m.running)}</td>
-                      <td className={`px-3 py-3 text-center font-bold bg-green-50`}>
+                      <td className="px-3 py-3 text-center font-bold bg-green-50">
                         {m.remAdj > 0.005
                           ? <span className="inline-flex items-center gap-1 text-red-700"><X className="w-4 h-4" />₹{fmt(m.remAdj)}</span>
                           : <span className="text-emerald-700 flex items-center justify-center gap-1"><CheckCircle2 className="w-4 h-4" />₹{fmt(0)}</span>
@@ -705,7 +637,6 @@ const MonthlyBreakdownPopup = React.memo(({ rowInfo, onClose }) => {
           </div>
         </div>
       </div>
-
       {viewingMonth && <MonthDetailView monthData={viewingMonth} rawData={viewingMonth.rawData} onClose={() => setViewingMonth(null)} />}
     </>
   )
@@ -847,7 +778,6 @@ const InlineDistributionTable = ({ billingRows, paymentData, amountType, onBack,
     return currentRows
   }, [paymentData.amount])
 
-  // Re-run auto-split when loading completes
   const loadingKey = rows.map(r => r.balanceLoading).join(',')
   useEffect(() => {
     if (distMode === 'auto') {
@@ -892,28 +822,33 @@ const InlineDistributionTable = ({ billingRows, paymentData, amountType, onBack,
   const displayMonth = (() => { const [y, m] = paymentData.month.split('-'); return `${ALL_MONTHS[parseInt(m) - 1]} ${y}` })()
   const pct = paymentData.amount > 0 ? Math.min(100, (totalAlloc / paymentData.amount) * 100) : 0
 
+  // ── ★ CHANGE 1: include companyName, entity, splitPct, isSplit so the
+  //    parent can store a rich DistributedPayment record ────────────────
   const handleSubmit = () => {
     if (!canSubmit) return
     const entries = rows.filter(r => r.checked && Number(r.amount) >= 0).map(r => ({
-      orderId: r.orderId, state: r.state, amount: Number(r.amount), notes: r.notes,
-      date: toDisplayDate(paymentData.date), month: displayMonth,
+      orderId:     r.orderId,
+      companyName: r.companyName,   // ← added
+      state:       r.state,
+      entity:      r.entity,        // ← added
+      splitPct:    r.splitPct,      // ← added
+      isSplit:     r.isSplit,       // ← added
+      amount:      Number(r.amount),
+      notes:       r.notes,
+      date:        toDisplayDate(paymentData.date),
+      month:       displayMonth,
     }))
     console.log('[handleSubmit] Submitting entries:', entries)
     onSubmit(entries)
   }
 
-  // ── Open breakdown popup with the currently-allocated amount for that row
   const openBreakdown = (row) => {
     const allocatedAmount = Number(row.amount) || 0
     console.log(`[openBreakdown] ${row.rowKey} allocatedAmount=₹${allocatedAmount}`)
     setBreakdownRow({
-      orderId: row.orderId,
-      state: row.state,
-      companyName: row.companyName,
-      months: row.monthlyData || [],
-      balance: row.balance || 0,
-      order: row.order,
-      allocatedAmount, // ← KEY: pass to popup for Remaining Adj calculation
+      orderId: row.orderId, state: row.state, companyName: row.companyName,
+      months: row.monthlyData || [], balance: row.balance || 0,
+      order: row.order, allocatedAmount,
     })
   }
 
@@ -1029,11 +964,7 @@ const InlineDistributionTable = ({ billingRows, paymentData, amountType, onBack,
                         ? <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" /><span className="text-xs text-slate-400">…</span></div>
                         : <>
                           <span className={`text-sm font-bold tabular-nums ${(row.balance || 0) >= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>₹{fmt(row.balance || 0)}</span>
-                          <button
-                            onClick={() => openBreakdown(row)}
-                            title="View full monthly breakdown"
-                            className="p-1 hover:bg-amber-200 rounded-lg transition-colors flex-shrink-0"
-                          >
+                          <button onClick={() => openBreakdown(row)} title="View full monthly breakdown" className="p-1 hover:bg-amber-200 rounded-lg transition-colors flex-shrink-0">
                             <Info className="w-3.5 h-3.5 text-amber-600" />
                           </button>
                         </>
@@ -1152,9 +1083,16 @@ export default function BulkUpdate() {
   }
   const handleBack = () => { setPaymentData(null); window.scrollTo({ top: 0, behavior: 'smooth' }) }
 
+  // ── ★ CHANGE 2: save DistributedPayment record after billing entries succeed ──
   const handleSubmit = async (entries) => {
     setSubmitting(true)
     console.log('[handleSubmit] Submitting', entries.length, 'entries')
+
+    // Capture before any state resets
+    const capturedPaymentData = paymentData
+    const capturedGroup = selectedGroup
+    const capturedAmountType = amountType
+
     try {
       const results = await Promise.allSettled(entries.map(async ({ orderId, state, amount, notes, date, month }) => {
         const res = await fetch('/api/billing/monthly?action=add-entry', {
@@ -1165,8 +1103,50 @@ export default function BulkUpdate() {
         if (!j.success) throw new Error(`${orderId}/${state}: ${j.error}`)
         return j
       }))
+
       const succeeded = results.filter(r => r.status === 'fulfilled').length
       const failedItems = results.filter(r => r.status === 'rejected').map(r => r.reason?.message || 'unknown error')
+
+      // ── Save distribution record (non-fatal) ─────────────────────────
+      if (succeeded > 0 && capturedGroup && capturedPaymentData) {
+        try {
+          const distRes = await fetch('/api/billing/distributed', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              companyGroup: capturedGroup.groupName,
+              paymentType:  capturedAmountType,
+              paymentDate:  entries[0]?.date  || '',
+              billingMonth: entries[0]?.month || '',
+              totalAmount:  capturedPaymentData.amount,
+              notes:        capturedPaymentData.notes || '',
+              entryCount:   entries.length,
+              entries: entries.map(e => ({
+                orderId:     e.orderId,
+                companyName: e.companyName  || '',
+                state:       e.state,
+                entity:      e.entity       || '',
+                splitPct:    e.splitPct     || 100,
+                isSplit:     e.isSplit      || false,
+                amount:      Number(e.amount),
+                notes:       e.notes        || '',
+                date:        e.date,
+                month:       e.month,
+              })),
+            }),
+          })
+          const distJson = await distRes.json()
+          if (distJson.success) {
+            console.log('[handleSubmit] Distribution record saved:', distJson.data?._id)
+          } else {
+            console.warn('[handleSubmit] Distribution record save failed (non-fatal):', distJson.error)
+          }
+        } catch (distErr) {
+          // Non-fatal — billing entries are already persisted
+          console.error('[handleSubmit] Failed to save distribution record (non-fatal):', distErr)
+        }
+      }
+
       if (failedItems.length) {
         console.error('[handleSubmit] Some entries failed:', failedItems)
         showToast(`Saved ${succeeded}/${entries.length}. ${failedItems.length} failed — check console.`, succeeded > 0 ? 'success' : 'error')
@@ -1174,13 +1154,15 @@ export default function BulkUpdate() {
         console.log('[handleSubmit] All', succeeded, 'entries saved successfully')
         showToast(`Successfully saved ${succeeded} of ${entries.length} records.`)
       }
+
       setPaymentData(null)
       const nd = todayISO(); setForm({ date: nd, month: billingMonthFromDate(nd), amount: '', notes: buildPoint1(nd, '') })
     } catch (e) {
       console.error('[handleSubmit] Error:', e)
       showToast('Update failed: ' + e.message, 'error')
+    } finally {
+      setSubmitting(false)
     }
-    finally { setSubmitting(false) }
   }
 
   const billingMonthLabel = useMemo(() => { const found = months.find(m => m.value === form.month); return found ? found.label : '' }, [form.month, months])
@@ -1215,7 +1197,7 @@ export default function BulkUpdate() {
               </div>
             </div>
 
-            {/* CARD 1 */}
+            {/* CARD 1 — Payment Setup */}
             <div className="bg-white border border-slate-200 rounded-2xl shadow-sm">
               <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1250,10 +1232,12 @@ export default function BulkUpdate() {
                     </div>
                   </div>
                 </div>
+
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-dashed border-slate-200" /></div>
                   <div className="relative flex justify-center"><span className="bg-white px-3 text-xs font-semibold text-slate-400 uppercase tracking-wide">Payment Details</span></div>
                 </div>
+
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
                   <div className="space-y-4 flex justify-between">
                     <div>
@@ -1278,6 +1262,7 @@ export default function BulkUpdate() {
                       </button>
                     </div>
                   </div>
+
                   <div className="flex flex-col h-full">
                     <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wide mb-2"><StickyNote className="w-3.5 h-3.5 text-amber-500" />Notes</label>
                     <div className="flex items-start gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-t-xl">
@@ -1297,7 +1282,7 @@ export default function BulkUpdate() {
               </div>
             </div>
 
-            {/* CARD 2 */}
+            {/* CARD 2 — Filter Orders */}
             {selectedGroup && (
               <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
