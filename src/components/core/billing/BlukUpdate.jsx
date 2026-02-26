@@ -5,7 +5,8 @@ import {
   IndianRupee, CalendarDays, StickyNote, Zap, AlertCircle,
   CheckCircle2, Loader2, Filter, Users, RotateCcw,
   Send, SlidersHorizontal, PenLine, ChevronRight,
-  Banknote, ArrowLeft, Lock, Info, Eye
+  Banknote, ArrowLeft, Lock, Info, Eye, CreditCard, Wallet,
+  Building, Smartphone
 } from 'lucide-react'
 
 const INDIAN_STATES = [
@@ -36,6 +37,14 @@ const AMOUNT_TYPES = [
   { value: 'tdsProvision', label: 'TDS Provision', fullLabel: 'TDS Provision', color: 'amber', bg: 'bg-amber-500' },
   { value: 'tdsConfirm', label: 'TDS Confirm', fullLabel: 'TDS Confirm', color: 'violet', bg: 'bg-violet-500' },
 ]
+
+const PAYMENT_METHODS = [
+  { value: 'cash', label: 'Cash', icon: Wallet, color: 'emerald' },
+  { value: 'check', label: 'Check', icon: CreditCard, color: 'blue' },
+  { value: 'neft', label: 'NEFT', icon: Building, color: 'violet' },
+  { value: 'upi', label: 'UPI', icon: Smartphone, color: 'orange' },
+]
+
 const ALL_MONTHS = ["January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"]
 const DIST_MODES = [
@@ -822,17 +831,15 @@ const InlineDistributionTable = ({ billingRows, paymentData, amountType, onBack,
   const displayMonth = (() => { const [y, m] = paymentData.month.split('-'); return `${ALL_MONTHS[parseInt(m) - 1]} ${y}` })()
   const pct = paymentData.amount > 0 ? Math.min(100, (totalAlloc / paymentData.amount) * 100) : 0
 
-  // ── ★ CHANGE 1: include companyName, entity, splitPct, isSplit so the
-  //    parent can store a rich DistributedPayment record ────────────────
   const handleSubmit = () => {
     if (!canSubmit) return
     const entries = rows.filter(r => r.checked && Number(r.amount) >= 0).map(r => ({
       orderId:     r.orderId,
-      companyName: r.companyName,   // ← added
+      companyName: r.companyName,
       state:       r.state,
-      entity:      r.entity,        // ← added
-      splitPct:    r.splitPct,      // ← added
-      isSplit:     r.isSplit,       // ← added
+      entity:      r.entity,
+      splitPct:    r.splitPct,
+      isSplit:     r.isSplit,
       amount:      Number(r.amount),
       notes:       r.notes,
       date:        toDisplayDate(paymentData.date),
@@ -1022,7 +1029,18 @@ export default function BulkUpdate() {
   const months = useMemo(() => monthOptions(), [])
 
   const initialDate = todayISO()
-  const [form, setForm] = useState({ date: initialDate, month: billingMonthFromDate(initialDate), amount: '', notes: buildPoint1(initialDate, '') })
+  const [form, setForm] = useState({
+    date: initialDate,
+    month: billingMonthFromDate(initialDate),
+    amount: '',
+    notes: buildPoint1(initialDate, ''),
+    paymentMethod: 'cash',
+    bankName: '',
+    checkNumber: '',
+    neftId: '',
+    transactionId: '',
+    paymentNote: ''
+  })
   const [formErr, setFormErr] = useState('')
   const [paymentData, setPaymentData] = useState(null)
   const [submitting, setSubmitting] = useState(false)
@@ -1071,6 +1089,13 @@ export default function BulkUpdate() {
       const next = { ...prev, [k]: v }
       if (k === 'date') { next.month = billingMonthFromDate(v); const e = getUserExtra(prev.notes); next.notes = buildPoint1(v, prev.amount) + (e ? `\n${e}` : '') }
       if (k === 'amount') { const e = getUserExtra(prev.notes); next.notes = buildPoint1(prev.date, v) + (e ? `\n${e}` : '') }
+      if (k === 'paymentMethod') {
+        next.bankName = ''
+        next.checkNumber = ''
+        next.neftId = ''
+        next.transactionId = ''
+        next.paymentNote = ''
+      }
       return next
     })
     setFormErr('')
@@ -1083,12 +1108,10 @@ export default function BulkUpdate() {
   }
   const handleBack = () => { setPaymentData(null); window.scrollTo({ top: 0, behavior: 'smooth' }) }
 
-  // ── ★ CHANGE 2: save DistributedPayment record after billing entries succeed ──
   const handleSubmit = async (entries) => {
     setSubmitting(true)
     console.log('[handleSubmit] Submitting', entries.length, 'entries')
 
-    // Capture before any state resets
     const capturedPaymentData = paymentData
     const capturedGroup = selectedGroup
     const capturedAmountType = amountType
@@ -1107,7 +1130,6 @@ export default function BulkUpdate() {
       const succeeded = results.filter(r => r.status === 'fulfilled').length
       const failedItems = results.filter(r => r.status === 'rejected').map(r => r.reason?.message || 'unknown error')
 
-      // ── Save distribution record (non-fatal) ─────────────────────────
       if (succeeded > 0 && capturedGroup && capturedPaymentData) {
         try {
           const distRes = await fetch('/api/billing/distributed', {
@@ -1120,6 +1142,12 @@ export default function BulkUpdate() {
               billingMonth: entries[0]?.month || '',
               totalAmount:  capturedPaymentData.amount,
               notes:        capturedPaymentData.notes || '',
+              paymentMethod: capturedPaymentData.paymentMethod || 'cash',
+              bankName: capturedPaymentData.bankName || '',
+              checkNumber: capturedPaymentData.checkNumber || '',
+              neftId: capturedPaymentData.neftId || '',
+              transactionId: capturedPaymentData.transactionId || '',
+              paymentNote: capturedPaymentData.paymentNote || '',
               entryCount:   entries.length,
               entries: entries.map(e => ({
                 orderId:     e.orderId,
@@ -1142,7 +1170,6 @@ export default function BulkUpdate() {
             console.warn('[handleSubmit] Distribution record save failed (non-fatal):', distJson.error)
           }
         } catch (distErr) {
-          // Non-fatal — billing entries are already persisted
           console.error('[handleSubmit] Failed to save distribution record (non-fatal):', distErr)
         }
       }
@@ -1156,7 +1183,19 @@ export default function BulkUpdate() {
       }
 
       setPaymentData(null)
-      const nd = todayISO(); setForm({ date: nd, month: billingMonthFromDate(nd), amount: '', notes: buildPoint1(nd, '') })
+      const nd = todayISO()
+      setForm({
+        date: nd,
+        month: billingMonthFromDate(nd),
+        amount: '',
+        notes: buildPoint1(nd, ''),
+        paymentMethod: 'cash',
+        bankName: '',
+        checkNumber: '',
+        neftId: '',
+        transactionId: '',
+        paymentNote: ''
+      })
     } catch (e) {
       console.error('[handleSubmit] Error:', e)
       showToast('Update failed: ' + e.message, 'error')
@@ -1166,6 +1205,8 @@ export default function BulkUpdate() {
   }
 
   const billingMonthLabel = useMemo(() => { const found = months.find(m => m.value === form.month); return found ? found.label : '' }, [form.month, months])
+
+  const selectedPaymentMethod = PAYMENT_METHODS.find(pm => pm.value === form.paymentMethod)
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 lg:p-6">
@@ -1238,29 +1279,175 @@ export default function BulkUpdate() {
                   <div className="relative flex justify-center"><span className="bg-white px-3 text-xs font-semibold text-slate-400 uppercase tracking-wide">Payment Details</span></div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-                  <div className="space-y-4 flex justify-between">
-                    <div>
-                      <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wide mb-2"><CalendarDays className="w-3.5 h-3.5 text-violet-500" />Payment Date</label>
-                      <input type="date" value={form.date} onChange={e => handleField('date', e.target.value)} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 font-medium text-slate-700 bg-white" />
-                    </div>
-                    <div>
-                      <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wide mb-2"><IndianRupee className="w-3.5 h-3.5 text-emerald-500" />Amount (₹)</label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₹</span>
-                        <input type="number" value={form.amount} onChange={e => handleField('amount', e.target.value)} placeholder="0.00"
-                          className={`w-full pl-7 pr-3 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 font-bold text-slate-800 ${formErr ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'}`} />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wide mb-2"><CalendarDays className="w-3.5 h-3.5 text-violet-500" />Payment Date</label>
+                        <input type="date" value={form.date} onChange={e => handleField('date', e.target.value)} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 font-medium text-slate-700 bg-white" />
                       </div>
-                      {formErr && <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{formErr}</p>}
+                      <div>
+                        <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wide mb-2"><IndianRupee className="w-3.5 h-3.5 text-emerald-500" />Amount (₹)</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₹</span>
+                          <input type="number" value={form.amount} onChange={e => handleField('amount', e.target.value)} placeholder="0.00"
+                            className={`w-full pl-7 pr-3 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 font-bold text-slate-800 ${formErr ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'}`} />
+                        </div>
+                        {formErr && <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{formErr}</p>}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 pt-1 flex-wrap">
-                      <button onClick={handleDistribute} disabled={!canProceed}
-                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all w-full justify-center mt-1 ${canProceed ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-sm hover:shadow' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}>
-                        {canProceed ? <Users className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                        {!selectedGroup ? 'Select a group first' : !amountType ? 'Choose payment type' : filteredBillingRows.length === 0 ? 'No matching orders' : 'Distribute Amount'}
-                        {canProceed && <ChevronRight className="w-4 h-4" />}
-                      </button>
+
+                    {/* Payment Method Selection */}
+                    <div>
+                      <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">
+                        {selectedPaymentMethod && <selectedPaymentMethod.icon className={`w-3.5 h-3.5 text-${selectedPaymentMethod.color}-500`} />}
+                        Payment Method
+                      </label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {PAYMENT_METHODS.map(pm => {
+                          const Icon = pm.icon
+                          return (
+                            <button
+                              key={pm.value}
+                              onClick={() => handleField('paymentMethod', pm.value)}
+                              className={`flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-xl text-xs font-bold border-2 transition-all ${
+                                form.paymentMethod === pm.value
+                                  ? `bg-${pm.color}-50 border-${pm.color}-500 text-${pm.color}-700 shadow-sm`
+                                  : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                              }`}
+                            >
+                              <Icon className="w-4 h-4" />
+                              {pm.label}
+                            </button>
+                          )
+                        })}
+                      </div>
                     </div>
+
+                    {/* Conditional Payment Fields */}
+                    {form.paymentMethod && (
+                      <div className="space-y-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                        <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
+                          {selectedPaymentMethod && <selectedPaymentMethod.icon className={`w-4 h-4 text-${selectedPaymentMethod.color}-500`} />}
+                          <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">{selectedPaymentMethod?.label} Details</span>
+                        </div>
+
+                        {form.paymentMethod === 'cash' && (
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1.5">Note</label>
+                            <input
+                              type="text"
+                              value={form.paymentNote}
+                              onChange={e => handleField('paymentNote', e.target.value)}
+                              placeholder="Enter note..."
+                              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+                            />
+                          </div>
+                        )}
+
+                        {form.paymentMethod === 'check' && (
+                          <>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 mb-1.5">Bank Name <span className="text-slate-400">(optional)</span></label>
+                              <input
+                                type="text"
+                                value={form.bankName}
+                                onChange={e => handleField('bankName', e.target.value)}
+                                placeholder="Enter bank name..."
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 mb-1.5">Check Number</label>
+                              <input
+                                type="text"
+                                value={form.checkNumber}
+                                onChange={e => handleField('checkNumber', e.target.value)}
+                                placeholder="Enter check number..."
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 mb-1.5">Note</label>
+                              <input
+                                type="text"
+                                value={form.paymentNote}
+                                onChange={e => handleField('paymentNote', e.target.value)}
+                                placeholder="Enter note..."
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                              />
+                            </div>
+                          </>
+                        )}
+
+                        {form.paymentMethod === 'upi' && (
+                          <>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 mb-1.5">Transaction/Receipt ID</label>
+                              <input
+                                type="text"
+                                value={form.transactionId}
+                                onChange={e => handleField('transactionId', e.target.value)}
+                                placeholder="Enter transaction ID..."
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 mb-1.5">Note</label>
+                              <input
+                                type="text"
+                                value={form.paymentNote}
+                                onChange={e => handleField('paymentNote', e.target.value)}
+                                placeholder="Enter note..."
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+                              />
+                            </div>
+                          </>
+                        )}
+
+                        {form.paymentMethod === 'neft' && (
+                          <>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 mb-1.5">Bank Name <span className="text-slate-400">(optional)</span></label>
+                              <input
+                                type="text"
+                                value={form.bankName}
+                                onChange={e => handleField('bankName', e.target.value)}
+                                placeholder="Enter bank name..."
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 mb-1.5">NEFT ID/No</label>
+                              <input
+                                type="text"
+                                value={form.neftId}
+                                onChange={e => handleField('neftId', e.target.value)}
+                                placeholder="Enter NEFT ID..."
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 mb-1.5">Note</label>
+                              <input
+                                type="text"
+                                value={form.paymentNote}
+                                onChange={e => handleField('paymentNote', e.target.value)}
+                                placeholder="Enter note..."
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white"
+                              />
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    <button onClick={handleDistribute} disabled={!canProceed}
+                      className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all w-full justify-center ${canProceed ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-sm hover:shadow' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}>
+                      {canProceed ? <Users className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                      {!selectedGroup ? 'Select a group first' : !amountType ? 'Choose payment type' : filteredBillingRows.length === 0 ? 'No matching orders' : 'Distribute Amount'}
+                      {canProceed && <ChevronRight className="w-4 h-4" />}
+                    </button>
                   </div>
 
                   <div className="flex flex-col h-full">
@@ -1279,6 +1466,71 @@ export default function BulkUpdate() {
                     <p className="mt-1.5 text-[10px] text-slate-400 flex items-center gap-1"><AlertCircle className="w-3 h-3 text-amber-400 flex-shrink-0" />Point 1 is auto-generated from date &amp; amount. Write additional points below.</p>
                   </div>
                 </div>
+
+                {/* Payment Details Display Card */}
+                {form.paymentMethod && (
+                  <div className="mt-4 p-4 bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 rounded-xl">
+                    <div className="flex items-center gap-2 mb-3 pb-3 border-b border-slate-300">
+                      <div className={`w-8 h-8 rounded-lg bg-${selectedPaymentMethod?.color}-100 flex items-center justify-center`}>
+                        {selectedPaymentMethod && <selectedPaymentMethod.icon className={`w-4 h-4 text-${selectedPaymentMethod.color}-600`} />}
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-800">Payment Details Summary</h3>
+                        <p className="text-xs text-slate-500">{selectedPaymentMethod?.label} Payment</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-white rounded-lg p-3 border border-slate-200">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Payment Date</p>
+                        <p className="text-sm font-semibold text-slate-800">{toDisplayDate(form.date) || '--'}</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border border-slate-200">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Amount</p>
+                        <p className="text-sm font-bold text-emerald-700">₹{form.amount ? fmt(Number(form.amount)) : '--'}</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border border-slate-200">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Method</p>
+                        <p className={`text-sm font-bold text-${selectedPaymentMethod?.color}-700`}>{selectedPaymentMethod?.label}</p>
+                      </div>
+                      {form.paymentMethod === 'check' && form.bankName && (
+                        <div className="bg-white rounded-lg p-3 border border-slate-200">
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Bank Name</p>
+                          <p className="text-sm font-semibold text-slate-800">{form.bankName}</p>
+                        </div>
+                      )}
+                      {form.paymentMethod === 'check' && form.checkNumber && (
+                        <div className="bg-white rounded-lg p-3 border border-slate-200">
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Check Number</p>
+                          <p className="text-sm font-mono font-bold text-blue-700">{form.checkNumber}</p>
+                        </div>
+                      )}
+                      {form.paymentMethod === 'neft' && form.bankName && (
+                        <div className="bg-white rounded-lg p-3 border border-slate-200">
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Bank Name</p>
+                          <p className="text-sm font-semibold text-slate-800">{form.bankName}</p>
+                        </div>
+                      )}
+                      {form.paymentMethod === 'neft' && form.neftId && (
+                        <div className="bg-white rounded-lg p-3 border border-slate-200">
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">NEFT ID</p>
+                          <p className="text-sm font-mono font-bold text-violet-700">{form.neftId}</p>
+                        </div>
+                      )}
+                      {form.paymentMethod === 'upi' && form.transactionId && (
+                        <div className="bg-white rounded-lg p-3 border border-slate-200 col-span-2">
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Transaction ID</p>
+                          <p className="text-sm font-mono font-bold text-orange-700 break-all">{form.transactionId}</p>
+                        </div>
+                      )}
+                      {form.paymentNote && (
+                        <div className="bg-white rounded-lg p-3 border border-slate-200 col-span-2">
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Payment Note</p>
+                          <p className="text-sm text-slate-700">{form.paymentNote}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

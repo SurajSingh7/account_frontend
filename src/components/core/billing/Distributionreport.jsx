@@ -3,9 +3,8 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import {
   Search, X, Filter, Eye, Printer, Building2, Calendar,
   IndianRupee, FileText, CheckCircle2, AlertCircle,
-  Loader2, RefreshCw, BarChart3, Users, CreditCard,
-  ChevronDown, Banknote, TrendingUp, Hash, Clock,
-  ArrowUpRight, Layers, Tag, Download
+  Loader2, RefreshCw, Hash, Layers, Wallet, CreditCard,
+  Building, Smartphone, Banknote
 } from 'lucide-react'
 
 // ─── Constants ────────────────────────────────────────────────
@@ -39,6 +38,13 @@ const PAYMENT_TYPES = [
   },
 ]
 
+const PAYMENT_METHOD_META = {
+  cash:  { label: 'Cash',  icon: Wallet,      color: 'emerald', bg: 'bg-emerald-100', text: 'text-emerald-700' },
+  check: { label: 'Check', icon: CreditCard,  color: 'blue',    bg: 'bg-blue-100',    text: 'text-blue-700'    },
+  neft:  { label: 'NEFT',  icon: Building,    color: 'violet',  bg: 'bg-violet-100',  text: 'text-violet-700'  },
+  upi:   { label: 'UPI',   icon: Smartphone,  color: 'orange',  bg: 'bg-orange-100',  text: 'text-orange-700'  },
+}
+
 // ─── Helpers ──────────────────────────────────────────────────
 const fmt = (n) => (n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmtShort = (n) => {
@@ -55,11 +61,13 @@ const fmtCreatedAt = (iso) => {
   return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) +
     ' ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
 }
+const getPaymentMethodMeta = (method) => PAYMENT_METHOD_META[method] || PAYMENT_METHOD_META.cash
 
-// ─── Report Modal (PDF-like) ──────────────────────────────────
+// ─── Report Modal ─────────────────────────────────────────────
 const ReportModal = React.memo(({ record, onClose }) => {
   const t = typeInfo(record.paymentType)
-  const printAreaRef = useRef(null)
+  const pm = getPaymentMethodMeta(record.paymentMethod)
+  const PmIcon = pm.icon
 
   useEffect(() => {
     const h = (e) => { if (e.key === 'Escape') onClose() }
@@ -67,7 +75,6 @@ const ReportModal = React.memo(({ record, onClose }) => {
     return () => document.removeEventListener('keydown', h)
   }, [onClose])
 
-  // Inject print styles; clean up on unmount
   useEffect(() => {
     const style = document.createElement('style')
     style.id = 'dist-report-print'
@@ -89,8 +96,6 @@ const ReportModal = React.memo(({ record, onClose }) => {
     return () => { document.getElementById('dist-report-print')?.remove() }
   }, [])
 
-  const handlePrint = () => window.print()
-
   const entries = record.entries || []
   const totalAllocated = entries.reduce((s, e) => s + (Number(e.amount) || 0), 0)
   const splitCount = entries.filter(e => e.isSplit).length
@@ -99,6 +104,15 @@ const ReportModal = React.memo(({ record, onClose }) => {
   const generatedOn = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
   const generatedAt = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   const recordRef = record._id?.slice(-8).toUpperCase() || 'N/A'
+
+  // Build payment method detail string
+  const pmDetails = [
+    record.bankName     && `Bank: ${record.bankName}`,
+    record.checkNumber  && `Check #${record.checkNumber}`,
+    record.neftId       && `NEFT ID: ${record.neftId}`,
+    record.transactionId && `Txn ID: ${record.transactionId}`,
+    record.paymentNote  && `Note: ${record.paymentNote}`,
+  ].filter(Boolean)
 
   return (
     <div
@@ -110,7 +124,7 @@ const ReportModal = React.memo(({ record, onClose }) => {
         style={{ maxWidth: '1060px', maxHeight: '96vh' }}
         onClick={e => e.stopPropagation()}
       >
-        {/* ── Toolbar ── */}
+        {/* Toolbar */}
         <div className="flex items-center justify-between px-6 py-3 bg-slate-900 rounded-t-2xl flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-7 h-7 bg-white/10 rounded-lg flex items-center justify-center">
@@ -124,7 +138,7 @@ const ReportModal = React.memo(({ record, onClose }) => {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={handlePrint}
+              onClick={() => window.print()}
               className="flex items-center gap-1.5 px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-all border border-white/10"
             >
               <Printer className="w-3.5 h-3.5" />Print / Export
@@ -138,7 +152,7 @@ const ReportModal = React.memo(({ record, onClose }) => {
           </div>
         </div>
 
-        {/* ── Scrollable Report Area ── */}
+        {/* Scrollable Report */}
         <div className="overflow-auto flex-1 bg-slate-100 p-6">
           <div id="dist-report-printable" className="bg-white rounded-2xl shadow-sm mx-auto" style={{ maxWidth: '960px' }}>
 
@@ -148,7 +162,7 @@ const ReportModal = React.memo(({ record, onClose }) => {
                 <div>
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-sm">
-                      <Banknote className="w-5.5 h-5.5 text-white" style={{ width: '22px', height: '22px' }} />
+                      <Banknote style={{ width: '22px', height: '22px' }} className="text-white" />
                     </div>
                     <div>
                       <h1 className="text-[22px] font-black text-slate-900 tracking-tight leading-none">
@@ -175,13 +189,15 @@ const ReportModal = React.memo(({ record, onClose }) => {
               </div>
             </div>
 
-            {/* Summary Grid */}
             <div className="px-10 py-7">
-              <div className="grid grid-cols-3 gap-4 mb-6">
+
+              {/* Summary Grid — 4 cards */}
+              <div className="grid grid-cols-4 gap-4 mb-6">
                 {[
-                  { label: 'Company Group', value: record.companyGroup, icon: Building2, cls: 'border-blue-200 bg-blue-50', textCls: 'text-blue-800', iconCls: 'text-blue-500' },
-                  { label: 'Payment Date',  value: record.paymentDate,  icon: Calendar,  cls: 'border-slate-200 bg-slate-50', textCls: 'text-slate-800', iconCls: 'text-slate-400' },
-                  { label: 'Billing Month', value: record.billingMonth, icon: Calendar,  cls: 'border-indigo-200 bg-indigo-50', textCls: 'text-indigo-800', iconCls: 'text-indigo-400' },
+                  { label: 'Company Group', value: record.companyGroup, icon: Building2,    cls: 'border-blue-200 bg-blue-50',    textCls: 'text-blue-800',   iconCls: 'text-blue-500'   },
+                  { label: 'Payment Date',  value: record.paymentDate,  icon: Calendar,     cls: 'border-slate-200 bg-slate-50',  textCls: 'text-slate-800',  iconCls: 'text-slate-400'  },
+                  { label: 'Billing Month', value: record.billingMonth, icon: Calendar,     cls: 'border-indigo-200 bg-indigo-50',textCls: 'text-indigo-800', iconCls: 'text-indigo-400' },
+                  { label: 'Payment Type',  value: t.label,             icon: FileText,     cls: 'border-slate-200 bg-slate-50',  textCls: 'text-slate-800',  iconCls: 'text-slate-400'  },
                 ].map(({ label, value, icon: Icon, cls, textCls, iconCls }) => (
                   <div key={label} className={`rounded-xl border p-4 ${cls}`}>
                     <div className="flex items-center gap-1.5 mb-1.5">
@@ -191,6 +207,53 @@ const ReportModal = React.memo(({ record, onClose }) => {
                     <p className={`text-base font-black leading-tight ${textCls}`}>{value || '-'}</p>
                   </div>
                 ))}
+              </div>
+
+              {/* Payment Method Card */}
+              <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${pm.bg}`}>
+                    <PmIcon className={`w-4 h-4 ${pm.text}`} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Payment Method</p>
+                    <p className={`text-sm font-black uppercase ${pm.text}`}>{pm.label}</p>
+                  </div>
+                </div>
+                {pmDetails.length > 0 && (
+                  <div className="flex flex-wrap gap-3">
+                    {record.bankName && (
+                      <div className="bg-white rounded-lg px-3 py-2 border border-slate-200">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Bank</p>
+                        <p className="text-xs font-bold text-slate-700">{record.bankName}</p>
+                      </div>
+                    )}
+                    {record.checkNumber && (
+                      <div className="bg-white rounded-lg px-3 py-2 border border-slate-200">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Check No.</p>
+                        <p className="text-xs font-mono font-bold text-blue-700">{record.checkNumber}</p>
+                      </div>
+                    )}
+                    {record.neftId && (
+                      <div className="bg-white rounded-lg px-3 py-2 border border-slate-200">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">NEFT ID</p>
+                        <p className="text-xs font-mono font-bold text-violet-700">{record.neftId}</p>
+                      </div>
+                    )}
+                    {record.transactionId && (
+                      <div className="bg-white rounded-lg px-3 py-2 border border-slate-200">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Transaction ID</p>
+                        <p className="text-xs font-mono font-bold text-orange-700 break-all">{record.transactionId}</p>
+                      </div>
+                    )}
+                    {record.paymentNote && (
+                      <div className="bg-white rounded-lg px-3 py-2 border border-slate-200">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Note</p>
+                        <p className="text-xs text-slate-600">{record.paymentNote}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Total Amount Banner */}
@@ -206,9 +269,9 @@ const ReportModal = React.memo(({ record, onClose }) => {
                   </div>
                   <div className="grid grid-cols-3 gap-4 text-right">
                     {[
-                      { label: 'Orders', value: uniqueOrders },
-                      { label: 'Entries', value: entries.length },
-                      { label: 'Split Rows', value: splitCount },
+                      { label: 'Orders',     value: uniqueOrders     },
+                      { label: 'Entries',    value: entries.length   },
+                      { label: 'Split Rows', value: splitCount       },
                     ].map(({ label, value }) => (
                       <div key={label} className="bg-white/15 rounded-xl px-4 py-3">
                         <p className="text-2xl font-black text-white">{value}</p>
@@ -219,7 +282,7 @@ const ReportModal = React.memo(({ record, onClose }) => {
                 </div>
               </div>
 
-              {/* Notes */}
+              {/* Notes — only payment reference notes, no entity/entry notes */}
               {record.notes && (
                 <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
                   <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1.5">Reference / Notes</p>
@@ -239,12 +302,12 @@ const ReportModal = React.memo(({ record, onClose }) => {
                 </div>
               </div>
 
-              {/* Entries Table */}
+              {/* Entries Table — NO Notes, NO Entity columns */}
               <div className="rounded-xl border border-slate-200 overflow-hidden mb-8">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-900">
-                      {['#', 'Order ID', 'Company', 'State', 'Entity', 'Month', 'Date', 'Amount (₹)', 'Notes'].map(h => (
+                      {['#', 'Order ID', 'Company', 'State', 'Split', 'Month', 'Payment Date', 'Amount (₹)'].map(h => (
                         <th key={h} className="px-4 py-3.5 text-left text-[10px] font-black text-slate-300 uppercase tracking-wider whitespace-nowrap">
                           {h}
                         </th>
@@ -256,35 +319,32 @@ const ReportModal = React.memo(({ record, onClose }) => {
                       <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
                         <td className="px-4 py-3 text-xs font-black text-slate-300">{idx + 1}</td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-black text-violet-700 font-mono">{entry.orderId}</span>
-                            {entry.isSplit && (
-                              <span className="text-[8px] font-black text-violet-400 bg-violet-100 px-1.5 py-0.5 rounded uppercase tracking-wide">split {entry.splitPct}%</span>
-                            )}
-                          </div>
+                          <span className="text-sm font-black text-violet-700 font-mono">{entry.orderId}</span>
                         </td>
-                        <td className="px-4 py-3 text-sm font-semibold text-slate-700 max-w-[160px] truncate">{entry.companyName || '-'}</td>
+                        <td className="px-4 py-3 text-sm font-semibold text-slate-700 max-w-[180px] truncate">
+                          {entry.companyName || '-'}
+                        </td>
                         <td className="px-4 py-3">
                           <span className="inline-flex px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-bold rounded border border-indigo-100">
                             {entry.state || '-'}
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{entry.entity || '-'}</span>
+                          {entry.isSplit
+                            ? <span className="text-[9px] font-black text-violet-500 bg-violet-100 px-2 py-0.5 rounded uppercase tracking-wide">{entry.splitPct}%</span>
+                            : <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded uppercase">100%</span>
+                          }
                         </td>
                         <td className="px-4 py-3 text-xs font-semibold text-slate-600 whitespace-nowrap">{entry.month}</td>
                         <td className="px-4 py-3 text-xs text-slate-400 font-mono whitespace-nowrap">{entry.date}</td>
                         <td className="px-4 py-3 text-right">
                           <span className="text-sm font-black text-emerald-700 whitespace-nowrap">₹{fmt(entry.amount)}</span>
                         </td>
-                        <td className="px-4 py-3 text-xs text-slate-400 max-w-[200px] truncate" title={entry.notes || ''}>
-                          {entry.notes || '—'}
-                        </td>
                       </tr>
                     ))}
                     {entries.length === 0 && (
                       <tr>
-                        <td colSpan={9} className="px-4 py-8 text-center text-slate-400 text-sm">No entries recorded</td>
+                        <td colSpan={8} className="px-4 py-8 text-center text-slate-400 text-sm">No entries recorded</td>
                       </tr>
                     )}
                   </tbody>
@@ -294,11 +354,8 @@ const ReportModal = React.memo(({ record, onClose }) => {
                         TOTAL ({entries.length} entries · {uniqueOrders} orders)
                       </td>
                       <td className="px-4 py-3.5 text-right">
-                        <span className="text-base font-black text-white whitespace-nowrap">
-                          ₹{fmt(totalAllocated)}
-                        </span>
+                        <span className="text-base font-black text-white whitespace-nowrap">₹{fmt(totalAllocated)}</span>
                       </td>
-                      <td className="px-4 py-3.5" />
                     </tr>
                   </tfoot>
                 </table>
@@ -343,7 +400,7 @@ const StatCard = ({ icon: Icon, label, value, sub, iconCls, borderCls }) => (
   <div className={`bg-white rounded-2xl border shadow-sm p-5 ${borderCls || 'border-slate-200'}`}>
     <div className="flex items-start justify-between mb-3">
       <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${iconCls || 'bg-slate-100'}`}>
-        <Icon className="w-4.5 h-4.5" style={{ width: '18px', height: '18px' }} />
+        <Icon style={{ width: '18px', height: '18px' }} />
       </div>
     </div>
     <p className="text-2xl font-black text-slate-900 leading-none mb-1">{value}</p>
@@ -354,16 +411,16 @@ const StatCard = ({ icon: Icon, label, value, sub, iconCls, borderCls }) => (
 
 // ─── Main Page ────────────────────────────────────────────────
 export default function DistributedPaymentsPage() {
-  const [records, setRecords]         = useState([])
-  const [groups, setGroups]           = useState([])
-  const [loading, setLoading]         = useState(true)
-  const [groupQuery, setGroupQuery]   = useState('')
-  const [typeFilter, setTypeFilter]   = useState('')
-  const [textSearch, setTextSearch]   = useState('')
-  const [viewRecord, setViewRecord]   = useState(null)
-  const [deletingId, setDeletingId]   = useState(null)
-  const [toast, setToast]             = useState(null)
-  const groupInputRef                 = useRef(null)
+  const [records, setRecords]       = useState([])
+  const [groups, setGroups]         = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [groupQuery, setGroupQuery] = useState('')
+  const [typeFilter, setTypeFilter] = useState('')
+  const [textSearch, setTextSearch] = useState('')
+  const [viewRecord, setViewRecord] = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
+  const [toast, setToast]           = useState(null)
+  const groupInputRef               = useRef(null)
 
   const showToast = useCallback((msg, type = 'success') => {
     setToast({ msg, type })
@@ -394,7 +451,6 @@ export default function DistributedPaymentsPage() {
 
   useEffect(() => { fetchRecords() }, [fetchRecords])
 
-  // Client-side text search across records
   const filteredRecords = useMemo(() => {
     if (!textSearch.trim()) return records
     const q = textSearch.toLowerCase().trim()
@@ -403,6 +459,7 @@ export default function DistributedPaymentsPage() {
       r.billingMonth?.toLowerCase().includes(q) ||
       r.paymentDate?.includes(q) ||
       r.notes?.toLowerCase().includes(q) ||
+      r.paymentMethod?.toLowerCase().includes(q) ||
       r.entries?.some(e =>
         e.orderId?.toLowerCase().includes(q) ||
         e.companyName?.toLowerCase().includes(q) ||
@@ -411,9 +468,8 @@ export default function DistributedPaymentsPage() {
     )
   }, [records, textSearch])
 
-  // Summary stats
   const stats = useMemo(() => {
-    const totalAmt = filteredRecords.reduce((s, r) => s + (Number(r.totalAmount) || 0), 0)
+    const totalAmt     = filteredRecords.reduce((s, r) => s + (Number(r.totalAmount) || 0), 0)
     const totalEntries = filteredRecords.reduce((s, r) => s + (r.entryCount || 0), 0)
     const byType = PAYMENT_TYPES.map(t => ({
       ...t,
@@ -448,7 +504,7 @@ export default function DistributedPaymentsPage() {
 
       <div className="max-w-7xl mx-auto space-y-5">
 
-        {/* ── Page Header ── */}
+        {/* Page Header */}
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -468,19 +524,22 @@ export default function DistributedPaymentsPage() {
           </button>
         </div>
 
-        {/* ── Stat Cards ── */}
+        {/* Stat Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon={FileText}    label="Total Records"   value={stats.total}                            iconCls="bg-slate-100 text-slate-600"   borderCls="border-slate-200" />
-          <StatCard icon={IndianRupee} label="Total Amount"    value={fmtShort(stats.totalAmt)} sub={`₹${fmt(stats.totalAmt)}`} iconCls="bg-emerald-100 text-emerald-600" borderCls="border-emerald-200" />
-          <StatCard icon={Hash}        label="Order Entries"   value={stats.totalEntries}                     iconCls="bg-violet-100 text-violet-600"  borderCls="border-violet-200" />
-          <StatCard icon={Building2}   label="Company Groups"  value={groups.length}                          iconCls="bg-blue-100 text-blue-600"      borderCls="border-blue-200" />
+          <StatCard icon={FileText}    label="Total Records"  value={stats.total}                            iconCls="bg-slate-100 text-slate-600"   borderCls="border-slate-200" />
+          <StatCard icon={IndianRupee} label="Total Amount"   value={fmtShort(stats.totalAmt)} sub={`₹${fmt(stats.totalAmt)}`} iconCls="bg-emerald-100 text-emerald-600" borderCls="border-emerald-200" />
+          <StatCard icon={Hash}        label="Order Entries"  value={stats.totalEntries}                     iconCls="bg-violet-100 text-violet-600"  borderCls="border-violet-200" />
+          <StatCard icon={Building2}   label="Company Groups" value={groups.length}                          iconCls="bg-blue-100 text-blue-600"      borderCls="border-blue-200" />
         </div>
 
-        {/* ── Type Summary Strip ── */}
+        {/* Type Summary Strip */}
         <div className="grid grid-cols-3 gap-3">
           {stats.byType.map(t => (
-            <div key={t.value} className={`rounded-xl border p-4 bg-white shadow-sm cursor-pointer transition-all hover:shadow-md ${typeFilter === t.value ? 'ring-2 ring-offset-1 ring-slate-900' : ''}`}
-              onClick={() => setTypeFilter(v => v === t.value ? '' : t.value)}>
+            <div
+              key={t.value}
+              className={`rounded-xl border p-4 bg-white shadow-sm cursor-pointer transition-all hover:shadow-md ${typeFilter === t.value ? 'ring-2 ring-offset-1 ring-slate-900' : ''}`}
+              onClick={() => setTypeFilter(v => v === t.value ? '' : t.value)}
+            >
               <div className="flex items-center justify-between mb-2">
                 <span className={`text-xs font-black px-2.5 py-1 rounded-full border ${t.badgeCls}`}>{t.label}</span>
                 <span className="text-xs font-bold text-slate-400">{t.count} records</span>
@@ -491,7 +550,7 @@ export default function DistributedPaymentsPage() {
           ))}
         </div>
 
-        {/* ── Search & Filter Panel ── */}
+        {/* Search & Filter */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
             <div className="w-7 h-7 rounded-xl bg-slate-100 flex items-center justify-center">
@@ -504,7 +563,6 @@ export default function DistributedPaymentsPage() {
           </div>
           <div className="p-5">
             <div className="flex flex-wrap gap-4 items-end">
-
               {/* Company Group */}
               <div className="flex-1 min-w-[220px]">
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Company Group</label>
@@ -584,7 +642,7 @@ export default function DistributedPaymentsPage() {
           </div>
         </div>
 
-        {/* ── Records Table ── */}
+        {/* Records Table */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -616,7 +674,10 @@ export default function DistributedPaymentsPage() {
                 {hasFilters ? 'Try clearing some filters, or' : ''} Submit payments from the Bulk Update page to create distribution records.
               </p>
               {hasFilters && (
-                <button onClick={() => { setGroupQuery(''); setTypeFilter(''); setTextSearch('') }} className="mt-3 text-xs font-bold text-violet-600 hover:text-violet-800 underline">
+                <button
+                  onClick={() => { setGroupQuery(''); setTypeFilter(''); setTextSearch('') }}
+                  className="mt-3 text-xs font-bold text-violet-600 hover:text-violet-800 underline"
+                >
                   Clear all filters
                 </button>
               )}
@@ -626,7 +687,7 @@ export default function DistributedPaymentsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
-                    {['#', 'Company Group', 'Billing Month', 'Payment Date', 'Type', 'Total Amount', 'Orders', 'Submitted At', 'Actions'].map(h => (
+                    {['#', 'Company Group', 'Billing Month', 'Payment Date', 'Method', 'Type', 'Total Amount', 'Entries', 'Submitted At', 'Actions'].map(h => (
                       <th key={h} className="px-4 py-3.5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
                         {h}
                       </th>
@@ -635,7 +696,9 @@ export default function DistributedPaymentsPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredRecords.map((rec, idx) => {
-                    const t = typeInfo(rec.paymentType)
+                    const t   = typeInfo(rec.paymentType)
+                    const pm  = getPaymentMethodMeta(rec.paymentMethod)
+                    const PmIcon = pm.icon
                     return (
                       <tr key={rec._id} className="hover:bg-violet-50/30 transition-colors group relative">
                         <td className="px-4 py-3.5 text-xs font-black text-slate-300">{idx + 1}</td>
@@ -657,6 +720,13 @@ export default function DistributedPaymentsPage() {
                             {rec.paymentDate}
                           </span>
                         </td>
+                        {/* Payment Method column */}
+                        <td className="px-4 py-3.5">
+                          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${pm.bg} ${pm.text}`}>
+                            <PmIcon className="w-3 h-3" />
+                            {pm.label}
+                          </div>
+                        </td>
                         <td className="px-4 py-3.5">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg border ${t.badgeCls}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${t.dotCls}`} />
@@ -664,9 +734,7 @@ export default function DistributedPaymentsPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3.5">
-                          <div>
-                            <span className="text-base font-black text-emerald-700">₹{fmt(rec.totalAmount)}</span>
-                          </div>
+                          <span className="text-base font-black text-emerald-700">₹{fmt(rec.totalAmount)}</span>
                         </td>
                         <td className="px-4 py-3.5">
                           <span className="inline-flex px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg">
@@ -710,10 +778,7 @@ export default function DistributedPaymentsPage() {
         </div>
       </div>
 
-      {/* Click outside to close delete confirm */}
       {deletingId && <div className="fixed inset-0 z-40" onClick={() => setDeletingId(null)} />}
-
-      {/* Report Modal */}
       {viewRecord && <ReportModal record={viewRecord} onClose={() => setViewRecord(null)} />}
     </div>
   )

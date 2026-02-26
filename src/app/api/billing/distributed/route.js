@@ -28,7 +28,7 @@ export async function GET(request) {
 
     const [records, groups] = await Promise.all([
       DistributedPayment.find(query).sort({ createdAt: -1 }).limit(500).lean(),
-      DistributedPayment.distinct('companyGroup'),           // all groups for autocomplete
+      DistributedPayment.distinct('companyGroup'),
     ]);
 
     return NextResponse.json({ success: true, data: records, groups: groups.sort() });
@@ -43,23 +43,42 @@ export async function POST(request) {
   try {
     await connectDB();
     const body = await request.json();
-    const { companyGroup, paymentType, paymentDate, billingMonth, totalAmount, notes, entries } = body;
+
+    const {
+      companyGroup,
+      paymentType,
+      paymentDate,
+      billingMonth,
+      totalAmount,
+      notes,
+      entries,
+      // ── Payment method fields ──
+      paymentMethod,
+      bankName,
+      checkNumber,
+      neftId,
+      transactionId,
+      paymentNote,
+    } = body;
 
     if (!companyGroup || !paymentType || !paymentDate || !billingMonth || totalAmount === undefined) {
-      return NextResponse.json({ success: false, error: 'Missing required fields: companyGroup, paymentType, paymentDate, billingMonth, totalAmount' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: 'Missing required fields: companyGroup, paymentType, paymentDate, billingMonth, totalAmount' },
+        { status: 400 }
+      );
     }
 
     const cleanEntries = (entries || []).map(e => ({
-      orderId:     String(e.orderId || ''),
+      orderId:     String(e.orderId     || ''),
       companyName: String(e.companyName || ''),
-      state:       String(e.state || ''),
-      entity:      String(e.entity || ''),
-      splitPct:    Number(e.splitPct) || 100,
+      state:       String(e.state       || ''),
+      entity:      String(e.entity      || ''),
+      splitPct:    Number(e.splitPct)   || 100,
       isSplit:     Boolean(e.isSplit),
-      amount:      Number(e.amount)  || 0,
-      notes:       String(e.notes   || ''),
-      date:        String(e.date    || ''),
-      month:       String(e.month   || ''),
+      amount:      Number(e.amount)     || 0,
+      notes:       String(e.notes       || ''),
+      date:        String(e.date        || ''),
+      month:       String(e.month       || ''),
     }));
 
     const record = await DistributedPayment.create({
@@ -68,9 +87,16 @@ export async function POST(request) {
       paymentDate:   String(paymentDate),
       billingMonth:  String(billingMonth),
       totalAmount:   Number(totalAmount),
-      notes:         String(notes || ''),
+      notes:         String(notes         || ''),
       entries:       cleanEntries,
       entryCount:    cleanEntries.length,
+      // ── Payment method fields ──
+      paymentMethod:  String(paymentMethod  || 'cash'),
+      bankName:       String(bankName       || ''),
+      checkNumber:    String(checkNumber    || ''),
+      neftId:         String(neftId         || ''),
+      transactionId:  String(transactionId  || ''),
+      paymentNote:    String(paymentNote    || ''),
     });
 
     return NextResponse.json({ success: true, data: record }, { status: 201 });

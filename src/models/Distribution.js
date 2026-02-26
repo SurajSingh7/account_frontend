@@ -6,12 +6,12 @@ const DistributionEntrySchema = new mongoose.Schema({
   companyName: { type: String, default: '' },
   state:       { type: String, default: '' },
   entity:      { type: String, default: '' },
-  splitPct:    { type: Number, default: 100 },   // e.g. 50 or 100
+  splitPct:    { type: Number, default: 100 },
   isSplit:     { type: Boolean, default: false },
   amount:      { type: Number, required: true, default: 0 },
   notes:       { type: String, default: '' },
-  date:        { type: String, required: true },  // DD-MM-YYYY (payment date)
-  month:       { type: String, required: true },  // "January 2026" (billing month)
+  date:        { type: String, required: true },  // DD-MM-YYYY
+  month:       { type: String, required: true },  // "January 2026"
 }, { _id: false });
 
 const DistributedPaymentSchema = new mongoose.Schema({
@@ -35,6 +35,18 @@ const DistributedPaymentSchema = new mongoose.Schema({
   // ── Meta ─────────────────────────────────────────────────────
   notes:      { type: String, default: '' },
   entryCount: { type: Number, default: 0 },
+
+  // ── Payment Method ───────────────────────────────────────────
+  paymentMethod: {
+    type: String,
+    default: 'cash',
+    enum: ['cash', 'check', 'neft', 'upi'],
+  },
+  bankName:      { type: String, default: '' },
+  checkNumber:   { type: String, default: '' },
+  neftId:        { type: String, default: '' },
+  transactionId: { type: String, default: '' },
+  paymentNote:   { type: String, default: '' },
 
   // ── Per-order breakdown ───────────────────────────────────────
   entries: { type: [DistributionEntrySchema], default: [] },
