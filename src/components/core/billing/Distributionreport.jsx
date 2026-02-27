@@ -4,7 +4,8 @@ import {
   Search, X, Filter, Eye, Printer, Building2, Calendar,
   IndianRupee, FileText, CheckCircle2, AlertCircle,
   Loader2, RefreshCw, Hash, Layers, Wallet, CreditCard,
-  Building, Smartphone, Banknote
+  Building, Smartphone, Banknote, ChevronDown, ChevronUp,
+  MapPin, Clock
 } from 'lucide-react'
 
 // ─── Constants ────────────────────────────────────────────────
@@ -39,10 +40,10 @@ const PAYMENT_TYPES = [
 ]
 
 const PAYMENT_METHOD_META = {
-  cash:  { label: 'Cash',  icon: Wallet,      color: 'emerald', bg: 'bg-emerald-100', text: 'text-emerald-700' },
-  check: { label: 'Check', icon: CreditCard,  color: 'blue',    bg: 'bg-blue-100',    text: 'text-blue-700'    },
-  neft:  { label: 'NEFT',  icon: Building,    color: 'violet',  bg: 'bg-violet-100',  text: 'text-violet-700'  },
-  upi:   { label: 'UPI',   icon: Smartphone,  color: 'orange',  bg: 'bg-orange-100',  text: 'text-orange-700'  },
+  cash:  { label: 'Cash',  icon: Wallet,     color: 'emerald', bg: 'bg-emerald-100', text: 'text-emerald-700' },
+  check: { label: 'Check', icon: CreditCard, color: 'blue',    bg: 'bg-blue-100',    text: 'text-blue-700'    },
+  neft:  { label: 'NEFT',  icon: Building,   color: 'violet',  bg: 'bg-violet-100',  text: 'text-violet-700'  },
+  upi:   { label: 'UPI',   icon: Smartphone, color: 'orange',  bg: 'bg-orange-100',  text: 'text-orange-700'  },
 }
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -63,9 +64,190 @@ const fmtCreatedAt = (iso) => {
 }
 const getPaymentMethodMeta = (method) => PAYMENT_METHOD_META[method] || PAYMENT_METHOD_META.cash
 
+// ─── Status Pill ──────────────────────────────────────────────
+const StatusPill = ({ adj }) => {
+  if (adj.amountStatus === 'Fully Paid') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide bg-emerald-100 text-emerald-700 border border-emerald-200">
+        <CheckCircle2 className="w-2.5 h-2.5 flex-shrink-0" />Fully Paid
+      </span>
+    )
+  }
+  if (adj.amountStatus === 'Partially Paid') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide bg-amber-100 text-amber-700 border border-amber-200">
+        <AlertCircle className="w-2.5 h-2.5 flex-shrink-0" />Partial
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide bg-red-100 text-red-600 border border-red-200">
+      <X className="w-2.5 h-2.5 flex-shrink-0" />Not Paid
+    </span>
+  )
+}
+
+// ─── PDF Entry Card (single column, compact, print-optimized) ─
+const PdfEntryCard = ({ entry, index }) => {
+  const adjs = (entry.monthlyAdjustments || []).filter(adj => Number(adj.adjustedAmount) > 0)
+  const hasAdjs = adjs.length > 0
+
+  return (
+    <div style={{
+      border: '1px solid #e2e8f0',
+      borderRadius: '10px',
+      overflow: 'hidden',
+      marginBottom: '10px',
+      breakInside: 'avoid',
+      pageBreakInside: 'avoid',
+      backgroundColor: '#fff'
+    }}>
+      {/* Card Header */}
+      <div style={{
+        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+        padding: '10px 14px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{
+            width: '22px', height: '22px', borderRadius: '6px',
+            background: 'rgba(255,255,255,0.15)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '10px', fontWeight: 900, color: '#fff', flexShrink: 0
+          }}>{index + 1}</div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 900, color: '#fff', fontFamily: 'monospace', letterSpacing: '-0.3px' }}>
+                {entry.orderId}
+              </span>
+              {entry.isSplit && (
+                <span style={{
+                  fontSize: '8px', fontWeight: 900, color: '#c4b5fd',
+                  background: 'rgba(139,92,246,0.3)', border: '1px solid rgba(167,139,250,0.3)',
+                  padding: '1px 6px', borderRadius: '4px', textTransform: 'uppercase'
+                }}>Split {entry.splitPct}%</span>
+              )}
+            </div>
+            {entry.companyName && (
+              <p style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px', marginBottom: 0 }}>{entry.companyName}</p>
+            )}
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <p style={{ fontSize: '8px', fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px', marginTop: 0 }}>Amount</p>
+          <p style={{ fontSize: '16px', fontWeight: 900, color: '#34d399', marginTop: 0, marginBottom: 0, lineHeight: 1 }}>₹{fmt(entry.amount)}</p>
+        </div>
+      </div>
+
+      {/* Meta row */}
+      <div style={{
+        padding: '7px 14px',
+        background: '#f8fafc',
+        borderBottom: '1px solid #f1f5f9',
+        display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <span style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>State:</span>
+          <span style={{ fontSize: '10px', fontWeight: 700, color: '#4338ca', background: '#eef2ff', border: '1px solid #e0e7ff', padding: '1px 7px', borderRadius: '5px' }}>
+            {entry.state || '-'}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <span style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Payment Date:</span>
+          <span style={{ fontSize: '10px', fontWeight: 700, color: '#374151', fontFamily: 'monospace' }}>{entry.date || '-'}</span>
+        </div>
+        {entry.month && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <span style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Billing:</span>
+            <span style={{ fontSize: '10px', fontWeight: 700, color: '#374151' }}>{entry.month}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Invoice Adjustments */}
+      {hasAdjs && (
+        <div style={{ padding: '10px 14px' }}>
+          <p style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '8px', marginTop: 0 }}>
+            Invoice Adjustments ({adjs.length})
+          </p>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+            <thead>
+              <tr style={{ background: '#f1f5f9' }}>
+                {['#', 'Month', 'Invoice No', 'Invoice Date', 'Status', 'Amount', 'Remaining'].map(h => (
+                  <th key={h} style={{
+                    padding: '5px 8px', textAlign: 'left', fontSize: '8px',
+                    fontWeight: 900, color: '#64748b', textTransform: 'uppercase',
+                    letterSpacing: '0.8px', borderBottom: '1px solid #e2e8f0',
+                    whiteSpace: 'nowrap'
+                  }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {adjs.map((adj, i) => {
+                const isFullyPaid   = adj.amountStatus === 'Fully Paid'
+                const isPartialPaid = adj.amountStatus === 'Partially Paid'
+                const rowBg = isFullyPaid ? 'rgba(209,250,229,0.3)' : isPartialPaid ? 'rgba(254,243,199,0.3)' : 'rgba(254,226,226,0.3)'
+                return (
+                  <tr key={i} style={{ background: i % 2 === 0 ? rowBg : '#fff', borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '5px 8px', fontWeight: 700, color: '#94a3b8' }}>{i + 1}</td>
+                    <td style={{ padding: '5px 8px', fontWeight: 800, color: '#1e293b' }}>{adj.month}</td>
+                    <td style={{ padding: '5px 8px', fontWeight: 700, color: '#2563eb', fontFamily: 'monospace', fontSize: '9px' }}>
+                      {adj.invoiceNumber && adj.invoiceNumber !== '-' ? adj.invoiceNumber : '—'}
+                    </td>
+                    <td style={{ padding: '5px 8px', color: '#475569' }}>
+                      {adj.invoiceDate && adj.invoiceDate !== '-' ? adj.invoiceDate : '—'}
+                    </td>
+                    <td style={{ padding: '5px 8px' }}>
+                      <span style={{
+                        fontSize: '8px', fontWeight: 900, padding: '2px 6px', borderRadius: '20px',
+                        background: isFullyPaid ? '#d1fae5' : isPartialPaid ? '#fef3c7' : '#fee2e2',
+                        color: isFullyPaid ? '#065f46' : isPartialPaid ? '#92400e' : '#991b1b',
+                        border: `1px solid ${isFullyPaid ? '#a7f3d0' : isPartialPaid ? '#fde68a' : '#fecaca'}`,
+                        textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap'
+                      }}>
+                        {isFullyPaid ? 'Fully Paid' : isPartialPaid ? 'Partial' : 'Not Paid'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '5px 8px', fontWeight: 900, color: isFullyPaid ? '#059669' : isPartialPaid ? '#d97706' : '#dc2626', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      ₹{fmt(adj.adjustedAmount)}
+                    </td>
+                    <td style={{ padding: '5px 8px', color: '#d97706', fontWeight: 700, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {isPartialPaid && adj.remainingAmount > 0 ? `₹${fmt(adj.remainingAmount)}` : '—'}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+
+          {/* Sub-total */}
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            marginTop: '8px', paddingTop: '7px', borderTop: '1px solid #e2e8f0'
+          }}>
+            <span style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              {adjs.length} line{adjs.length !== 1 ? 's' : ''} · Entry Total
+            </span>
+            <span style={{ fontSize: '12px', fontWeight: 900, color: '#1e293b' }}>₹{fmt(entry.amount)}</span>
+          </div>
+        </div>
+      )}
+
+      {!hasAdjs && (
+        <div style={{ padding: '8px 14px', borderTop: '1px solid #f1f5f9' }}>
+          <p style={{ fontSize: '10px', color: '#94a3b8', fontStyle: 'italic', margin: 0 }}>Manual distribution — no invoice details</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Report Modal ─────────────────────────────────────────────
 const ReportModal = React.memo(({ record, onClose }) => {
-  const t = typeInfo(record.paymentType)
+  const t  = typeInfo(record.paymentType)
   const pm = getPaymentMethodMeta(record.paymentMethod)
   const PmIcon = pm.icon
 
@@ -83,295 +265,275 @@ const ReportModal = React.memo(({ record, onClose }) => {
         body > * { visibility: hidden !important; }
         #dist-report-printable, #dist-report-printable * { visibility: visible !important; }
         #dist-report-printable {
-          position: fixed !important;
-          top: 0 !important; left: 0 !important;
-          width: 100vw !important;
-          padding: 24px !important;
-          background: white !important;
-          z-index: 99999 !important;
+          position: fixed !important; top: 0 !important; left: 0 !important;
+          width: 100vw !important; padding: 20px !important;
+          background: white !important; z-index: 99999 !important;
+          font-size: 11px !important;
         }
+        @page { margin: 15mm; size: A4; }
       }
     `
     document.head.appendChild(style)
     return () => { document.getElementById('dist-report-print')?.remove() }
   }, [])
 
-  const entries = record.entries || []
+  // Filter out zero-amount entries
+  const entries        = (record.entries || []).filter(e => Number(e.amount) > 0)
   const totalAllocated = entries.reduce((s, e) => s + (Number(e.amount) || 0), 0)
-  const splitCount = entries.filter(e => e.isSplit).length
-  const uniqueOrders = new Set(entries.map(e => e.orderId)).size
-  const now = new Date()
-  const generatedOn = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
-  const generatedAt = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-  const recordRef = record._id?.slice(-8).toUpperCase() || 'N/A'
-
-  // Build payment method detail string
-  const pmDetails = [
-    record.bankName     && `Bank: ${record.bankName}`,
-    record.checkNumber  && `Check #${record.checkNumber}`,
-    record.neftId       && `NEFT ID: ${record.neftId}`,
-    record.transactionId && `Txn ID: ${record.transactionId}`,
-    record.paymentNote  && `Note: ${record.paymentNote}`,
-  ].filter(Boolean)
+  const splitCount     = entries.filter(e => e.isSplit).length
+  const uniqueOrders   = new Set(entries.map(e => e.orderId)).size
+  const now            = new Date()
+  const generatedOn    = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
+  const generatedAt    = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  const recordRef      = record._id?.slice(-8).toUpperCase() || 'N/A'
 
   return (
     <div
-      className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 overflow-auto"
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-3 overflow-auto"
       onClick={onClose}
     >
       <div
         className="bg-white rounded-2xl shadow-2xl w-full flex flex-col overflow-hidden"
-        style={{ maxWidth: '1060px', maxHeight: '96vh' }}
+        style={{ maxWidth: '860px', maxHeight: '97vh' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Toolbar */}
-        <div className="flex items-center justify-between px-6 py-3 bg-slate-900 rounded-t-2xl flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-3 bg-slate-900 rounded-t-2xl flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-7 h-7 bg-white/10 rounded-lg flex items-center justify-center">
               <FileText className="w-3.5 h-3.5 text-slate-300" />
             </div>
             <div>
               <p className="text-sm font-bold text-white leading-none">Payment Distribution Report</p>
-              <p className="text-[10px] text-slate-400 mt-0.5">Ref: {recordRef}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">Ref #{recordRef}</p>
             </div>
             <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${t.badgeCls}`}>{t.label}</span>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => window.print()}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-all border border-white/10"
-            >
-              <Printer className="w-3.5 h-3.5" />Print / Export
+            <button onClick={() => window.print()} className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all">
+              <Printer className="w-3.5 h-3.5" />Print / PDF
             </button>
-            <button
-              onClick={onClose}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-all border border-white/10"
-            >
+            <button onClick={onClose} className="flex items-center gap-1.5 px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-all border border-white/10">
               <X className="w-3.5 h-3.5" />Close
             </button>
           </div>
         </div>
 
-        {/* Scrollable Report */}
-        <div className="overflow-auto flex-1 bg-slate-100 p-6">
-          <div id="dist-report-printable" className="bg-white rounded-2xl shadow-sm mx-auto" style={{ maxWidth: '960px' }}>
+        {/* Scrollable body */}
+        <div className="overflow-auto flex-1 bg-slate-100 p-4">
+          <div id="dist-report-printable" className="bg-white rounded-xl shadow-sm mx-auto" style={{ maxWidth: '800px', fontFamily: 'system-ui, sans-serif' }}>
 
-            {/* Report Header */}
-            <div className="px-10 pt-9 pb-7 border-b-2 border-slate-100">
-              <div className="flex items-start justify-between gap-6">
+            {/* ── PDF HEADER ── */}
+            <div style={{ padding: '24px 28px 18px', borderBottom: '2px solid #f1f5f9' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-sm">
-                      <Banknote style={{ width: '22px', height: '22px' }} className="text-white" />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+                    <div style={{ width: '42px', height: '42px', background: '#0f172a', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Banknote style={{ width: '22px', height: '22px', color: '#fff' }} />
                     </div>
                     <div>
-                      <h1 className="text-[22px] font-black text-slate-900 tracking-tight leading-none">
+                      <h1 style={{ fontSize: '20px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.5px', lineHeight: 1 }}>
                         PAYMENT DISTRIBUTION REPORT
                       </h1>
-                      <p className="text-xs text-slate-400 font-semibold mt-1 tracking-wide uppercase">
+                      <p style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 600, margin: '4px 0 0', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
                         Confidential · Internal Use Only
                       </p>
                     </div>
                   </div>
-                  <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-sm font-bold ${t.badgeCls}`}>
-                    <span className={`w-2 h-2 rounded-full ${t.dotCls}`} />
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 700,
+                    background: t.value === 'receivedDetails' ? '#ecfdf5' : t.value === 'tdsProvision' ? '#fffbeb' : '#f5f3ff',
+                    color:      t.value === 'receivedDetails' ? '#065f46' : t.value === 'tdsProvision' ? '#92400e' : '#5b21b6',
+                    border:     `1px solid ${t.value === 'receivedDetails' ? '#a7f3d0' : t.value === 'tdsProvision' ? '#fde68a' : '#ddd6fe'}`,
+                  }}>
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: t.value === 'receivedDetails' ? '#34d399' : t.value === 'tdsProvision' ? '#fbbf24' : '#8b5cf6' }} />
                     {t.label}
                   </div>
                 </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Generated</p>
-                  <p className="text-sm font-bold text-slate-700">{generatedOn}</p>
-                  <p className="text-xs text-slate-400">{generatedAt}</p>
-                  <div className="mt-2 px-2.5 py-1 bg-slate-100 rounded-lg inline-block">
-                    <p className="text-[10px] font-mono text-slate-500 font-bold">#{recordRef}</p>
+                <div style={{ textAlign: 'right' }}>
+                  <p style={{ fontSize: '9px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px', marginTop: 0 }}>Generated</p>
+                  <p style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b', marginBottom: '2px', marginTop: 0 }}>{generatedOn}</p>
+                  <p style={{ fontSize: '10px', color: '#64748b', marginBottom: '6px', marginTop: 0 }}>{generatedAt}</p>
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', display: 'inline-block' }}>
+                    <p style={{ fontSize: '9px', fontFamily: 'monospace', color: '#64748b', fontWeight: 700, margin: 0 }}>#{recordRef}</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="px-10 py-7">
+            <div style={{ padding: '18px 28px' }}>
 
-              {/* Summary Grid — 4 cards */}
-              <div className="grid grid-cols-4 gap-4 mb-6">
+              {/* ── INFO GRID 4-col ── */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px', marginBottom: '14px' }}>
                 {[
-                  { label: 'Company Group', value: record.companyGroup, icon: Building2,    cls: 'border-blue-200 bg-blue-50',    textCls: 'text-blue-800',   iconCls: 'text-blue-500'   },
-                  { label: 'Payment Date',  value: record.paymentDate,  icon: Calendar,     cls: 'border-slate-200 bg-slate-50',  textCls: 'text-slate-800',  iconCls: 'text-slate-400'  },
-                  { label: 'Billing Month', value: record.billingMonth, icon: Calendar,     cls: 'border-indigo-200 bg-indigo-50',textCls: 'text-indigo-800', iconCls: 'text-indigo-400' },
-                  { label: 'Payment Type',  value: t.label,             icon: FileText,     cls: 'border-slate-200 bg-slate-50',  textCls: 'text-slate-800',  iconCls: 'text-slate-400'  },
-                ].map(({ label, value, icon: Icon, cls, textCls, iconCls }) => (
-                  <div key={label} className={`rounded-xl border p-4 ${cls}`}>
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <Icon className={`w-3.5 h-3.5 ${iconCls}`} />
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
-                    </div>
-                    <p className={`text-base font-black leading-tight ${textCls}`}>{value || '-'}</p>
+                  { label: 'Company Group', value: record.companyGroup, bg: '#eff6ff', border: '#bfdbfe', color: '#1e40af' },
+                  { label: 'Payment Date',  value: record.paymentDate,  bg: '#f8fafc', border: '#e2e8f0', color: '#1e293b' },
+                  { label: 'Billing Month', value: record.billingMonth, bg: '#eef2ff', border: '#c7d2fe', color: '#3730a3' },
+                  { label: 'Payment Type',  value: t.label,             bg: '#f8fafc', border: '#e2e8f0', color: '#1e293b' },
+                ].map(({ label, value, bg, border, color }) => (
+                  <div key={label} style={{ background: bg, border: `1px solid ${border}`, borderRadius: '8px', padding: '10px 12px' }}>
+                    <p style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px', marginTop: 0 }}>{label}</p>
+                    <p style={{ fontSize: '13px', fontWeight: 900, color, margin: 0, lineHeight: 1.2 }}>{value || '—'}</p>
                   </div>
                 ))}
               </div>
 
-              {/* Payment Method Card */}
-              <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${pm.bg}`}>
-                    <PmIcon className={`w-4 h-4 ${pm.text}`} />
+              {/* ── PAYMENT METHOD ── */}
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 16px', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+                  <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: pm.bg.replace('bg-', '').includes('blue') ? '#dbeafe' : pm.bg.replace('bg-', '').includes('violet') ? '#ede9fe' : pm.bg.replace('bg-', '').includes('orange') ? '#ffedd5' : '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <PmIcon style={{ width: '16px', height: '16px' }} />
                   </div>
                   <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Payment Method</p>
-                    <p className={`text-sm font-black uppercase ${pm.text}`}>{pm.label}</p>
+                    <p style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px', marginTop: 0 }}>Payment Method</p>
+                    <p style={{ fontSize: '13px', fontWeight: 900, textTransform: 'uppercase', color: '#1e293b', margin: 0 }}>{pm.label}</p>
                   </div>
                 </div>
-                {pmDetails.length > 0 && (
-                  <div className="flex flex-wrap gap-3">
-                    {record.bankName && (
-                      <div className="bg-white rounded-lg px-3 py-2 border border-slate-200">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Bank</p>
-                        <p className="text-xs font-bold text-slate-700">{record.bankName}</p>
-                      </div>
-                    )}
-                    {record.checkNumber && (
-                      <div className="bg-white rounded-lg px-3 py-2 border border-slate-200">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Check No.</p>
-                        <p className="text-xs font-mono font-bold text-blue-700">{record.checkNumber}</p>
-                      </div>
-                    )}
-                    {record.neftId && (
-                      <div className="bg-white rounded-lg px-3 py-2 border border-slate-200">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">NEFT ID</p>
-                        <p className="text-xs font-mono font-bold text-violet-700">{record.neftId}</p>
-                      </div>
-                    )}
-                    {record.transactionId && (
-                      <div className="bg-white rounded-lg px-3 py-2 border border-slate-200">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Transaction ID</p>
-                        <p className="text-xs font-mono font-bold text-orange-700 break-all">{record.transactionId}</p>
-                      </div>
-                    )}
-                    {record.paymentNote && (
-                      <div className="bg-white rounded-lg px-3 py-2 border border-slate-200">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Note</p>
-                        <p className="text-xs text-slate-600">{record.paymentNote}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Total Amount Banner */}
-              <div className="rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 p-6 mb-6 relative overflow-hidden">
-                <div className="absolute inset-0 opacity-10">
-                  <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-white" />
-                  <div className="absolute -left-4 -bottom-4 w-28 h-28 rounded-full bg-white" />
-                </div>
-                <div className="relative flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-black text-emerald-100 uppercase tracking-widest mb-1">Total Amount Distributed</p>
-                    <p className="text-4xl font-black text-white tracking-tight">₹{fmt(record.totalAmount)}</p>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4 text-right">
-                    {[
-                      { label: 'Orders',     value: uniqueOrders     },
-                      { label: 'Entries',    value: entries.length   },
-                      { label: 'Split Rows', value: splitCount       },
-                    ].map(({ label, value }) => (
-                      <div key={label} className="bg-white/15 rounded-xl px-4 py-3">
-                        <p className="text-2xl font-black text-white">{value}</p>
-                        <p className="text-[10px] font-bold text-emerald-100 uppercase mt-0.5">{label}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Notes — only payment reference notes, no entity/entry notes */}
-              {record.notes && (
-                <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                  <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1.5">Reference / Notes</p>
-                  <p className="text-sm text-amber-900 leading-relaxed whitespace-pre-wrap">{record.notes}</p>
-                </div>
-              )}
-
-              {/* Section Header */}
-              <div className="flex items-center gap-3 mb-4">
-                <h2 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.15em]">Distribution Breakdown</h2>
-                <div className="h-px flex-1 bg-slate-200" />
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">{entries.length} entries</span>
-                  {splitCount > 0 && (
-                    <span className="text-xs font-bold text-violet-600 bg-violet-100 px-2.5 py-1 rounded-full">{splitCount} split</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {record.bankName && (
+                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px' }}>
+                      <p style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px', marginTop: 0 }}>Bank</p>
+                      <p style={{ fontSize: '11px', fontWeight: 700, color: '#374151', margin: 0 }}>{record.bankName}</p>
+                    </div>
+                  )}
+                  {record.checkNumber && (
+                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px' }}>
+                      <p style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px', marginTop: 0 }}>Check No.</p>
+                      <p style={{ fontSize: '11px', fontFamily: 'monospace', fontWeight: 700, color: '#2563eb', margin: 0 }}>{record.checkNumber}</p>
+                    </div>
+                  )}
+                  {record.neftId && (
+                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px' }}>
+                      <p style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px', marginTop: 0 }}>NEFT ID</p>
+                      <p style={{ fontSize: '11px', fontFamily: 'monospace', fontWeight: 700, color: '#7c3aed', margin: 0 }}>{record.neftId}</p>
+                    </div>
+                  )}
+                  {record.transactionId && (
+                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px' }}>
+                      <p style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px', marginTop: 0 }}>Transaction ID</p>
+                      <p style={{ fontSize: '11px', fontFamily: 'monospace', fontWeight: 700, color: '#ea580c', margin: 0, wordBreak: 'break-all' }}>{record.transactionId}</p>
+                    </div>
+                  )}
+                  {record.paymentNote && (
+                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px' }}>
+                      <p style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px', marginTop: 0 }}>Note</p>
+                      <p style={{ fontSize: '11px', color: '#374151', margin: 0 }}>{record.paymentNote}</p>
+                    </div>
                   )}
                 </div>
               </div>
 
-              {/* Entries Table — NO Notes, NO Entity columns */}
-              <div className="rounded-xl border border-slate-200 overflow-hidden mb-8">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-slate-900">
-                      {['#', 'Order ID', 'Company', 'State', 'Split', 'Month', 'Payment Date', 'Amount (₹)'].map(h => (
-                        <th key={h} className="px-4 py-3.5 text-left text-[10px] font-black text-slate-300 uppercase tracking-wider whitespace-nowrap">
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {entries.map((entry, idx) => (
-                      <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
-                        <td className="px-4 py-3 text-xs font-black text-slate-300">{idx + 1}</td>
-                        <td className="px-4 py-3">
-                          <span className="text-sm font-black text-violet-700 font-mono">{entry.orderId}</span>
-                        </td>
-                        <td className="px-4 py-3 text-sm font-semibold text-slate-700 max-w-[180px] truncate">
-                          {entry.companyName || '-'}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="inline-flex px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-bold rounded border border-indigo-100">
-                            {entry.state || '-'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          {entry.isSplit
-                            ? <span className="text-[9px] font-black text-violet-500 bg-violet-100 px-2 py-0.5 rounded uppercase tracking-wide">{entry.splitPct}%</span>
-                            : <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded uppercase">100%</span>
-                          }
-                        </td>
-                        <td className="px-4 py-3 text-xs font-semibold text-slate-600 whitespace-nowrap">{entry.month}</td>
-                        <td className="px-4 py-3 text-xs text-slate-400 font-mono whitespace-nowrap">{entry.date}</td>
-                        <td className="px-4 py-3 text-right">
-                          <span className="text-sm font-black text-emerald-700 whitespace-nowrap">₹{fmt(entry.amount)}</span>
-                        </td>
-                      </tr>
+              {/* ── TOTAL AMOUNT BANNER ── */}
+              <div style={{
+                background: 'linear-gradient(135deg, #059669 0%, #0d9488 100%)',
+                borderRadius: '12px', padding: '16px 20px',
+                marginBottom: '14px', position: 'relative', overflow: 'hidden'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
+                  <div>
+                    <p style={{ fontSize: '9px', fontWeight: 900, color: '#a7f3d0', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '4px', marginTop: 0 }}>
+                      Total Amount Distributed
+                    </p>
+                    <p style={{ fontSize: '32px', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-1px', lineHeight: 1 }}>
+                      ₹{fmt(record.totalAmount)}
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    {[
+                      { label: 'Orders',     value: uniqueOrders   },
+                      { label: 'Entries',    value: entries.length },
+                      { label: 'Split Rows', value: splitCount     },
+                    ].map(({ label, value }) => (
+                      <div key={label} style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '8px', padding: '8px 14px', textAlign: 'center' }}>
+                        <p style={{ fontSize: '20px', fontWeight: 900, color: '#fff', margin: 0, lineHeight: 1 }}>{value}</p>
+                        <p style={{ fontSize: '8px', fontWeight: 700, color: '#a7f3d0', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '4px', marginBottom: 0 }}>{label}</p>
+                      </div>
                     ))}
-                    {entries.length === 0 && (
-                      <tr>
-                        <td colSpan={8} className="px-4 py-8 text-center text-slate-400 text-sm">No entries recorded</td>
-                      </tr>
-                    )}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-slate-800">
-                      <td colSpan={7} className="px-4 py-3.5 text-xs font-black text-slate-300 uppercase tracking-wide">
-                        TOTAL ({entries.length} entries · {uniqueOrders} orders)
-                      </td>
-                      <td className="px-4 py-3.5 text-right">
-                        <span className="text-base font-black text-white whitespace-nowrap">₹{fmt(totalAllocated)}</span>
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
+                  </div>
+                </div>
               </div>
 
-              {/* Footer */}
-              <div className="flex items-center justify-between pt-5 border-t-2 border-dashed border-slate-200">
-                <div className="text-xs text-slate-400 space-y-0.5">
-                  <p className="font-medium">This is a system-generated report. No signature required.</p>
-                  <p>Generated on {generatedOn} at {generatedAt} · Record #{recordRef}</p>
+              {/* Notes */}
+              {record.notes && (
+                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px' }}>
+                  <p style={{ fontSize: '8px', fontWeight: 900, color: '#d97706', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px', marginTop: 0 }}>Reference / Notes</p>
+                  <p style={{ fontSize: '11px', color: '#92400e', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' }}>{record.notes}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 bg-slate-900 rounded-lg flex items-center justify-center">
-                    <Banknote className="w-3.5 h-3.5 text-white" />
+              )}
+
+              {/* ── DISTRIBUTION BREAKDOWN ── */}
+              <div style={{ marginBottom: '18px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                  <h2 style={{ fontSize: '10px', fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '2px', margin: 0, whiteSpace: 'nowrap' }}>
+                    Distribution Breakdown
+                  </h2>
+                  <div style={{ height: '1px', flex: 1, background: '#e2e8f0' }} />
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748b', background: '#f1f5f9', padding: '3px 10px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
+                    {entries.length} entr{entries.length !== 1 ? 'ies' : 'y'}
+                  </span>
+                  {splitCount > 0 && (
+                    <span style={{ fontSize: '10px', fontWeight: 700, color: '#7c3aed', background: '#ede9fe', padding: '3px 10px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
+                      {splitCount} split
+                    </span>
+                  )}
+                </div>
+
+                {entries.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '30px', background: '#f8fafc', borderRadius: '10px', border: '1px dashed #e2e8f0', color: '#94a3b8' }}>
+                    <p style={{ fontSize: '13px', fontWeight: 700, margin: 0 }}>No entries recorded</p>
                   </div>
-                  <span className="text-xs font-black text-slate-600 uppercase tracking-wide">Billing Management System</span>
+                ) : (
+                  <>
+                    {/* Single-column cards */}
+                    <div>
+                      {entries.map((entry, idx) => (
+                        <PdfEntryCard
+                          key={`${entry.orderId}-${entry.state}-${idx}`}
+                          entry={entry}
+                          index={idx}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Grand total */}
+                    <div style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '12px 18px', background: '#0f172a', borderRadius: '10px', marginTop: '4px'
+                    }}>
+                      <div>
+                        <p style={{ fontSize: '9px', fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '2px', marginTop: 0 }}>
+                          Grand Total — {entries.length} entr{entries.length !== 1 ? 'ies' : 'y'} · {uniqueOrders} order{uniqueOrders !== 1 ? 's' : ''}
+                        </p>
+                        {Math.abs(totalAllocated - record.totalAmount) > 0.01 && (
+                          <p style={{ fontSize: '9px', color: '#fbbf24', fontWeight: 700, margin: 0 }}>
+                            ⚠ Sum ₹{fmt(totalAllocated)} vs Recorded ₹{fmt(record.totalAmount)}
+                          </p>
+                        )}
+                      </div>
+                      <p style={{ fontSize: '22px', fontWeight: 900, color: '#fff', margin: 0 }}>₹{fmt(totalAllocated)}</p>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* ── FOOTER ── */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '14px', borderTop: '2px dashed #e2e8f0' }}>
+                <div>
+                  <p style={{ fontSize: '9px', color: '#94a3b8', fontWeight: 500, marginBottom: '2px', marginTop: 0 }}>
+                    This is a system-generated report. No signature required.
+                  </p>
+                  <p style={{ fontSize: '9px', color: '#94a3b8', margin: 0 }}>
+                    Generated on {generatedOn} at {generatedAt} · Record #{recordRef}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '28px', height: '28px', background: '#0f172a', borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Banknote style={{ width: '14px', height: '14px', color: '#fff' }} />
+                  </div>
+                  <span style={{ fontSize: '10px', fontWeight: 900, color: '#475569', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    Billing Management System
+                  </span>
                 </div>
               </div>
             </div>
@@ -398,7 +560,7 @@ const DeleteConfirm = ({ onConfirm, onCancel }) => (
 // ─── Stat Card ────────────────────────────────────────────────
 const StatCard = ({ icon: Icon, label, value, sub, iconCls, borderCls }) => (
   <div className={`bg-white rounded-2xl border shadow-sm p-5 ${borderCls || 'border-slate-200'}`}>
-    <div className="flex items-start justify-between mb-3">
+    <div className="mb-3">
       <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${iconCls || 'bg-slate-100'}`}>
         <Icon style={{ width: '18px', height: '18px' }} />
       </div>
@@ -496,7 +658,7 @@ export default function DistributedPaymentsPage() {
 
       {/* Toast */}
       {toast && (
-        <div className={`fixed top-4 right-4 z-[99999] flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl text-sm font-bold border transition-all ${toast.type === 'error' ? 'bg-red-600 text-white border-red-700' : 'bg-emerald-600 text-white border-emerald-700'}`}>
+        <div className={`fixed top-4 right-4 z-[99999] flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl text-sm font-bold border ${toast.type === 'error' ? 'bg-red-600 text-white border-red-700' : 'bg-emerald-600 text-white border-emerald-700'}`}>
           {toast.type === 'error' ? <AlertCircle className="w-4 h-4 flex-shrink-0" /> : <CheckCircle2 className="w-4 h-4 flex-shrink-0" />}
           {toast.msg}
         </div>
@@ -526,10 +688,10 @@ export default function DistributedPaymentsPage() {
 
         {/* Stat Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon={FileText}    label="Total Records"  value={stats.total}                            iconCls="bg-slate-100 text-slate-600"   borderCls="border-slate-200" />
+          <StatCard icon={FileText}    label="Total Records"  value={stats.total}                                             iconCls="bg-slate-100 text-slate-600"   borderCls="border-slate-200" />
           <StatCard icon={IndianRupee} label="Total Amount"   value={fmtShort(stats.totalAmt)} sub={`₹${fmt(stats.totalAmt)}`} iconCls="bg-emerald-100 text-emerald-600" borderCls="border-emerald-200" />
-          <StatCard icon={Hash}        label="Order Entries"  value={stats.totalEntries}                     iconCls="bg-violet-100 text-violet-600"  borderCls="border-violet-200" />
-          <StatCard icon={Building2}   label="Company Groups" value={groups.length}                          iconCls="bg-blue-100 text-blue-600"      borderCls="border-blue-200" />
+          <StatCard icon={Hash}        label="Order Entries"  value={stats.totalEntries}                                      iconCls="bg-violet-100 text-violet-600"  borderCls="border-violet-200" />
+          <StatCard icon={Building2}   label="Company Groups" value={groups.length}                                           iconCls="bg-blue-100 text-blue-600"      borderCls="border-blue-200" />
         </div>
 
         {/* Type Summary Strip */}
@@ -563,65 +725,40 @@ export default function DistributedPaymentsPage() {
           </div>
           <div className="p-5">
             <div className="flex flex-wrap gap-4 items-end">
-              {/* Company Group */}
               <div className="flex-1 min-w-[220px]">
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Company Group</label>
                 <div className="relative">
                   <Building2 className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <input
-                    ref={groupInputRef}
-                    type="text"
-                    value={groupQuery}
-                    onChange={e => setGroupQuery(e.target.value)}
-                    placeholder="Search company group…"
-                    list="grp-suggestions"
-                    className="w-full pl-9 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white font-medium text-slate-700 placeholder:text-slate-300"
-                  />
-                  <datalist id="grp-suggestions">
-                    {groups.map(g => <option key={g} value={g} />)}
-                  </datalist>
+                  <input ref={groupInputRef} type="text" value={groupQuery} onChange={e => setGroupQuery(e.target.value)}
+                    placeholder="Search company group…" list="grp-suggestions"
+                    className="w-full pl-9 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white font-medium text-slate-700 placeholder:text-slate-300" />
+                  <datalist id="grp-suggestions">{groups.map(g => <option key={g} value={g} />)}</datalist>
                   {groupQuery && (
-                    <button onClick={() => setGroupQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 hover:bg-slate-100 rounded-md transition-colors">
+                    <button onClick={() => setGroupQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 hover:bg-slate-100 rounded-md">
                       <X className="w-3.5 h-3.5 text-slate-400" />
                     </button>
                   )}
                 </div>
               </div>
-
-              {/* Payment Type */}
               <div className="min-w-[340px]">
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Payment Type</label>
                 <div className="flex gap-1.5">
-                  <button
-                    onClick={() => setTypeFilter('')}
-                    className={`flex-1 px-3 py-2.5 rounded-xl text-xs font-black border transition-all ${!typeFilter ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
-                  >
-                    All
-                  </button>
+                  <button onClick={() => setTypeFilter('')} className={`flex-1 px-3 py-2.5 rounded-xl text-xs font-black border transition-all ${!typeFilter ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}>All</button>
                   {PAYMENT_TYPES.map(t => (
-                    <button
-                      key={t.value}
-                      onClick={() => setTypeFilter(v => v === t.value ? '' : t.value)}
-                      className={`flex-1 px-3 py-2.5 rounded-xl text-xs font-black border transition-all whitespace-nowrap ${typeFilter === t.value ? t.activeCls + ' shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
-                    >
+                    <button key={t.value} onClick={() => setTypeFilter(v => v === t.value ? '' : t.value)}
+                      className={`flex-1 px-3 py-2.5 rounded-xl text-xs font-black border transition-all whitespace-nowrap ${typeFilter === t.value ? t.activeCls + ' shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}>
                       {t.shortLabel}
                     </button>
                   ))}
                 </div>
               </div>
-
-              {/* Text Search */}
               <div className="flex-1 min-w-[220px]">
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Quick Search</label>
                 <div className="relative">
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={textSearch}
-                    onChange={e => setTextSearch(e.target.value)}
+                  <input type="text" value={textSearch} onChange={e => setTextSearch(e.target.value)}
                     placeholder="Order ID, company, month, date…"
-                    className="w-full pl-9 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white font-medium text-slate-700 placeholder:text-slate-300"
-                  />
+                    className="w-full pl-9 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white font-medium text-slate-700 placeholder:text-slate-300" />
                   {textSearch && (
                     <button onClick={() => setTextSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 hover:bg-slate-100 rounded-md">
                       <X className="w-3.5 h-3.5 text-slate-400" />
@@ -629,12 +766,9 @@ export default function DistributedPaymentsPage() {
                   )}
                 </div>
               </div>
-
               {hasFilters && (
-                <button
-                  onClick={() => { setGroupQuery(''); setTypeFilter(''); setTextSearch('') }}
-                  className="flex items-center gap-1.5 px-4 py-2.5 bg-rose-50 text-rose-600 text-sm rounded-xl border border-rose-200 hover:bg-rose-100 font-bold transition-all self-end"
-                >
+                <button onClick={() => { setGroupQuery(''); setTypeFilter(''); setTextSearch('') }}
+                  className="flex items-center gap-1.5 px-4 py-2.5 bg-rose-50 text-rose-600 text-sm rounded-xl border border-rose-200 hover:bg-rose-100 font-bold transition-all self-end">
                   <X className="w-3.5 h-3.5" />Clear All
                 </button>
               )}
@@ -674,10 +808,8 @@ export default function DistributedPaymentsPage() {
                 {hasFilters ? 'Try clearing some filters, or' : ''} Submit payments from the Bulk Update page to create distribution records.
               </p>
               {hasFilters && (
-                <button
-                  onClick={() => { setGroupQuery(''); setTypeFilter(''); setTextSearch('') }}
-                  className="mt-3 text-xs font-bold text-violet-600 hover:text-violet-800 underline"
-                >
+                <button onClick={() => { setGroupQuery(''); setTypeFilter(''); setTextSearch('') }}
+                  className="mt-3 text-xs font-bold text-violet-600 hover:text-violet-800 underline">
                   Clear all filters
                 </button>
               )}
@@ -688,16 +820,14 @@ export default function DistributedPaymentsPage() {
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
                     {['#', 'Company Group', 'Billing Month', 'Payment Date', 'Method', 'Type', 'Total Amount', 'Entries', 'Submitted At', 'Actions'].map(h => (
-                      <th key={h} className="px-4 py-3.5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
-                        {h}
-                      </th>
+                      <th key={h} className="px-4 py-3.5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredRecords.map((rec, idx) => {
-                    const t   = typeInfo(rec.paymentType)
-                    const pm  = getPaymentMethodMeta(rec.paymentMethod)
+                    const t      = typeInfo(rec.paymentType)
+                    const pm     = getPaymentMethodMeta(rec.paymentMethod)
                     const PmIcon = pm.icon
                     return (
                       <tr key={rec._id} className="hover:bg-violet-50/30 transition-colors group relative">
@@ -711,59 +841,41 @@ export default function DistributedPaymentsPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3.5">
-                          <span className="inline-flex px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-100">
-                            {rec.billingMonth}
-                          </span>
+                          <span className="inline-flex px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-100">{rec.billingMonth}</span>
                         </td>
                         <td className="px-4 py-3.5">
-                          <span className="text-xs font-mono font-semibold text-slate-600 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-lg">
-                            {rec.paymentDate}
-                          </span>
+                          <span className="text-xs font-mono font-semibold text-slate-600 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-lg">{rec.paymentDate}</span>
                         </td>
-                        {/* Payment Method column */}
                         <td className="px-4 py-3.5">
                           <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${pm.bg} ${pm.text}`}>
-                            <PmIcon className="w-3 h-3" />
-                            {pm.label}
+                            <PmIcon className="w-3 h-3" />{pm.label}
                           </div>
                         </td>
                         <td className="px-4 py-3.5">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg border ${t.badgeCls}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${t.dotCls}`} />
-                            {t.label}
+                            <span className={`w-1.5 h-1.5 rounded-full ${t.dotCls}`} />{t.label}
                           </span>
                         </td>
                         <td className="px-4 py-3.5">
                           <span className="text-base font-black text-emerald-700">₹{fmt(rec.totalAmount)}</span>
                         </td>
                         <td className="px-4 py-3.5">
-                          <span className="inline-flex px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg">
-                            {rec.entryCount || 0} entries
-                          </span>
+                          <span className="inline-flex px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg">{rec.entryCount || 0} entries</span>
                         </td>
-                        <td className="px-4 py-3.5 text-xs text-slate-400 font-medium whitespace-nowrap">
-                          {fmtCreatedAt(rec.createdAt)}
-                        </td>
+                        <td className="px-4 py-3.5 text-xs text-slate-400 font-medium whitespace-nowrap">{fmtCreatedAt(rec.createdAt)}</td>
                         <td className="px-4 py-3.5">
                           <div className="flex items-center gap-2 relative">
-                            <button
-                              onClick={() => setViewRecord(rec)}
-                              className="flex items-center gap-1.5 px-3.5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-black transition-all shadow-sm hover:shadow whitespace-nowrap"
-                            >
+                            <button onClick={() => setViewRecord(rec)}
+                              className="flex items-center gap-1.5 px-3.5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-black transition-all shadow-sm hover:shadow whitespace-nowrap">
                               <Eye className="w-3.5 h-3.5" />View Report
                             </button>
                             <div className="relative">
-                              <button
-                                onClick={() => setDeletingId(v => v === rec._id ? null : rec._id)}
-                                className="p-2 hover:bg-red-50 rounded-xl text-slate-300 hover:text-red-500 transition-colors border border-transparent hover:border-red-200"
-                              >
+                              <button onClick={() => setDeletingId(v => v === rec._id ? null : rec._id)}
+                                className="p-2 hover:bg-red-50 rounded-xl text-slate-300 hover:text-red-500 transition-colors border border-transparent hover:border-red-200">
                                 <X className="w-3.5 h-3.5" />
                               </button>
                               {deletingId === rec._id && (
-                                <DeleteConfirm
-                                  onConfirm={() => handleDelete(rec._id)}
-                                  onCancel={() => setDeletingId(null)}
-                                />
+                                <DeleteConfirm onConfirm={() => handleDelete(rec._id)} onCancel={() => setDeletingId(null)} />
                               )}
                             </div>
                           </div>

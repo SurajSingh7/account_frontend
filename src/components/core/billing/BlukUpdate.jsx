@@ -132,37 +132,38 @@ const loadMonthlyDataForRow = async (order, state, toDateStr) => {
     let totalWithGst = 0, monthlyBilling = 0, cgst = 0, sgst = 0, igst = 0,
       miscSell = 0, received = 0, creditNotes = 0, tdsProvision = 0, tdsConfirm = 0,
       billingDays = getDaysInMonth(m, y), startDay = 1, endDay = getDaysInMonth(m, y),
-      invoiceNumber = '-', isSelfGST = false,
+      invoiceNumber = '-', invoiceDate = '-', isSelfGST = false,
       rawData = { miscellaneousSell: [], receivedDetails: [], creditNotes: [], tdsConfirm: [], tdsProvision: [] }
 
     if (rec) {
-      totalWithGst = Number(rec.totalWithGst) || 0
-      monthlyBilling = Number(rec.monthlyBilling) || 0
-      cgst = Number(rec.cgst) || 0
-      sgst = Number(rec.sgst) || 0
-      igst = Number(rec.igst) || 0
-      isSelfGST = rec.isSelfGST || false
-      miscSell = sumTotalWithGst(rec.miscellaneousSell)
-      received = sumAmount(rec.receivedDetails)
-      creditNotes = sumTotalWithGst(rec.creditNotes)
-      tdsProvision = sumAmount(rec.tdsProvision)
-      tdsConfirm = sumAmount(rec.tdsConfirm)
-      invoiceNumber = rec.invoiceNumber || '-'
-      billingDays = rec.billingDays || getDaysInMonth(m, y)
-      startDay = Number((rec.startDate || '').split('-')[0]) || 1
-      endDay = Number((rec.endDate || '').split('-')[0]) || getDaysInMonth(m, y)
+      totalWithGst   = Number(rec.totalWithGst)   || 0
+      monthlyBilling = Number(rec.monthlyBilling)  || 0
+      cgst           = Number(rec.cgst)            || 0
+      sgst           = Number(rec.sgst)            || 0
+      igst           = Number(rec.igst)            || 0
+      isSelfGST      = rec.isSelfGST               || false
+      miscSell       = sumTotalWithGst(rec.miscellaneousSell)
+      received       = sumAmount(rec.receivedDetails)
+      creditNotes    = sumTotalWithGst(rec.creditNotes)
+      tdsProvision   = sumAmount(rec.tdsProvision)
+      tdsConfirm     = sumAmount(rec.tdsConfirm)
+      invoiceNumber  = rec.invoiceNumber           || '-'
+      invoiceDate    = rec.invoiceDate             || '-'
+      billingDays    = rec.billingDays             || getDaysInMonth(m, y)
+      startDay       = Number((rec.startDate || '').split('-')[0]) || 1
+      endDay         = Number((rec.endDate   || '').split('-')[0]) || getDaysInMonth(m, y)
       rawData = {
         miscellaneousSell: rec.miscellaneousSell || [],
-        receivedDetails: rec.receivedDetails || [],
-        creditNotes: rec.creditNotes || [],
-        tdsConfirm: rec.tdsConfirm || [],
-        tdsProvision: rec.tdsProvision || [],
+        receivedDetails:   rec.receivedDetails   || [],
+        creditNotes:       rec.creditNotes       || [],
+        tdsConfirm:        rec.tdsConfirm        || [],
+        tdsProvision:      rec.tdsProvision      || [],
       }
     } else {
       const daysInM = getDaysInMonth(m, y)
-      const isPcd = y === pcdDate.getFullYear() && m === pcdDate.getMonth()
-      const isTerm = termDate && y === serviceEnd.getFullYear() && m === serviceEnd.getMonth()
-      let splitPct = 1
+      const isPcd   = y === pcdDate.getFullYear() && m === pcdDate.getMonth()
+      const isTerm  = termDate && y === serviceEnd.getFullYear() && m === serviceEnd.getMonth()
+      let splitPct  = 1
       if (isSplitOrder(order)) {
         splitPct = state === (order.billing1?.state || '')
           ? (Number(order.splitFactor?.state1Percentage) || 50) / 100
@@ -170,19 +171,19 @@ const loadMonthlyDataForRow = async (order, state, toDateStr) => {
       }
       const cap = Number(order.capacity) || 0, rate = Number(order.amount) || 0
       const baseMonthly = cap * rate * splitPct
-      startDay = isPcd ? pcdDate.getDate() : 1
-      endDay = isTerm ? serviceEnd.getDate() : daysInM
-      billingDays = endDay - startDay + 1
-      totalWithGst = (baseMonthly * 1.18 / daysInM) * billingDays
+      startDay       = isPcd  ? pcdDate.getDate()    : 1
+      endDay         = isTerm ? serviceEnd.getDate() : daysInM
+      billingDays    = endDay - startDay + 1
+      totalWithGst   = (baseMonthly * 1.18 / daysInM) * billingDays
       monthlyBilling = totalWithGst / 1.18
-      igst = totalWithGst - monthlyBilling
+      igst           = totalWithGst - monthlyBilling
     }
 
     const netCharges = (totalWithGst + miscSell) - (received + creditNotes + tdsConfirm)
     months.push({
       monthYear: monthName, month: m, year: y, billingDays, startDay, endDay,
       monthlyBilling, cgst, sgst, igst, totalWithGst, miscSell, received, creditNotes,
-      tdsProvision, tdsConfirm, invoiceNumber, isSelfGST, netCharges, rawData
+      tdsProvision, tdsConfirm, invoiceNumber, invoiceDate, isSelfGST, netCharges, rawData
     })
 
     if (termDate && cur.getFullYear() === serviceEnd.getFullYear() && cur.getMonth() === serviceEnd.getMonth()) break
@@ -222,16 +223,31 @@ const computeAutoSplitAmounts = (rows, totalAmount) => {
     return toPaise(r.balance || 0) > 0
   })
 
+  // Initialize outputs for ALL checked rows (even zero-balance ones)
   const allocated = {}
-  rows.filter(r => r.checked).forEach(r => { allocated[r.rowKey] = 0 })
+  const monthlyAdjustments = {}
+  rows.filter(r => r.checked).forEach(r => {
+    allocated[r.rowKey] = 0
+    monthlyAdjustments[r.rowKey] = []
+  })
 
   if (!checkedRows.length) {
     console.log('[AutoSplit] No eligible checked rows found')
-    return allocated
+    return { allocated, monthlyAdjustments }
   }
 
   const rowRemAdj = {}
   checkedRows.forEach(r => { rowRemAdj[r.rowKey] = computeRemAdjPerMonth(r.monthlyData) })
+
+  // Build a fast lookup: rowKey → { "YYYY-MM" → monthData }
+  const rowMonthLookup = {}
+  checkedRows.forEach(r => {
+    rowMonthLookup[r.rowKey] = {}
+    r.monthlyData.forEach(md => {
+      const key = `${md.year}-${String(md.month + 1).padStart(2, '0')}`
+      rowMonthLookup[r.rowKey][key] = md
+    })
+  })
 
   const allMonthKeys = new Set()
   checkedRows.forEach(r => {
@@ -264,7 +280,15 @@ const computeAutoSplitAmounts = (rows, totalAmount) => {
       .map(r => {
         const remAdjEntry = rowRemAdj[r.rowKey].find(e => e.year === y && e.month === monthIdx)
         const remAdjPaise = remAdjEntry ? Math.max(0, toPaise(remAdjEntry.remAdj)) : 0
-        return { rowKey: r.rowKey, orderId: r.orderId, remAdjPaise, monthYear: remAdjEntry?.monthYear || monthKey }
+        const md = rowMonthLookup[r.rowKey][monthKey] || {}
+        return {
+          rowKey:        r.rowKey,
+          orderId:       r.orderId,
+          remAdjPaise,
+          monthYear:     remAdjEntry?.monthYear || monthKey,
+          invoiceNumber: md.invoiceNumber || '-',
+          invoiceDate:   md.invoiceDate   || '-',
+        }
       })
       .filter(x => x.remAdjPaise > 0)
 
@@ -280,30 +304,75 @@ const computeAutoSplitAmounts = (rows, totalAmount) => {
     console.log(`  Total needed: ₹${fromPaise(totalNeededPaise)}, Budget remaining: ₹${fromPaise(remainingPaise)}`)
 
     if (remainingPaise >= totalNeededPaise) {
-      monthItems.forEach(({ rowKey, remAdjPaise }) => {
+      // ── Full month: every row gets paid completely ────────────
+      monthItems.forEach(({ rowKey, remAdjPaise, monthYear, invoiceNumber, invoiceDate }) => {
         allocatedPaise[rowKey] += remAdjPaise
+        monthlyAdjustments[rowKey].push({
+          month:           monthYear,
+          invoiceNumber,
+          invoiceDate,
+          adjustedAmount:  fromPaise(remAdjPaise),
+          remainingAmount: 0,
+          amountStatus:    'Fully Paid',
+        })
         console.log(`  ✅ ${rowKey}: fully paid ₹${fromPaise(remAdjPaise)} for ${monthKey}`)
       })
       remainingPaise -= totalNeededPaise
       console.log(`  Month ${monthKey} done. Budget left: ₹${fromPaise(remainingPaise)}`)
     } else {
+      // ── Partial month: fill row-by-row in Order ID ascending order ──
       const sorted = [...monthItems].sort((a, b) => a.orderId.localeCompare(b.orderId))
-      console.log(`  ⚡ PARTIAL month ${monthKey} — filling by Order ID asc:`, sorted.map(x => `${x.rowKey}=₹${fromPaise(x.remAdjPaise)}`))
-      for (const { rowKey, remAdjPaise } of sorted) {
-        if (remainingPaise <= 0) break
-        const cover = Math.min(remAdjPaise, remainingPaise)
+      console.log(`  ⚡ PARTIAL month ${monthKey} — filling by Order ID asc:`,
+        sorted.map(x => `${x.rowKey}=₹${fromPaise(x.remAdjPaise)}`))
+
+      for (const { rowKey, remAdjPaise, monthYear, invoiceNumber, invoiceDate } of sorted) {
+        if (remainingPaise <= 0) {
+          // This row gets nothing for this month
+          monthlyAdjustments[rowKey].push({
+            month:           monthYear,
+            invoiceNumber,
+            invoiceDate,
+            adjustedAmount:  0,
+            remainingAmount: fromPaise(remAdjPaise),
+            amountStatus:    'Not Paid',
+          })
+          console.log(`  ⚡ ${rowKey}: ₹0 (budget exhausted) for ${monthKey}`)
+          continue
+        }
+
+        const cover     = Math.min(remAdjPaise, remainingPaise)
+        const remaining = remAdjPaise - cover
+
         allocatedPaise[rowKey] += cover
         remainingPaise -= cover
-        console.log(`  ⚡ ${rowKey}: paid ₹${fromPaise(cover)} of ₹${fromPaise(remAdjPaise)} for ${monthKey}`)
+
+        monthlyAdjustments[rowKey].push({
+          month:           monthYear,
+          invoiceNumber,
+          invoiceDate,
+          adjustedAmount:  fromPaise(cover),
+          remainingAmount: fromPaise(remaining),
+          amountStatus:    cover >= remAdjPaise ? 'Fully Paid' : 'Partially Paid',
+        })
+        console.log(`  ⚡ ${rowKey}: paid ₹${fromPaise(cover)} of ₹${fromPaise(remAdjPaise)} (rem ₹${fromPaise(remaining)}) for ${monthKey}`)
       }
       break
     }
   }
 
+  // ── Leftover rounding cents: tack onto last row's last adjustment ──
   if (remainingPaise > 0) {
-    const lastRow = checkedRows.slice().reverse().find(r => allocatedPaise[r.rowKey] > 0) || checkedRows[checkedRows.length - 1]
+    const lastRow = checkedRows.slice().reverse().find(r => allocatedPaise[r.rowKey] > 0)
+      || checkedRows[checkedRows.length - 1]
     if (lastRow) {
       allocatedPaise[lastRow.rowKey] += remainingPaise
+      const adjs = monthlyAdjustments[lastRow.rowKey]
+      if (adjs.length > 0) {
+        const last = adjs[adjs.length - 1]
+        last.adjustedAmount  = Math.round((last.adjustedAmount  + fromPaise(remainingPaise)) * 100) / 100
+        last.remainingAmount = Math.max(0, Math.round((last.remainingAmount - fromPaise(remainingPaise)) * 100) / 100)
+        if (last.remainingAmount <= 0.005) { last.remainingAmount = 0; last.amountStatus = 'Fully Paid' }
+      }
       console.log(`[AutoSplit] Leftover ₹${fromPaise(remainingPaise)} assigned to: ${lastRow.rowKey}`)
     }
   }
@@ -312,7 +381,12 @@ const computeAutoSplitAmounts = (rows, totalAmount) => {
 
   console.log('[AutoSplit] ── Final allocation ──')
   console.log(Object.entries(allocated).map(([k, v]) => `  ${k}: ₹${fmt(v)}`).join('\n'))
-  return allocated
+  console.log('[AutoSplit] ── Monthly adjustments ──')
+  Object.entries(monthlyAdjustments).forEach(([k, adjs]) => {
+    if (adjs.length) console.log(`  ${k}:`, adjs.map(a => `${a.month}=₹${fmt(a.adjustedAmount)}(${a.amountStatus})`).join(', '))
+  })
+
+  return { allocated, monthlyAdjustments }
 }
 
 // ─── Array Details Sub-Popup ───────────────────────────────────
@@ -440,10 +514,10 @@ const MonthDetailView = ({ monthData, rawData, onClose }) => {
               <h4 className="text-sm font-bold text-slate-700 uppercase mb-3 pb-2 border-b border-slate-200">Payments & Adjustments</h4>
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { label: 'Received', val: monthData.received, color: 'green', key: 'receivedDetails', title: 'Payment Received Details' },
-                  { label: 'Credit Notes', val: monthData.creditNotes, color: 'cyan', key: 'creditNotes', title: 'Credit Notes Details' },
-                  { label: 'TDS Confirm', val: monthData.tdsConfirm, color: 'blue', key: 'tdsConfirm', title: 'TDS Confirm Details' },
-                  { label: 'TDS Provision', val: monthData.tdsProvision, color: 'orange', key: 'tdsProvision', title: 'TDS Provision Details' },
+                  { label: 'Received',      val: monthData.received,     color: 'green',  key: 'receivedDetails', title: 'Payment Received Details' },
+                  { label: 'Credit Notes',  val: monthData.creditNotes,  color: 'cyan',   key: 'creditNotes',     title: 'Credit Notes Details' },
+                  { label: 'TDS Confirm',   val: monthData.tdsConfirm,   color: 'blue',   key: 'tdsConfirm',      title: 'TDS Confirm Details' },
+                  { label: 'TDS Provision', val: monthData.tdsProvision, color: 'orange', key: 'tdsProvision',    title: 'TDS Provision Details' },
                 ].map(({ label, val, color, key, title }) => (
                   <div key={key} className={`flex justify-between items-center py-2 px-3 bg-${color}-50 rounded`}>
                     <span className={`text-sm text-${color}-600`}>{label}:</span>
@@ -468,10 +542,17 @@ const MonthDetailView = ({ monthData, rawData, onClose }) => {
                 </div>
               </div>
             </div>
-            {monthData.invoiceNumber && monthData.invoiceNumber !== '-' && (
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                <p className="text-xs font-bold text-blue-600 uppercase mb-1">Invoice Number</p>
-                <p className="text-base font-bold text-blue-900">{monthData.invoiceNumber}</p>
+            {((monthData.invoiceNumber && monthData.invoiceNumber !== '-') ||
+              (monthData.invoiceDate && monthData.invoiceDate !== '-')) && (
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-bold text-blue-600 uppercase mb-1">Invoice Number</p>
+                  <p className="text-base font-bold text-blue-900">{monthData.invoiceNumber || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-blue-600 uppercase mb-1">Invoice Date</p>
+                  <p className="text-base font-bold text-blue-900">{monthData.invoiceDate || '-'}</p>
+                </div>
               </div>
             )}
           </div>
@@ -506,7 +587,7 @@ const MonthlyBreakdownPopup = React.memo(({ rowInfo, onClose }) => {
     let pool = totalPool, running = 0, cumUnpaid = 0
     return sorted.map(m => {
       const charges = m.totalWithGst + m.miscSell
-      const credits = m.received + m.creditNotes + m.tdsConfirm
+      const credits  = m.received + m.creditNotes + m.tdsConfirm
       running += charges - credits
       let remAdj = 0
       if (pool >= charges) { pool -= charges; remAdj = 0; cumUnpaid = 0 }
@@ -517,14 +598,21 @@ const MonthlyBreakdownPopup = React.memo(({ rowInfo, onClose }) => {
   }, [sorted, allocatedAmount, orderId, state])
 
   const T = rows.reduce((a, m) => ({
-    mb: a.mb + m.monthlyBilling, cgst: a.cgst + (m.cgst || 0), sgst: a.sgst + (m.sgst || 0),
-    igst: a.igst + (m.igst || 0), total: a.total + m.totalWithGst, misc: a.misc + m.miscSell,
-    recv: a.recv + m.received, cn: a.cn + m.creditNotes, tdsc: a.tdsc + m.tdsConfirm, tdsp: a.tdsp + m.tdsProvision,
+    mb:   a.mb   + m.monthlyBilling,
+    cgst: a.cgst + (m.cgst || 0),
+    sgst: a.sgst + (m.sgst || 0),
+    igst: a.igst + (m.igst || 0),
+    total: a.total + m.totalWithGst,
+    misc:  a.misc  + m.miscSell,
+    recv:  a.recv  + m.received,
+    cn:    a.cn    + m.creditNotes,
+    tdsc:  a.tdsc  + m.tdsConfirm,
+    tdsp:  a.tdsp  + m.tdsProvision,
   }), { mb: 0, cgst: 0, sgst: 0, igst: 0, total: 0, misc: 0, recv: 0, cn: 0, tdsc: 0, tdsp: 0 })
 
   const capacity = order?.capacity || 0
-  const baseRate = order?.amount || 0
-  const isSplit = order ? isSplitOrder(order) : false
+  const baseRate  = order?.amount   || 0
+  const isSplit   = order ? isSplitOrder(order) : false
 
   return (
     <>
@@ -557,7 +645,6 @@ const MonthlyBreakdownPopup = React.memo(({ rowInfo, onClose }) => {
               <X className="w-4 h-4" />Close
             </button>
           </div>
-
           <div className="overflow-auto flex-1">
             {rows.length === 0 ? (
               <div className="p-12 text-center text-slate-400">No monthly data available</div>
@@ -568,6 +655,8 @@ const MonthlyBreakdownPopup = React.memo(({ rowInfo, onClose }) => {
                     <th className="px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Month</th>
                     <th className="px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Days</th>
                     <th className="px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Period</th>
+                    <th className="px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Invoice No</th>
+                    <th className="px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Invoice Date</th>
                     <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Basic Bill</th>
                     {hasCGST && <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">CGST (9%)</th>}
                     {hasSGST && <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">SGST (9%)</th>}
@@ -594,6 +683,12 @@ const MonthlyBreakdownPopup = React.memo(({ rowInfo, onClose }) => {
                       <td className="px-3 py-3 text-xs text-slate-500 whitespace-nowrap">
                         <div>{String(m.startDay).padStart(2, '0')}-{String(m.month + 1).padStart(2, '0')}-{m.year}</div>
                         <div>{String(m.endDay).padStart(2, '0')}-{String(m.month + 1).padStart(2, '0')}-{m.year}</div>
+                      </td>
+                      <td className="px-3 py-3 text-xs font-medium whitespace-nowrap">
+                        {m.invoiceNumber && m.invoiceNumber !== '-' ? <span className="text-blue-700">{m.invoiceNumber}</span> : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-3 py-3 text-xs font-medium whitespace-nowrap">
+                        {m.invoiceDate && m.invoiceDate !== '-' ? <span className="text-blue-600">{m.invoiceDate}</span> : <span className="text-slate-300">—</span>}
                       </td>
                       <td className="px-3 py-3 text-right font-bold text-slate-800">₹{fmt(m.monthlyBilling)}</td>
                       {hasCGST && <td className="px-3 py-3 text-right text-slate-600">₹{fmt(m.cgst || 0)}</td>}
@@ -624,7 +719,7 @@ const MonthlyBreakdownPopup = React.memo(({ rowInfo, onClose }) => {
                 </tbody>
                 <tfoot>
                   <tr className="bg-gradient-to-r from-gray-100 to-blue-100 border-t-2 border-gray-300 font-bold">
-                    <td colSpan="3" className="px-3 py-4 text-sm text-gray-900">TOTAL</td>
+                    <td colSpan="5" className="px-3 py-4 text-sm text-gray-900">TOTAL</td>
                     <td className="px-3 py-4 text-right text-sm text-slate-900">₹{fmt(T.mb)}</td>
                     {hasCGST && <td className="px-3 py-4 text-right text-sm text-gray-700">₹{fmt(T.cgst)}</td>}
                     {hasSGST && <td className="px-3 py-4 text-right text-sm text-gray-700">₹{fmt(T.sgst)}</td>}
@@ -748,12 +843,14 @@ const InlineDistributionTable = ({ billingRows, paymentData, amountType, onBack,
   const typeInfo = AMOUNT_TYPES.find(t => t.value === amountType)
   const todayStr = todayDDMMYYYY()
 
+  // ✅ FIX 1: Added monthlyAdjustments: [] to initial row state
   const [rows, setRows] = useState(() =>
     billingRows.map(({ order, state, splitPct, rowKey, isSplit }) => ({
       rowKey, orderId: order.orderId, companyName: order.companyName,
       state, entity: order.entity || '-', splitPct, isSplit, order,
       checked: false, amount: '', notes: paymentData.notes,
       balance: null, balanceLoading: true, monthlyData: null,
+      monthlyAdjustments: [],
     }))
   )
   const [distMode, setDistMode] = useState('manual')
@@ -774,6 +871,7 @@ const InlineDistributionTable = ({ billingRows, paymentData, amountType, onBack,
     })
   }, []) // eslint-disable-line
 
+  // ✅ FIX 2: applyMode now correctly destructures { allocated, monthlyAdjustments }
   const applyMode = useCallback((currentRows, mode) => {
     if (mode === 'auto') {
       if (currentRows.some(r => r.checked && r.balanceLoading)) {
@@ -781,10 +879,14 @@ const InlineDistributionTable = ({ billingRows, paymentData, amountType, onBack,
         return currentRows
       }
       console.log('[applyMode] Running auto-split for totalAmount=', paymentData.amount)
-      const allocated = computeAutoSplitAmounts(currentRows, paymentData.amount)
-      return currentRows.map(r => !r.checked ? { ...r, amount: '' } : { ...r, amount: String(allocated[r.rowKey] ?? 0) })
+      const { allocated, monthlyAdjustments } = computeAutoSplitAmounts(currentRows, paymentData.amount)
+      return currentRows.map(r => !r.checked
+        ? { ...r, amount: '', monthlyAdjustments: [] }
+        : { ...r, amount: String(allocated[r.rowKey] ?? 0), monthlyAdjustments: monthlyAdjustments[r.rowKey] || [] }
+      )
     }
-    return currentRows
+    // Manual mode: clear auto-generated adjustments
+    return currentRows.map(r => ({ ...r, monthlyAdjustments: [] }))
   }, [paymentData.amount])
 
   const loadingKey = rows.map(r => r.balanceLoading).join(',')
@@ -815,7 +917,7 @@ const InlineDistributionTable = ({ billingRows, paymentData, amountType, onBack,
   }
   const handleReset = () => {
     console.log('[handleReset] Resetting all rows')
-    setRows(prev => prev.map(r => ({ ...r, checked: false, amount: '', notes: paymentData.notes })))
+    setRows(prev => prev.map(r => ({ ...r, checked: false, amount: '', notes: paymentData.notes, monthlyAdjustments: [] })))
     setDistMode('manual')
   }
 
@@ -831,19 +933,21 @@ const InlineDistributionTable = ({ billingRows, paymentData, amountType, onBack,
   const displayMonth = (() => { const [y, m] = paymentData.month.split('-'); return `${ALL_MONTHS[parseInt(m) - 1]} ${y}` })()
   const pct = paymentData.amount > 0 ? Math.min(100, (totalAlloc / paymentData.amount) * 100) : 0
 
+  // ✅ FIX 3: handleSubmit forwards monthlyAdjustments per entry
   const handleSubmit = () => {
     if (!canSubmit) return
     const entries = rows.filter(r => r.checked && Number(r.amount) >= 0).map(r => ({
-      orderId:     r.orderId,
-      companyName: r.companyName,
-      state:       r.state,
-      entity:      r.entity,
-      splitPct:    r.splitPct,
-      isSplit:     r.isSplit,
-      amount:      Number(r.amount),
-      notes:       r.notes,
-      date:        toDisplayDate(paymentData.date),
-      month:       displayMonth,
+      orderId:            r.orderId,
+      companyName:        r.companyName,
+      state:              r.state,
+      entity:             r.entity,
+      splitPct:           r.splitPct,
+      isSplit:            r.isSplit,
+      amount:             Number(r.amount),
+      notes:              r.notes,
+      date:               toDisplayDate(paymentData.date),
+      month:              displayMonth,
+      monthlyAdjustments: distMode === 'auto' ? (r.monthlyAdjustments || []) : [],
     }))
     console.log('[handleSubmit] Submitting entries:', entries)
     onSubmit(entries)
@@ -1136,19 +1240,20 @@ export default function BulkUpdate() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              companyGroup: capturedGroup.groupName,
-              paymentType:  capturedAmountType,
-              paymentDate:  entries[0]?.date  || '',
-              billingMonth: entries[0]?.month || '',
-              totalAmount:  capturedPaymentData.amount,
-              notes:        capturedPaymentData.notes || '',
+              companyGroup:  capturedGroup.groupName,
+              paymentType:   capturedAmountType,
+              paymentDate:   entries[0]?.date  || '',
+              billingMonth:  entries[0]?.month || '',
+              totalAmount:   capturedPaymentData.amount,
+              notes:         capturedPaymentData.notes || '',
               paymentMethod: capturedPaymentData.paymentMethod || 'cash',
-              bankName: capturedPaymentData.bankName || '',
-              checkNumber: capturedPaymentData.checkNumber || '',
-              neftId: capturedPaymentData.neftId || '',
+              bankName:      capturedPaymentData.bankName      || '',
+              checkNumber:   capturedPaymentData.checkNumber   || '',
+              neftId:        capturedPaymentData.neftId        || '',
               transactionId: capturedPaymentData.transactionId || '',
-              paymentNote: capturedPaymentData.paymentNote || '',
-              entryCount:   entries.length,
+              paymentNote:   capturedPaymentData.paymentNote   || '',
+              entryCount:    entries.length,
+              // ✅ monthlyAdjustments forwarded per entry to API
               entries: entries.map(e => ({
                 orderId:     e.orderId,
                 companyName: e.companyName  || '',
@@ -1160,6 +1265,14 @@ export default function BulkUpdate() {
                 notes:       e.notes        || '',
                 date:        e.date,
                 month:       e.month,
+                monthlyAdjustments: (e.monthlyAdjustments || []).map(adj => ({
+                  month:           adj.month,
+                  invoiceNumber:   adj.invoiceNumber   || '-',
+                  invoiceDate:     adj.invoiceDate     || '-',
+                  adjustedAmount:  Number(adj.adjustedAmount)  || 0,
+                  remainingAmount: Number(adj.remainingAmount) || 0,
+                  amountStatus:    adj.amountStatus    || 'Not Paid',
+                })),
               })),
             }),
           })
@@ -1205,7 +1318,6 @@ export default function BulkUpdate() {
   }
 
   const billingMonthLabel = useMemo(() => { const found = months.find(m => m.value === form.month); return found ? found.label : '' }, [form.month, months])
-
   const selectedPaymentMethod = PAYMENT_METHODS.find(pm => pm.value === form.paymentMethod)
 
   return (
@@ -1307,15 +1419,12 @@ export default function BulkUpdate() {
                         {PAYMENT_METHODS.map(pm => {
                           const Icon = pm.icon
                           return (
-                            <button
-                              key={pm.value}
-                              onClick={() => handleField('paymentMethod', pm.value)}
+                            <button key={pm.value} onClick={() => handleField('paymentMethod', pm.value)}
                               className={`flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-xl text-xs font-bold border-2 transition-all ${
                                 form.paymentMethod === pm.value
                                   ? `bg-${pm.color}-50 border-${pm.color}-500 text-${pm.color}-700 shadow-sm`
                                   : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                              }`}
-                            >
+                              }`}>
                               <Icon className="w-4 h-4" />
                               {pm.label}
                             </button>
@@ -1331,111 +1440,62 @@ export default function BulkUpdate() {
                           {selectedPaymentMethod && <selectedPaymentMethod.icon className={`w-4 h-4 text-${selectedPaymentMethod.color}-500`} />}
                           <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">{selectedPaymentMethod?.label} Details</span>
                         </div>
-
                         {form.paymentMethod === 'cash' && (
                           <div>
                             <label className="block text-xs font-medium text-slate-600 mb-1.5">Note</label>
-                            <input
-                              type="text"
-                              value={form.paymentNote}
-                              onChange={e => handleField('paymentNote', e.target.value)}
-                              placeholder="Enter note..."
-                              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
-                            />
+                            <input type="text" value={form.paymentNote} onChange={e => handleField('paymentNote', e.target.value)} placeholder="Enter note..."
+                              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white" />
                           </div>
                         )}
-
                         {form.paymentMethod === 'check' && (
                           <>
                             <div>
                               <label className="block text-xs font-medium text-slate-600 mb-1.5">Bank Name <span className="text-slate-400">(optional)</span></label>
-                              <input
-                                type="text"
-                                value={form.bankName}
-                                onChange={e => handleField('bankName', e.target.value)}
-                                placeholder="Enter bank name..."
-                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                              />
+                              <input type="text" value={form.bankName} onChange={e => handleField('bankName', e.target.value)} placeholder="Enter bank name..."
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white" />
                             </div>
                             <div>
                               <label className="block text-xs font-medium text-slate-600 mb-1.5">Check Number</label>
-                              <input
-                                type="text"
-                                value={form.checkNumber}
-                                onChange={e => handleField('checkNumber', e.target.value)}
-                                placeholder="Enter check number..."
-                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                              />
+                              <input type="text" value={form.checkNumber} onChange={e => handleField('checkNumber', e.target.value)} placeholder="Enter check number..."
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white" />
                             </div>
                             <div>
                               <label className="block text-xs font-medium text-slate-600 mb-1.5">Note</label>
-                              <input
-                                type="text"
-                                value={form.paymentNote}
-                                onChange={e => handleField('paymentNote', e.target.value)}
-                                placeholder="Enter note..."
-                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                              />
+                              <input type="text" value={form.paymentNote} onChange={e => handleField('paymentNote', e.target.value)} placeholder="Enter note..."
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white" />
                             </div>
                           </>
                         )}
-
                         {form.paymentMethod === 'upi' && (
                           <>
                             <div>
                               <label className="block text-xs font-medium text-slate-600 mb-1.5">Transaction/Receipt ID</label>
-                              <input
-                                type="text"
-                                value={form.transactionId}
-                                onChange={e => handleField('transactionId', e.target.value)}
-                                placeholder="Enter transaction ID..."
-                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
-                              />
+                              <input type="text" value={form.transactionId} onChange={e => handleField('transactionId', e.target.value)} placeholder="Enter transaction ID..."
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white" />
                             </div>
                             <div>
                               <label className="block text-xs font-medium text-slate-600 mb-1.5">Note</label>
-                              <input
-                                type="text"
-                                value={form.paymentNote}
-                                onChange={e => handleField('paymentNote', e.target.value)}
-                                placeholder="Enter note..."
-                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
-                              />
+                              <input type="text" value={form.paymentNote} onChange={e => handleField('paymentNote', e.target.value)} placeholder="Enter note..."
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white" />
                             </div>
                           </>
                         )}
-
                         {form.paymentMethod === 'neft' && (
                           <>
                             <div>
                               <label className="block text-xs font-medium text-slate-600 mb-1.5">Bank Name <span className="text-slate-400">(optional)</span></label>
-                              <input
-                                type="text"
-                                value={form.bankName}
-                                onChange={e => handleField('bankName', e.target.value)}
-                                placeholder="Enter bank name..."
-                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white"
-                              />
+                              <input type="text" value={form.bankName} onChange={e => handleField('bankName', e.target.value)} placeholder="Enter bank name..."
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white" />
                             </div>
                             <div>
                               <label className="block text-xs font-medium text-slate-600 mb-1.5">NEFT ID/No</label>
-                              <input
-                                type="text"
-                                value={form.neftId}
-                                onChange={e => handleField('neftId', e.target.value)}
-                                placeholder="Enter NEFT ID..."
-                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white"
-                              />
+                              <input type="text" value={form.neftId} onChange={e => handleField('neftId', e.target.value)} placeholder="Enter NEFT ID..."
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white" />
                             </div>
                             <div>
                               <label className="block text-xs font-medium text-slate-600 mb-1.5">Note</label>
-                              <input
-                                type="text"
-                                value={form.paymentNote}
-                                onChange={e => handleField('paymentNote', e.target.value)}
-                                placeholder="Enter note..."
-                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white"
-                              />
+                              <input type="text" value={form.paymentNote} onChange={e => handleField('paymentNote', e.target.value)} placeholder="Enter note..."
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white" />
                             </div>
                           </>
                         )}

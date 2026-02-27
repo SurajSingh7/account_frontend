@@ -2,25 +2,22 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import DistributedPayment from '../../../../models/Distribution';
 
-// ─── GET: list records or single record by id ─────────────────
+// ─── GET ──────────────────────────────────────────────────────
 export async function GET(request) {
   try {
     await connectDB();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
-    // Single record by id
     if (id) {
       const record = await DistributedPayment.findById(id);
       if (!record) return NextResponse.json({ success: false, error: 'Record not found' }, { status: 404 });
       return NextResponse.json({ success: true, data: record });
     }
 
-    // Build query from optional filters
     const query = {};
     const companyGroup = searchParams.get('companyGroup');
     const paymentType  = searchParams.get('paymentType');
-
     if (companyGroup) query.companyGroup = { $regex: companyGroup.trim(), $options: 'i' };
     if (paymentType && ['receivedDetails', 'tdsProvision', 'tdsConfirm'].includes(paymentType)) {
       query.paymentType = paymentType;
@@ -30,7 +27,6 @@ export async function GET(request) {
       DistributedPayment.find(query).sort({ createdAt: -1 }).limit(500).lean(),
       DistributedPayment.distinct('companyGroup'),
     ]);
-
     return NextResponse.json({ success: true, data: records, groups: groups.sort() });
   } catch (error) {
     console.error('GET /api/billing/distributed error:', error);
@@ -38,27 +34,16 @@ export async function GET(request) {
   }
 }
 
-// ─── POST: create a new distribution record ───────────────────
+// ─── POST ─────────────────────────────────────────────────────
 export async function POST(request) {
   try {
     await connectDB();
     const body = await request.json();
 
     const {
-      companyGroup,
-      paymentType,
-      paymentDate,
-      billingMonth,
-      totalAmount,
-      notes,
-      entries,
-      // ── Payment method fields ──
-      paymentMethod,
-      bankName,
-      checkNumber,
-      neftId,
-      transactionId,
-      paymentNote,
+      companyGroup, paymentType, paymentDate, billingMonth, totalAmount,
+      notes, entries,
+      paymentMethod, bankName, checkNumber, neftId, transactionId, paymentNote,
     } = body;
 
     if (!companyGroup || !paymentType || !paymentDate || !billingMonth || totalAmount === undefined) {
@@ -79,6 +64,17 @@ export async function POST(request) {
       notes:       String(e.notes       || ''),
       date:        String(e.date        || ''),
       month:       String(e.month       || ''),
+      // ── NEW: clean and store monthly adjustments ─────────────
+      monthlyAdjustments: (e.monthlyAdjustments || []).map(adj => ({
+        month:           String(adj.month           || ''),
+        invoiceNumber:   String(adj.invoiceNumber   || '-'),
+        invoiceDate:     String(adj.invoiceDate     || '-'),
+        adjustedAmount:  Number(adj.adjustedAmount) || 0,
+        remainingAmount: Number(adj.remainingAmount) || 0,
+        amountStatus: ['Fully Paid', 'Partially Paid', 'Not Paid'].includes(adj.amountStatus)
+          ? adj.amountStatus
+          : 'Not Paid',
+      })),
     }));
 
     const record = await DistributedPayment.create({
@@ -90,7 +86,6 @@ export async function POST(request) {
       notes:         String(notes         || ''),
       entries:       cleanEntries,
       entryCount:    cleanEntries.length,
-      // ── Payment method fields ──
       paymentMethod:  String(paymentMethod  || 'cash'),
       bankName:       String(bankName       || ''),
       checkNumber:    String(checkNumber    || ''),
@@ -106,17 +101,15 @@ export async function POST(request) {
   }
 }
 
-// ─── DELETE: remove a record by id ───────────────────────────
+// ─── DELETE ───────────────────────────────────────────────────
 export async function DELETE(request) {
   try {
     await connectDB();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ success: false, error: 'id query param required' }, { status: 400 });
-
     const deleted = await DistributedPayment.findByIdAndDelete(id);
     if (!deleted) return NextResponse.json({ success: false, error: 'Record not found' }, { status: 404 });
-
     return NextResponse.json({ success: true, message: 'Distribution record deleted' });
   } catch (error) {
     console.error('DELETE /api/billing/distributed error:', error);
