@@ -251,10 +251,7 @@ const MonthDetailView = ({ monthData, rawData, onClose }) => {
               <h3 className="text-xl font-bold text-white">Month Details</h3>
               <p className="text-blue-100 text-sm mt-0.5">{monthData.monthYear}</p>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-            >
+            <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
               <X className="w-5 h-5 text-white" />
             </button>
           </div>
@@ -410,11 +407,18 @@ const MonthDetailView = ({ monthData, rawData, onClose }) => {
               </div>
             </div>
 
-            {/* Invoice Info */}
-            {monthData.invoiceNumber && monthData.invoiceNumber !== '-' && (
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                <p className="text-xs font-bold text-blue-600 uppercase mb-1">Invoice Number</p>
-                <p className="text-base font-bold text-blue-900">{monthData.invoiceNumber}</p>
+            {/* Invoice Info — shows Invoice Number + Invoice Date side by side */}
+            {((monthData.invoiceNumber && monthData.invoiceNumber !== '-') ||
+              (monthData.invoiceDate && monthData.invoiceDate !== '-')) && (
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-bold text-blue-600 uppercase mb-1">Invoice Number</p>
+                  <p className="text-base font-bold text-blue-900">{monthData.invoiceNumber || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-blue-600 uppercase mb-1">Invoice Date</p>
+                  <p className="text-base font-bold text-blue-900">{monthData.invoiceDate || '-'}</p>
+                </div>
               </div>
             )}
           </div>
@@ -456,18 +460,14 @@ const loadOrderBreakdown = async (order, toDateStr, splitState) => {
     }
   }
 
-  if (!pcdDate || !toDate) {
-    return breakdownBase
-  }
+  if (!pcdDate || !toDate) return breakdownBase
 
   // Fetch billing records
   let billingData = []
   try {
     const r = await fetch(`/api/billing/monthly?orderId=${order.orderId}`)
     const j = await r.json()
-    if (j.success) {
-      billingData = j.data
-    }
+    if (j.success) billingData = j.data
   } catch (e) {
     console.error(`[loadBreakdown] fetch exception:`, e)
   }
@@ -488,40 +488,41 @@ const loadOrderBreakdown = async (order, toDateStr, splitState) => {
     const monthName = fmtMonthYear(m, y)
     const rec = billingData.find(b => b.month === monthName && b.state === splitState)
 
-    let totalWithGst, monthlyBilling, cgst = 0, sgst = 0, igst = 0, miscSell, received, creditNotes, tdsProvision, tdsConfirm, invoiceNumber, billingDays, startDay, endDay, isSelfGST = false
+    let totalWithGst, monthlyBilling, cgst = 0, sgst = 0, igst = 0,
+        miscSell, received, creditNotes, tdsProvision, tdsConfirm,
+        invoiceNumber, invoiceDate,   // ← invoiceDate declared here
+        billingDays, startDay, endDay, isSelfGST = false
     let rawData = null
 
     if (rec) {
-      totalWithGst = Number(rec.totalWithGst) || 0
-      monthlyBilling = Number(rec.monthlyBilling) || 0
-      cgst = Number(rec.cgst) || 0
-      sgst = Number(rec.sgst) || 0
-      igst = Number(rec.igst) || 0
-      isSelfGST = rec.isSelfGST || false
-      miscSell = sumTotalWithGst(rec.miscellaneousSell)
-      received = sumAmount(rec.receivedDetails)
-      // creditNotes   = sumAmount(rec.creditNotes)
-      creditNotes = sumTotalWithGst(rec.creditNotes)
-
-      tdsProvision = sumAmount(rec.tdsProvision)
-      tdsConfirm = sumAmount(rec.tdsConfirm)
+      totalWithGst  = Number(rec.totalWithGst)  || 0
+      monthlyBilling= Number(rec.monthlyBilling) || 0
+      cgst          = Number(rec.cgst)  || 0
+      sgst          = Number(rec.sgst)  || 0
+      igst          = Number(rec.igst)  || 0
+      isSelfGST     = rec.isSelfGST || false
+      miscSell      = sumTotalWithGst(rec.miscellaneousSell)
+      received      = sumAmount(rec.receivedDetails)
+      creditNotes   = sumTotalWithGst(rec.creditNotes)
+      tdsProvision  = sumAmount(rec.tdsProvision)
+      tdsConfirm    = sumAmount(rec.tdsConfirm)
       invoiceNumber = rec.invoiceNumber || '-'
-      billingDays = rec.billingDays || getDaysInMonth(m, y)
-      startDay = Number((rec.startDate || '').split('-')[0]) || 1
-      endDay = Number((rec.endDate || '').split('-')[0]) || getDaysInMonth(m, y)
+      invoiceDate   = rec.invoiceDate   || '-'   // ← read from record
+      billingDays   = rec.billingDays   || getDaysInMonth(m, y)
+      startDay      = Number((rec.startDate || '').split('-')[0]) || 1
+      endDay        = Number((rec.endDate   || '').split('-')[0]) || getDaysInMonth(m, y)
 
-      // Store raw data for popup
       rawData = {
         miscellaneousSell: rec.miscellaneousSell || [],
-        receivedDetails: rec.receivedDetails || [],
-        creditNotes: rec.creditNotes || [],
-        tdsConfirm: rec.tdsConfirm || [],
-        tdsProvision: rec.tdsProvision || []
+        receivedDetails:   rec.receivedDetails   || [],
+        creditNotes:       rec.creditNotes       || [],
+        tdsConfirm:        rec.tdsConfirm        || [],
+        tdsProvision:      rec.tdsProvision      || []
       }
     } else {
       const daysInM = getDaysInMonth(m, y)
-      const isPcd = y === pcdDate.getFullYear() && m === pcdDate.getMonth()
-      const isTerm = termDate && y === serviceEnd.getFullYear() && m === serviceEnd.getMonth()
+      const isPcd   = y === pcdDate.getFullYear() && m === pcdDate.getMonth()
+      const isTerm  = termDate && y === serviceEnd.getFullYear() && m === serviceEnd.getMonth()
 
       let splitPct = 1
       if (isSplit(order)) {
@@ -530,34 +531,37 @@ const loadOrderBreakdown = async (order, toDateStr, splitState) => {
           : (Number(order.splitFactor?.state2Percentage) || 50) / 100
       }
 
-      const cap = Number(order.capacity) || 0
-      const rate = Number(order.amount) || 0
-      const baseMonthly = cap * rate * splitPct
-      const gstRate = 0.18
-      const grandTotal = baseMonthly * (1 + gstRate)
+      const cap          = Number(order.capacity) || 0
+      const rate         = Number(order.amount)   || 0
+      const baseMonthly  = cap * rate * splitPct
+      const gstRate      = 0.18
+      const grandTotal   = baseMonthly * (1 + gstRate)
 
-      startDay = isPcd ? pcdDate.getDate() : 1
-      endDay = isTerm ? serviceEnd.getDate() : daysInM
-      billingDays = endDay - startDay + 1
-      totalWithGst = (grandTotal / daysInM) * billingDays
+      startDay       = isPcd  ? pcdDate.getDate()    : 1
+      endDay         = isTerm ? serviceEnd.getDate() : daysInM
+      billingDays    = endDay - startDay + 1
+      totalWithGst   = (grandTotal / daysInM) * billingDays
       monthlyBilling = totalWithGst / (1 + gstRate)
-      igst = totalWithGst - monthlyBilling
+      igst           = totalWithGst - monthlyBilling
       miscSell = received = creditNotes = tdsProvision = tdsConfirm = 0
-      invoiceNumber = '-'
+      invoiceNumber  = '-'
+      invoiceDate    = '-'   // ← default for calculated rows
+
       rawData = {
         miscellaneousSell: [],
-        receivedDetails: [],
-        creditNotes: [],
-        tdsConfirm: [],
-        tdsProvision: []
+        receivedDetails:   [],
+        creditNotes:       [],
+        tdsConfirm:        [],
+        tdsProvision:      []
       }
     }
 
     breakdownBase.months.push({
       monthYear: monthName, month: m, year: y, billingDays, startDay, endDay,
       monthlyBilling, cgst, sgst, igst, totalWithGst, miscSell,
-      received, creditNotes, tdsProvision, tdsConfirm, invoiceNumber, isSelfGST,
-      rawData
+      received, creditNotes, tdsProvision, tdsConfirm,
+      invoiceNumber, invoiceDate,   // ← both passed into month object
+      isSelfGST, rawData
     })
 
     if (termDate && y === serviceEnd.getFullYear() && m === serviceEnd.getMonth()) break

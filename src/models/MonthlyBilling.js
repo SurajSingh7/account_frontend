@@ -61,6 +61,7 @@ const MonthlyBillingSchema = new mongoose.Schema({
   igst: { type: Number, default: 0 }, // IGST 18% of monthlyBilling
   totalWithGst: { type: Number, required: true }, // monthlyBilling + cgst + sgst + igst
   invoiceNumber: { type: String, default: '' },
+  invoiceDate: { type: String, default: '' }, 
   
   // GST Details from order
   isSelfGST: { type: Boolean, default: false },

@@ -58,6 +58,17 @@ const generateInvoiceNumber = (billing, index = 0) => {
   return `INV-${year}${month}${day}-${stateCode}-${timestamp}`;
 };
 
+// ─── Invoice date = startDate + 1 day ─────────────────────────
+// Full month (startDay=1)  → 2nd of month
+// Partial month (e.g. startDay=17) → 18th
+const calcInvoiceDate = (startDateStr) => {
+  const d = parseDate(startDateStr);
+  if (!d) return '';
+  const next = new Date(d);
+  next.setDate(next.getDate() + 1);
+  return formatDate(next);
+};
+
 // ─── GST recalculation helpers ─────────────────────────────────
 const recalcCreditNotes = (creditNotes, isSelfGST) => {
   if (!creditNotes?.length) return [];
@@ -165,10 +176,12 @@ const generateBillingStubForMonth = (order, monthIdx, year, state) => {
     igst = Math.round(monthlyCharge * (gstDetails.igst || 18) / 100 * 100) / 100;
   }
 
+  const startDateStr = formatDate(new Date(year, monthIdx, startDay));
+
   return {
     orderId:          order.orderId,
     month:            formatMonthYear(monthIdx, year),
-    startDate:        formatDate(new Date(year, monthIdx, startDay)),
+    startDate:        startDateStr,
     endDate:          formatDate(new Date(year, monthIdx, endDay)),
     billingDays,
     perDayRate:       monthlyBase / daysInMonth,
@@ -185,6 +198,7 @@ const generateBillingStubForMonth = (order, monthIdx, year, state) => {
     companyName:      order.companyName,
     status:           'generated',
     invoiceNumber:    '',
+    invoiceDate:      calcInvoiceDate(startDateStr),
     receivedDetails:  [],
     creditNotes:      [],
     miscellaneousSell:[],
@@ -257,7 +271,9 @@ const calculateMonthlyBillings = (order, endDate, autoGenerateInvoice = false) =
         perDayRate: totalAmount * statePct / 100 / daysInMonth,
         receivedDetails: [], creditNotes: [], miscellaneousSell: [], tdsProvision: [], tdsConfirm: [],
         monthlyBilling: monthlyCharge, cgst, sgst, igst, totalWithGst: monthlyCharge + cgst + sgst + igst,
-        invoiceNumber: '', isSelfGST, gstState: gstDetails.gstState||'', gstStateCode: gstDetails.gstStateCode||'',
+        invoiceNumber: '',
+        invoiceDate: calcInvoiceDate(startDateStr),
+        isSelfGST, gstState: gstDetails.gstState||'', gstStateCode: gstDetails.gstStateCode||'',
         state, splitKey: String(statePct), splitPercentage: statePct, capacity: capacityMbps,
         companyName: order.companyName, status: 'generated', isPcdMonth, isTerminateMonth,
       };
@@ -379,13 +395,9 @@ export async function PATCH(request) {
     const action = searchParams.get('action');
 
     // ── action=add-entry ─────────────────────────────────────
-    // Adds a payment/TDS/received entry to a billing month.
-    // Finds the existing record, or auto-generates a stub if missing.
-    // Body: { orderId, state, month, amountType, entry: { date, amount, notes } }
     if (action === 'add-entry') {
       const { orderId, state, month, amountType, entry } = await request.json();
 
-      // Validate inputs
       if (!orderId || !month || !amountType || !entry) {
         return NextResponse.json({
           success: false,
@@ -398,7 +410,6 @@ export async function PATCH(request) {
         return NextResponse.json({ success: false, error: `Invalid amountType: ${amountType}` }, { status: 400 });
       }
 
-      // Validate entry has required fields
       if (!entry.date || entry.amount === undefined || entry.amount === null) {
         return NextResponse.json({ success: false, error: 'entry must have date and amount' }, { status: 400 });
       }
@@ -408,8 +419,6 @@ export async function PATCH(request) {
         return NextResponse.json({ success: false, error: 'entry.amount must be a number' }, { status: 400 });
       }
 
-      // ── Step 1: Find existing billing record ──────────────
-      // Try exact state match first, then fallback to empty state (non-split orders)
       let billing = await MonthlyBilling.findOne({ orderId, month, state });
       if (!billing && state) {
         billing = await MonthlyBilling.findOne({ orderId, month, state: '' });
@@ -418,7 +427,6 @@ export async function PATCH(request) {
         billing = await MonthlyBilling.findOne({ orderId, month });
       }
 
-      // ── Step 2: If still not found, auto-generate a stub ─
       if (!billing) {
         const order = await Order.findOne({ orderId });
         if (!order) {
@@ -432,21 +440,17 @@ export async function PATCH(request) {
 
         const stub = generateBillingStubForMonth(order, parsed.month, parsed.year, state || order.billing1?.state || '');
         billing    = new MonthlyBilling(stub);
-        // Don't save yet — we'll save after appending the entry below
       }
 
-      // ── Step 3: Append the new entry ─────────────────────
       const cleanEntry = {
         date:   entry.date   || '',
         amount: entryAmount,
         notes:  entry.notes  || '',
       };
 
-      // For types that store array of objects, push cleanly
       if (!billing[amountType]) billing[amountType] = [];
       billing[amountType].push(cleanEntry);
 
-      // ── Step 4: Re-sanitise GST fields and save ──────────
       const sanitised = sanitiseBillingForSave(billing.toObject ? billing.toObject() : billing);
       Object.assign(billing, sanitised);
 
