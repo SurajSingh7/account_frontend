@@ -76,7 +76,292 @@ const creditPoolBalance = (months) => {
   return running
 }
 
-// ─── Text truncation with popup ────────────────────────────────
+// ─── AMOUNT STATUS helpers ────────────────────────────────────
+/**
+ * Parses a "Month YYYY" string (e.g. "September 2025") into a Date object.
+ */
+const parseMonthYear = (s) => {
+  if (!s) return null
+  const parts = s.trim().split(' ')
+  if (parts.length !== 2) return null
+  return new Date(`${parts[0]} 1, ${parts[1]}`)
+}
+
+/**
+ * Fetches distributed payment data for a given orderId and state,
+ * then returns month-wise amountStatus derived from monthlyAdjustments.
+ *
+ * Rules:
+ * 1. LATEST RECORD WINS — if the same billing month appears in multiple
+ *    payment records, the LAST one processed overwrites earlier ones.
+ *    Payments are sorted ascending by paymentDate so the most recent
+ *    payment's status is always the final value.
+ * 2. FILTER BY toDateStr — only months on or before the selected period
+ *    end date are shown.
+ */
+const fetchAmountStatus = async (orderId, state, toDateStr) => {
+  try {
+    const r = await fetch(`/api/billing/distributed?orderId=${orderId}`)
+    const j = await r.json()
+    if (!j.success || !j.data?.length) return []
+
+    // Parse the "up to" boundary (DD-MM-YYYY format)
+    const toDate = toDateStr ? parseAnyDate(toDateStr) : null
+
+    // Sort payments ascending by paymentDate, then createdAt as tiebreaker,
+    // so when multiple payments share the same date, the one created last
+    // (most recent record) wins and its status is the final value.
+    const sorted = [...j.data].sort((a, b) => {
+      const da = parseAnyDate(a.paymentDate) || new Date(0)
+      const db = parseAnyDate(b.paymentDate) || new Date(0)
+      if (da - db !== 0) return da - db
+      // same paymentDate → use createdAt as tiebreaker
+      const ca = a.createdAt ? new Date(a.createdAt) : new Date(0)
+      const cb = b.createdAt ? new Date(b.createdAt) : new Date(0)
+      return ca - cb
+    })
+
+    // statusMap: last write wins (latest payment record for each month)
+    const statusMap = {}
+    sorted.forEach(payment => {
+      payment.entries?.forEach(entry => {
+        if (entry.orderId === orderId && (!state || entry.state === state)) {
+          entry.monthlyAdjustments?.forEach(adj => {
+            // Filter: skip months beyond the selected period
+            if (toDate) {
+              const adjDate = parseMonthYear(adj.month)
+              if (adjDate && adjDate > toDate) return
+            }
+            // Latest record overwrites — no priority logic, just overwrite
+            statusMap[adj.month] = {
+              month: adj.month,
+              amountStatus: adj.amountStatus,
+              invoiceNumber: adj.invoiceNumber
+            }
+          })
+        }
+      })
+    })
+
+    // Sort results chronologically
+    const months = Object.values(statusMap).sort((a, b) => {
+      const da = parseMonthYear(a.month) || new Date(0)
+      const db = parseMonthYear(b.month) || new Date(0)
+      return da - db
+    })
+
+    // ── Retrospective upgrade ──────────────────────────────────────
+    // Rule: if a month is "Partially Paid" and ANY later month is
+    // "Fully Paid", it means the remaining balance was settled by a
+    // subsequent payment — so retrospectively upgrade it to "Fully Paid".
+    // Right-to-left pass builds suffix flag; left-to-right pass applies.
+    const n = months.length
+    const fullyPaidAfter = new Array(n).fill(false)
+    for (let i = n - 2; i >= 0; i--) {
+      if (months[i + 1].amountStatus === 'Fully Paid' || fullyPaidAfter[i + 1]) {
+        fullyPaidAfter[i] = true
+      }
+    }
+    for (let i = 0; i < n; i++) {
+      if ((months[i].amountStatus === 'Partially Paid' || months[i].amountStatus === 'Not Paid') && fullyPaidAfter[i]) {
+        months[i] = { ...months[i], amountStatus: 'Fully Paid' }
+      }
+    }
+    // ──────────────────────────────────────────────────────────────
+
+    return months
+  } catch (e) {
+    console.error('[fetchAmountStatus] error:', e)
+    return []
+  }
+}
+
+/**
+ * Returns Tailwind classes and label for each amountStatus value.
+ */
+const statusStyle = (status) => {
+  switch (status) {
+    case 'Fully Paid':
+      return { bg: 'bg-emerald-100 text-emerald-800 border border-emerald-200', dot: 'bg-emerald-500' }
+    case 'Partially Paid':
+      return { bg: 'bg-amber-100 text-amber-800 border border-amber-200', dot: 'bg-amber-500' }
+    case 'Not Paid':
+    default:
+      return { bg: 'bg-rose-100 text-rose-800 border border-rose-200', dot: 'bg-rose-500' }
+  }
+}
+
+// ─── Amount Status History Popup ─────────────────────────────
+const AmountStatusHistoryPopup = React.memo(({ allStatuses, orderId, state, onClose }) => {
+  useEffect(() => {
+    const h = e => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 z-[10005] flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[70vh] overflow-auto"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-5 py-4 flex items-center justify-between sticky top-0 rounded-t-2xl">
+          <div>
+            <h3 className="text-base font-bold text-white">Payment History</h3>
+            <p className="text-slate-300 text-xs mt-0.5">Order: {orderId} · {state}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors">
+            <X className="w-4 h-4 text-white" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-4">
+          {allStatuses.length === 0 ? (
+            <p className="text-center text-slate-400 text-sm py-6">No payment records found</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {allStatuses.map((item, i) => {
+                const s = statusStyle(item.amountStatus)
+                return (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-100"
+                  >
+                    <span className="text-sm font-semibold text-slate-700">{item.month}</span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${s.bg}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                      {item.amountStatus}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+})
+AmountStatusHistoryPopup.displayName = 'AmountStatusHistoryPopup'
+
+/**
+ * Shows ONLY the selected month's status badge inline.
+ * An ⓘ button opens a popup with the full month-wise history.
+ *
+ * KEY FIX: We fetch the FULL history (no date cap) first so the
+ * retrospective upgrade algorithm can see future "Fully Paid" months.
+ * Then we filter down to toDateStr only for the inline badge lookup.
+ * This ensures e.g. Oct "Not Paid" gets upgraded to "Fully Paid" when
+ * Nov is "Fully Paid" — even when the filter is set to "Up to OCT 2025".
+ *
+ * selectedMonthLabel: e.g. "November 2025" — the exact month chosen in the filter.
+ *   If null/undefined (All months / date range), shows the latest filtered month's badge.
+ */
+const AmountStatusCell = React.memo(({ orderId, state, toDateStr, selectedMonthLabel }) => {
+  const [allStatuses, setAllStatuses] = useState(null) // full upgraded history (popup + inline source)
+  const [showPopup, setShowPopup] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    setAllStatuses(null)
+
+    // Fetch full history (no date cap) so retrospective upgrade sees all months.
+    // The upgrade inside fetchAmountStatus already runs on this full set.
+    fetchAmountStatus(orderId, state, null).then(full => {
+      if (!cancelled) setAllStatuses(full)
+    })
+
+    return () => { cancelled = true }
+  }, [orderId, state])
+  // NOTE: toDateStr intentionally NOT in deps — we always fetch full history.
+  // toDateStr is only used below to filter the inline badge.
+
+  // Loading
+  if (allStatuses === null) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <div className="animate-spin h-3.5 w-3.5 rounded-full border-b-2 border-blue-400" />
+      </div>
+    )
+  }
+
+  // Build the filtered view for inline badge:
+  // from the already-upgraded full list, keep only months <= toDateStr
+  const toDate = toDateStr ? parseAnyDate(toDateStr) : null
+  const filteredStatuses = toDate
+    ? allStatuses.filter(item => {
+        const d = parseMonthYear(item.month)
+        return !d || d <= toDate
+      })
+    : allStatuses
+
+  // Determine which single month to show inline:
+  // Case 1: A specific month is selected (e.g. "January 2026")
+  //   → look for it in the data; if NOT found, show "Not Paid" for that month.
+  //   → NEVER fall back to a different month when a specific one is selected.
+  // Case 2: No specific month (All / date range)
+  //   → show the latest available month in the filtered list.
+  let inlineItem = null
+  if (selectedMonthLabel) {
+    // Exact match only — if Jan 2026 not in data → Not Paid for Jan 2026
+    inlineItem = filteredStatuses.find(s => s.month === selectedMonthLabel) || {
+      month: selectedMonthLabel,
+      amountStatus: 'Not Paid'
+    }
+  } else {
+    // No specific month selected → show latest available
+    inlineItem = filteredStatuses.length > 0
+      ? filteredStatuses[filteredStatuses.length - 1]
+      : { month: '-', amountStatus: 'Not Paid' }
+  }
+
+  const s = statusStyle(inlineItem.amountStatus)
+  const hasHistory = (allStatuses?.length || 0) > 0
+
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        {/* Single inline badge for the selected month */}
+        <div className="flex flex-col gap-0.5">
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap ${s.bg}`}>
+            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.dot}`} />
+            {inlineItem.amountStatus}
+          </span>
+          <span className="text-[10px] text-slate-400 font-medium pl-1">{inlineItem.month}</span>
+        </div>
+
+        {/* Info icon — opens full history popup */}
+        {hasHistory && (
+          <button
+            onClick={() => setShowPopup(true)}
+            title="View full payment history"
+            className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-blue-100 text-slate-400 hover:text-blue-600 transition-colors"
+          >
+            <Info className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
+      {/* History popup */}
+      {showPopup && (
+        <AmountStatusHistoryPopup
+          allStatuses={allStatuses || []}
+          orderId={orderId}
+          state={state}
+          onClose={() => setShowPopup(false)}
+        />
+      )}
+    </>
+  )
+})
+AmountStatusCell.displayName = 'AmountStatusCell'
+
+// ─── Text truncation with popup ─────────────────────────────────
 const TextPopup = React.memo(({ text, onClose }) => {
   useEffect(() => {
     const h = e => { if (e.key === 'Escape') onClose() }
@@ -407,7 +692,7 @@ const MonthDetailView = ({ monthData, rawData, onClose }) => {
               </div>
             </div>
 
-            {/* Invoice Info — shows Invoice Number + Invoice Date side by side */}
+            {/* Invoice Info */}
             {((monthData.invoiceNumber && monthData.invoiceNumber !== '-') ||
               (monthData.invoiceDate && monthData.invoiceDate !== '-')) && (
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 grid grid-cols-2 gap-4">
@@ -462,7 +747,6 @@ const loadOrderBreakdown = async (order, toDateStr, splitState) => {
 
   if (!pcdDate || !toDate) return breakdownBase
 
-  // Fetch billing records
   let billingData = []
   try {
     const r = await fetch(`/api/billing/monthly?orderId=${order.orderId}`)
@@ -472,7 +756,6 @@ const loadOrderBreakdown = async (order, toDateStr, splitState) => {
     console.error(`[loadBreakdown] fetch exception:`, e)
   }
 
-  // Determine service window
   let serviceEnd = toDate
   if (termDate) {
     const lastServiceDay = new Date(termDate)
@@ -490,7 +773,7 @@ const loadOrderBreakdown = async (order, toDateStr, splitState) => {
 
     let totalWithGst, monthlyBilling, cgst = 0, sgst = 0, igst = 0,
         miscSell, received, creditNotes, tdsProvision, tdsConfirm,
-        invoiceNumber, invoiceDate,   // ← invoiceDate declared here
+        invoiceNumber, invoiceDate,
         billingDays, startDay, endDay, isSelfGST = false
     let rawData = null
 
@@ -507,7 +790,7 @@ const loadOrderBreakdown = async (order, toDateStr, splitState) => {
       tdsProvision  = sumAmount(rec.tdsProvision)
       tdsConfirm    = sumAmount(rec.tdsConfirm)
       invoiceNumber = rec.invoiceNumber || '-'
-      invoiceDate   = rec.invoiceDate   || '-'   // ← read from record
+      invoiceDate   = rec.invoiceDate   || '-'
       billingDays   = rec.billingDays   || getDaysInMonth(m, y)
       startDay      = Number((rec.startDate || '').split('-')[0]) || 1
       endDay        = Number((rec.endDate   || '').split('-')[0]) || getDaysInMonth(m, y)
@@ -545,7 +828,7 @@ const loadOrderBreakdown = async (order, toDateStr, splitState) => {
       igst           = totalWithGst - monthlyBilling
       miscSell = received = creditNotes = tdsProvision = tdsConfirm = 0
       invoiceNumber  = '-'
-      invoiceDate    = '-'   // ← default for calculated rows
+      invoiceDate    = '-'
 
       rawData = {
         miscellaneousSell: [],
@@ -560,7 +843,7 @@ const loadOrderBreakdown = async (order, toDateStr, splitState) => {
       monthYear: monthName, month: m, year: y, billingDays, startDay, endDay,
       monthlyBilling, cgst, sgst, igst, totalWithGst, miscSell,
       received, creditNotes, tdsProvision, tdsConfirm,
-      invoiceNumber, invoiceDate,   // ← both passed into month object
+      invoiceNumber, invoiceDate,
       isSelfGST, rawData
     })
 
@@ -581,12 +864,10 @@ const BreakdownTable = ({ bd, onClose }) => {
   const od = bd.orderDetails
   const sorted = [...bd.months].sort((a, b) => new Date(a.year, a.month) - new Date(b.year, b.month))
 
-  // Check if we have CGST/SGST or IGST
   const hasCGST = sorted.some(m => (m.cgst ?? 0) > 0)
   const hasSGST = sorted.some(m => (m.sgst ?? 0) > 0)
   const hasIGST = sorted.some(m => (m.igst ?? 0) > 0)
 
-  // Running balance rows
   const pool0 = sorted.reduce((s, m) => s + m.received + m.creditNotes + m.tdsConfirm, 0)
   let pool = pool0, running = 0, cumUnpaid = 0
   const rows = sorted.map(m => {
@@ -617,7 +898,6 @@ const BreakdownTable = ({ bd, onClose }) => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/10 to-slate-50 py-6">
         <div className="max-w-[1800px] mx-auto px-4">
           <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
-            {/* Header */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-6">
                 <div>
@@ -628,8 +908,6 @@ const BreakdownTable = ({ bd, onClose }) => {
                     Order: <b className="text-white">{od.orderId}</b> — State: <b className="text-white">{od.state}</b>
                   </p>
                 </div>
-
-                {/* Quick Info Chips */}
                 <div className="flex items-center gap-2">
                   <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1.5">
                     <p className="text-[10px] font-bold text-blue-100 uppercase">Capacity</p>
@@ -645,7 +923,6 @@ const BreakdownTable = ({ bd, onClose }) => {
                   </div>
                 </div>
               </div>
-
               <button
                 onClick={onClose}
                 className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-medium text-sm transition-all"
@@ -654,7 +931,6 @@ const BreakdownTable = ({ bd, onClose }) => {
               </button>
             </div>
 
-            {/* Table */}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -742,21 +1018,18 @@ const BreakdownTable = ({ bd, onClose }) => {
                   </tr>
                 </tfoot>
               </table>
-
-
             </div>
           </div>
         </div>
       </div>
 
-      {/* Month Detail Popup */}
       {viewingMonth && <MonthDetailView monthData={viewingMonth} rawData={viewingMonth.rawData} onClose={() => setViewingMonth(null)} />}
     </>
   )
 }
 
 // ─── Simplified table row ─────────────────────────────────────
-const OrderRow = React.memo(({ order, toDateStr, splitState, onViewBreakdown, onBalanceReady, rowKey, hideLsi }) => {
+const OrderRow = React.memo(({ order, toDateStr, splitState, onViewBreakdown, onBalanceReady, rowKey, hideLsi, selectedMonthLabel }) => {
   const router = useRouter()
   const [bd, setBd] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -776,7 +1049,7 @@ const OrderRow = React.memo(({ order, toDateStr, splitState, onViewBreakdown, on
 
   if (loading) return (
     <tr className="border-b border-slate-100">
-      <td colSpan={hideLsi ? 8 : 9} className="px-4 py-3 text-center text-slate-400 text-sm">
+      <td colSpan={hideLsi ? 9 : 10} className="px-4 py-3 text-center text-slate-400 text-sm">
         <div className="flex items-center justify-center gap-2">
           <div className="animate-spin h-4 w-4 rounded-full border-b-2 border-blue-500" />
           <span>Loading {order.orderId}…</span>
@@ -832,6 +1105,15 @@ const OrderRow = React.memo(({ order, toDateStr, splitState, onViewBreakdown, on
           </button>
         </div>
       </td>
+      {/* ── NEW: AMOUNT STATUS column ── */}
+      <td className="px-4 py-3 bg-slate-50/40">
+        <AmountStatusCell
+          orderId={order.orderId}
+          state={splitState || order.billing1?.state || ''}
+          toDateStr={toDateStr}
+          selectedMonthLabel={selectedMonthLabel}
+        />
+      </td>
       <td className="px-4 py-3 text-center">
         <span className="inline-flex px-3 py-1 bg-purple-50 text-purple-700 text-sm font-bold rounded">
           {splitPct}%
@@ -872,7 +1154,6 @@ export default function OutstandingReportComp() {
   const [selYear, setSelYear] = useState(curYear)
   const [selMonth, setSelMonth] = useState('All')
 
-  // Load orders
   useEffect(() => {
     fetch('/api/billing/orders')
       .then(r => r.json())
@@ -888,12 +1169,10 @@ export default function OutstandingReportComp() {
     setRowBalances(prev => ({ ...prev, [key]: bal }))
   }, [])
 
-  // Reset balances when filters change
   const filterKey = useMemo(() => JSON.stringify({ filters, statusFilter, activeTab, selYear, selMonth }),
     [filters, statusFilter, activeTab, selYear, selMonth])
   useEffect(() => { setRowBalances({}) }, [filterKey])
 
-  // Sync toDate from period selector
   useEffect(() => {
     if (activeTab !== 'period') return
     if (selYear === 'All') {
@@ -914,7 +1193,6 @@ export default function OutstandingReportComp() {
     else { const yn = parseInt(y); setSelYear(yn); setSelMonth(yn === curYear ? ALL_MONTHS[curMonthIdx] : 'All') }
   }
 
-  // Filter orders
   const filteredOrders = useMemo(() => {
     return orders.filter(order => {
       if (filters.search) {
@@ -955,6 +1233,44 @@ export default function OutstandingReportComp() {
 
   const toDateStr = useMemo(() => toStorageFmt(filters.to) || todayDMY, [filters.to, todayDMY])
 
+  // Compute the exact "Month YYYY" label for the selected period.
+  // Used by AmountStatusCell to show only that month's status inline.
+  //
+  // Rules:
+  //  • Period → specific month (e.g. NOV 2025)  → "November 2025"
+  //  • Period → "All" months for a year          → last month of that year
+  //      - current year → current month
+  //      - past/future year → December of that year
+  //  • Period → "All" years                      → null (show latest available)
+  //  • Date Range → derive from filters.to date  → month of the "To" date
+  //      e.g. To = 2026-01-15 → "January 2026"
+  const selectedMonthLabel = useMemo(() => {
+    if (activeTab === 'dateRange') {
+      // Derive from the "To" date field (format: YYYY-MM-DD)
+      if (!filters.to) return null
+      const [yyyy, mm] = filters.to.split('-').map(Number)
+      if (!yyyy || !mm) return null
+      return `${MONTH_NAMES[mm - 1]} ${yyyy}`
+    }
+
+    // Period tab
+    if (selYear === 'All') return null               // All years → null
+
+    const yn = parseInt(selYear)
+
+    if (selMonth !== 'All') {
+      // Specific month chosen
+      const mIdx = ALL_MONTHS.indexOf(selMonth)
+      return mIdx >= 0 ? `${MONTH_NAMES[mIdx]} ${yn}` : null
+    }
+
+    // selMonth === 'All' → use last available month of that year
+    // For current year: last available month = current month
+    // For any other year: December
+    const lastMIdx = (yn === curYear) ? curMonthIdx : 11
+    return `${MONTH_NAMES[lastMIdx]} ${yn}`
+  }, [activeTab, selYear, selMonth, curYear, curMonthIdx, filters.to])
+
   const clearFilters = useCallback(() => {
     const dr = getDefaultDateRange()
     setFilters({ search: '', state: '', company: '', entity: '', from: dr.from, to: dr.to })
@@ -977,7 +1293,6 @@ export default function OutstandingReportComp() {
             <p className="text-sm text-slate-500 mt-0.5">Cumulative balances per order up to selected period</p>
           </div>
 
-          {/* Filters */}
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <div className="relative flex-1 min-w-[180px]">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -1031,7 +1346,6 @@ export default function OutstandingReportComp() {
             )}
             <div className="flex-1" />
 
-            {/* Stats */}
             <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-center">
               <p className="text-[10px] font-bold text-slate-400 uppercase">Orders</p>
               <p className="text-2xl font-extrabold text-slate-900">{filteredOrders.length}</p>
@@ -1041,12 +1355,10 @@ export default function OutstandingReportComp() {
                 ? 'bg-emerald-50 border border-emerald-200'
                 : 'bg-rose-50 border border-rose-200'
               }`}>
-
               <p className={`text-[10px] font-bold uppercase 
     ${totalBalance < 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                 Total Balance
               </p>
-
               {isCalc ? (
                 <div className="flex items-center justify-center gap-2 mt-1">
                   <div className="animate-spin h-5 w-5 rounded-full border-b-2 border-slate-600" />
@@ -1151,7 +1463,7 @@ export default function OutstandingReportComp() {
           )}
         </div>
 
-        {/* Simplified Table */}
+        {/* Table */}
         <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -1164,6 +1476,10 @@ export default function OutstandingReportComp() {
                   <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Company</th>
                   <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">State</th>
                   <th className="px-4 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider bg-yellow-50">Balance</th>
+                  {/* ── NEW COLUMN HEADER ── */}
+                  <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider bg-slate-50">
+                    Amount Status
+                  </th>
                   <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Split</th>
                   <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -1184,6 +1500,7 @@ export default function OutstandingReportComp() {
                           onViewBreakdown={setViewBD}
                           onBalanceReady={handleBalanceReady}
                           hideLsi={hideLsi}
+                          selectedMonthLabel={selectedMonthLabel}
                         />
                         <OrderRow
                           rowKey={`${order._id}-${s2}-${idx}`}
@@ -1193,6 +1510,7 @@ export default function OutstandingReportComp() {
                           onViewBreakdown={setViewBD}
                           onBalanceReady={handleBalanceReady}
                           hideLsi={hideLsi}
+                          selectedMonthLabel={selectedMonthLabel}
                         />
                       </React.Fragment>
                     )
@@ -1207,6 +1525,7 @@ export default function OutstandingReportComp() {
                       onViewBreakdown={setViewBD}
                       onBalanceReady={handleBalanceReady}
                       hideLsi={hideLsi}
+                      selectedMonthLabel={selectedMonthLabel}
                     />
                   )
                 })}
