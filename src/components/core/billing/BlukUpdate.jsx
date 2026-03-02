@@ -285,6 +285,7 @@ const computeAutoSplitAmounts = (rows, totalAmount) => {
           rowKey:        r.rowKey,
           orderId:       r.orderId,
           remAdjPaise,
+           totalChargesPaise:  toPaise((md.totalWithGst || 0) + (md.miscSell || 0)),  // ADD THI
           monthYear:     remAdjEntry?.monthYear || monthKey,
           invoiceNumber: md.invoiceNumber || '-',
           invoiceDate:   md.invoiceDate   || '-',
@@ -305,12 +306,13 @@ const computeAutoSplitAmounts = (rows, totalAmount) => {
 
     if (remainingPaise >= totalNeededPaise) {
       // ── Full month: every row gets paid completely ────────────
-      monthItems.forEach(({ rowKey, remAdjPaise, monthYear, invoiceNumber, invoiceDate }) => {
+      monthItems.forEach(({ rowKey, remAdjPaise,totalChargesPaise, monthYear, invoiceNumber, invoiceDate }) => {
         allocatedPaise[rowKey] += remAdjPaise
         monthlyAdjustments[rowKey].push({
           month:           monthYear,
           invoiceNumber,
           invoiceDate,
+          monthlyAmount:   fromPaise(totalChargesPaise),  
           adjustedAmount:  fromPaise(remAdjPaise),
           remainingAmount: 0,
           amountStatus:    'Fully Paid',
@@ -325,13 +327,14 @@ const computeAutoSplitAmounts = (rows, totalAmount) => {
       console.log(`  ⚡ PARTIAL month ${monthKey} — filling by Order ID asc:`,
         sorted.map(x => `${x.rowKey}=₹${fromPaise(x.remAdjPaise)}`))
 
-      for (const { rowKey, remAdjPaise, monthYear, invoiceNumber, invoiceDate } of sorted) {
+      for (const { rowKey, remAdjPaise, totalChargesPaise,monthYear, invoiceNumber, invoiceDate } of sorted) {
         if (remainingPaise <= 0) {
           // This row gets nothing for this month
           monthlyAdjustments[rowKey].push({
             month:           monthYear,
             invoiceNumber,
             invoiceDate,
+             monthlyAmount:   fromPaise(totalChargesPaise), 
             adjustedAmount:  0,
             remainingAmount: fromPaise(remAdjPaise),
             amountStatus:    'Not Paid',
@@ -350,6 +353,7 @@ const computeAutoSplitAmounts = (rows, totalAmount) => {
           month:           monthYear,
           invoiceNumber,
           invoiceDate,
+            monthlyAmount:   fromPaise(totalChargesPaise),   // ADD THIS
           adjustedAmount:  fromPaise(cover),
           remainingAmount: fromPaise(remaining),
           amountStatus:    cover >= remAdjPaise ? 'Fully Paid' : 'Partially Paid',
@@ -1267,6 +1271,7 @@ export default function BulkUpdate() {
                   month:           adj.month,
                   invoiceNumber:   adj.invoiceNumber   || '-',
                   invoiceDate:     adj.invoiceDate     || '-',
+                   monthlyAmount:   Number(adj.monthlyAmount)   || 0,   // ADD THIS
                   adjustedAmount:  Number(adj.adjustedAmount)  || 0,
                   remainingAmount: Number(adj.remainingAmount) || 0,
                   amountStatus:    adj.amountStatus    || 'Not Paid',

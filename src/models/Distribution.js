@@ -5,6 +5,7 @@ const MonthlyAdjustmentSchema = new mongoose.Schema({
   month:           { type: String, required: true },   // "September 2025"
   invoiceNumber:   { type: String, default: '-' },
   invoiceDate:     { type: String, default: '-' },
+  monthlyAmount:   { type: Number, default: 0 },  
   adjustedAmount:  { type: Number, default: 0 },       // amount paid toward this month
   remainingAmount: { type: Number, default: 0 },       // outstanding after this payment
   amountStatus: {

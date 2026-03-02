@@ -69,6 +69,7 @@ export async function POST(request) {
         month:           String(adj.month           || ''),
         invoiceNumber:   String(adj.invoiceNumber   || '-'),
         invoiceDate:     String(adj.invoiceDate     || '-'),
+        monthlyAmount:   Number(adj.monthlyAmount)  || 0,    // ← ADD THIS
         adjustedAmount:  Number(adj.adjustedAmount) || 0,
         remainingAmount: Number(adj.remainingAmount) || 0,
         amountStatus: ['Fully Paid', 'Partially Paid', 'Not Paid'].includes(adj.amountStatus)

@@ -65,10 +65,9 @@ const fmtCreatedAt = (iso) => {
 const getPaymentMethodMeta = (method) => PAYMENT_METHOD_META[method] || PAYMENT_METHOD_META.cash
 
 // ─── Compute monthly total for an entry ──────────────────────
-// Sum of (adjustedAmount + remainingAmount) across all monthlyAdjustments
 const getMonthlyTotal = (entry) => {
   const adjs = entry.monthlyAdjustments || []
-  if (!adjs.length) return null // no adj data — show dash
+  if (!adjs.length) return null
   return adjs.reduce((s, a) => s + (Number(a.adjustedAmount) || 0) + (Number(a.remainingAmount) || 0), 0)
 }
 
@@ -95,107 +94,77 @@ const StatusPill = ({ adj }) => {
   )
 }
 
-// ─── PDF Entry Card (single column, compact, print-optimized) ─
+// ─── PDF Entry Card ────────────────────────────────────────────
 const PdfEntryCard = ({ entry, index }) => {
-  const adjs = (entry.monthlyAdjustments || []).filter(adj => Number(adj.adjustedAmount) > 0)
+  // ✅ Only show Fully Paid or Partially Paid — skip Not Paid rows
+  const adjs = (entry.monthlyAdjustments || []).filter(adj =>
+    adj.amountStatus === 'Fully Paid' || adj.amountStatus === 'Partially Paid'
+  )
   const hasAdjs = adjs.length > 0
-  const monthlyTotal = getMonthlyTotal(entry)
 
   return (
-    <div style={{
-      border: '1px solid #e2e8f0',
-      borderRadius: '10px',
-      overflow: 'hidden',
-      marginBottom: '10px',
-      breakInside: 'avoid',
-      pageBreakInside: 'avoid',
-      backgroundColor: '#fff'
-    }}>
+    <div className="border border-slate-200 rounded-xl overflow-hidden mb-2.5 bg-white break-inside-avoid">
       {/* Card Header */}
-      <div style={{
-        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-        padding: '10px 14px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: '22px', height: '22px', borderRadius: '6px',
-            background: 'rgba(255,255,255,0.15)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '10px', fontWeight: 900, color: '#fff', flexShrink: 0
-          }}>{index + 1}</div>
+      <div className="bg-gradient-to-br from-slate-800 to-slate-900 px-3.5 py-2.5 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-[22px] h-[22px] rounded-[6px] bg-white/15 flex items-center justify-center text-[10px] font-black text-white flex-shrink-0">
+            {index + 1}
+          </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 900, color: '#fff', fontFamily: 'monospace', letterSpacing: '-0.3px' }}>
+            <div className="flex items-center gap-2">
+              <span className="text-[13px] font-black text-white font-mono tracking-tight">
                 {entry.orderId}
               </span>
               {entry.isSplit && (
-                <span style={{
-                  fontSize: '8px', fontWeight: 900, color: '#c4b5fd',
-                  background: 'rgba(139,92,246,0.3)', border: '1px solid rgba(167,139,250,0.3)',
-                  padding: '1px 6px', borderRadius: '4px', textTransform: 'uppercase'
-                }}>Split {entry.splitPct}%</span>
+                <span className="text-[8px] font-black text-violet-300 bg-violet-500/30 border border-violet-400/30 px-1.5 py-px rounded uppercase">
+                  Split {entry.splitPct}%
+                </span>
               )}
             </div>
             {entry.companyName && (
-              <p style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px', marginBottom: 0 }}>{entry.companyName}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5 mb-0">{entry.companyName}</p>
             )}
           </div>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <p style={{ fontSize: '8px', fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px', marginTop: 0 }}>Amount</p>
-          <p style={{ fontSize: '16px', fontWeight: 900, color: '#34d399', marginTop: 0, marginBottom: 0, lineHeight: 1 }}>₹{fmt(entry.amount)}</p>
-          {monthlyTotal !== null && (
-            <p style={{ fontSize: '9px', color: '#94a3b8', marginTop: '3px', marginBottom: 0 }}>
-              Monthly Total: <span style={{ color: '#fbbf24', fontWeight: 800 }}>₹{fmt(monthlyTotal)}</span>
-            </p>
-          )}
+        <div className="text-right">
+          <p className="text-[14px] font-black text-slate-500 uppercase tracking-widest mb-0.5 mt-0">Amount</p>
+          <p className="text-base font-black text-emerald-400 mt-0 mb-0 leading-none">₹{fmt(entry.amount)}</p>
         </div>
       </div>
 
       {/* Meta row */}
-      <div style={{
-        padding: '7px 14px',
-        background: '#f8fafc',
-        borderBottom: '1px solid #f1f5f9',
-        display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <span style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>State:</span>
-          <span style={{ fontSize: '10px', fontWeight: 700, color: '#4338ca', background: '#eef2ff', border: '1px solid #e0e7ff', padding: '1px 7px', borderRadius: '5px' }}>
+      <div className="px-3.5 py-1.5 bg-slate-50 border-b border-slate-100 flex items-center gap-5 flex-wrap">
+        <div className="flex items-center gap-1">
+          <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">State:</span>
+          <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-1.5 py-px rounded-[5px]">
             {entry.state || '-'}
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <span style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Payment Date:</span>
-          <span style={{ fontSize: '10px', fontWeight: 700, color: '#374151', fontFamily: 'monospace' }}>{entry.date || '-'}</span>
+        <div className="flex items-center gap-1">
+          <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Payment Date:</span>
+          <span className="text-[10px] font-bold text-slate-700 font-mono">{entry.date || '-'}</span>
         </div>
         {entry.month && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <span style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Billing:</span>
-            <span style={{ fontSize: '10px', fontWeight: 700, color: '#374151' }}>{entry.month}</span>
+          <div className="flex items-center gap-1">
+            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Billing:</span>
+            <span className="text-[10px] font-bold text-slate-700">{entry.month}</span>
           </div>
         )}
       </div>
 
-      {/* Invoice Adjustments */}
+      {/* Invoice Adjustments — only Paid / Partial */}
       {hasAdjs && (
-        <div style={{ padding: '10px 14px' }}>
-          <p style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '8px', marginTop: 0 }}>
+        <div className="p-3.5">
+          <p className="text-[8px] font-black text-slate-400 uppercase tracking-[1.5px] mb-2 mt-0">
             Invoice Adjustments ({adjs.length})
           </p>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+          <table className="w-full border-collapse text-[10px]">
             <thead>
-              <tr style={{ background: '#f1f5f9' }}>
-                {['#', 'Month', 'Invoice No', 'Invoice Date', 'Status', 'Adjusted Amt', 'Remaining', 'Monthly Total'].map(h => (
-                  <th key={h} style={{
-                    padding: '5px 8px', textAlign: 'left', fontSize: '8px',
-                    fontWeight: 900, color: '#64748b', textTransform: 'uppercase',
-                    letterSpacing: '0.8px', borderBottom: '1px solid #e2e8f0',
-                    whiteSpace: 'nowrap'
-                  }}>{h}</th>
+              <tr className="bg-slate-100">
+                {['#', 'Month', 'Invoice No', 'Invoice Date', 'Monthly Bill', 'Status', 'Monthly Remaining', 'Adjusted Amt', 'Pending Bill'].map(h => (
+                  <th key={h} className="px-2 py-1.5 text-left text-[8px] font-black text-slate-500 uppercase tracking-[0.8px] border-b border-slate-200 whitespace-nowrap">
+                    {h}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -203,80 +172,56 @@ const PdfEntryCard = ({ entry, index }) => {
               {adjs.map((adj, i) => {
                 const isFullyPaid   = adj.amountStatus === 'Fully Paid'
                 const isPartialPaid = adj.amountStatus === 'Partially Paid'
-                const rowBg = isFullyPaid ? 'rgba(209,250,229,0.3)' : isPartialPaid ? 'rgba(254,243,199,0.3)' : 'rgba(254,226,226,0.3)'
+                const rowBg = isFullyPaid ? 'bg-emerald-50/30' : 'bg-amber-50/30'
                 const rowMonthlyTotal = (Number(adj.adjustedAmount) || 0) + (Number(adj.remainingAmount) || 0)
                 return (
-                  <tr key={i} style={{ background: i % 2 === 0 ? rowBg : '#fff', borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '5px 8px', fontWeight: 700, color: '#94a3b8' }}>{i + 1}</td>
-                    <td style={{ padding: '5px 8px', fontWeight: 800, color: '#1e293b' }}>{adj.month}</td>
-                    <td style={{ padding: '5px 8px', fontWeight: 700, color: '#2563eb', fontFamily: 'monospace', fontSize: '9px' }}>
+                  <tr key={i} className={`${i % 2 === 0 ? rowBg : 'bg-white'} border-b border-slate-50`}>
+                    <td className="px-2 py-1.5 font-bold text-slate-400">{i + 1}</td>
+                    <td className="px-2 py-1.5 font-extrabold text-slate-900">{adj.month}</td>
+                    <td className="px-2 py-1.5 font-bold text-blue-600 font-mono text-[9px]">
                       {adj.invoiceNumber && adj.invoiceNumber !== '-' ? adj.invoiceNumber : '—'}
                     </td>
-                    <td style={{ padding: '5px 8px', color: '#475569' }}>
+                    <td className="px-2 py-1.5 text-slate-500">
                       {adj.invoiceDate && adj.invoiceDate !== '-' ? adj.invoiceDate : '—'}
                     </td>
-                    <td style={{ padding: '5px 8px' }}>
-                      <span style={{
-                        fontSize: '8px', fontWeight: 900, padding: '2px 6px', borderRadius: '20px',
-                        background: isFullyPaid ? '#d1fae5' : isPartialPaid ? '#fef3c7' : '#fee2e2',
-                        color: isFullyPaid ? '#065f46' : isPartialPaid ? '#92400e' : '#991b1b',
-                        border: `1px solid ${isFullyPaid ? '#a7f3d0' : isPartialPaid ? '#fde68a' : '#fecaca'}`,
-                        textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap'
-                      }}>
-                        {isFullyPaid ? 'Fully Paid' : isPartialPaid ? 'Partial' : 'Not Paid'}
+                    <td className="px-2 py-1.5 font-black text-violet-700 text-right whitespace-nowrap">
+                      ₹{fmt(adj.monthlyAmount)}
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-[0.5px] whitespace-nowrap border
+                        ${isFullyPaid
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                          : 'bg-amber-100 text-amber-800 border-amber-200'}`}>
+                        {isFullyPaid ? 'Fully Paid' : 'Partial'}
                       </span>
                     </td>
-                    <td style={{ padding: '5px 8px', fontWeight: 900, color: isFullyPaid ? '#059669' : isPartialPaid ? '#d97706' : '#dc2626', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <td className="px-2 py-1.5 font-black text-violet-700 text-right whitespace-nowrap">
+                      ₹{fmt(rowMonthlyTotal)}
+                    </td>
+                    <td className={`px-2 py-1.5 font-black text-right whitespace-nowrap
+                      ${isFullyPaid ? 'text-emerald-600' : 'text-amber-600'}`}>
                       ₹{fmt(adj.adjustedAmount)}
                     </td>
-                    <td style={{ padding: '5px 8px', color: '#d97706', fontWeight: 700, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      {adj.remainingAmount > 0 ? `₹${fmt(adj.remainingAmount)}` : '—'}
-                    </td>
-                    <td style={{ padding: '5px 8px', fontWeight: 900, color: '#7c3aed', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      ₹{fmt(rowMonthlyTotal)}
+                    <td className="px-2 py-1.5 text-red-700 font-bold text-right whitespace-nowrap">
+                      {Number(adj.remainingAmount) > 0 ? `₹${fmt(adj.remainingAmount)}` : ' ₹0'}
                     </td>
                   </tr>
                 )
               })}
             </tbody>
-            {/* Adj totals footer */}
-            <tfoot>
-              <tr style={{ background: '#f1f5f9', borderTop: '2px solid #e2e8f0' }}>
-                <td colSpan="5" style={{ padding: '5px 8px', fontSize: '8px', fontWeight: 900, color: '#64748b', textTransform: 'uppercase' }}>Totals</td>
-                <td style={{ padding: '5px 8px', fontWeight: 900, color: '#1e293b', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                  ₹{fmt(adjs.reduce((s, a) => s + (Number(a.adjustedAmount) || 0), 0))}
-                </td>
-                <td style={{ padding: '5px 8px', fontWeight: 900, color: '#d97706', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                  ₹{fmt(adjs.reduce((s, a) => s + (Number(a.remainingAmount) || 0), 0))}
-                </td>
-                <td style={{ padding: '5px 8px', fontWeight: 900, color: '#7c3aed', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                  ₹{fmt(adjs.reduce((s, a) => s + (Number(a.adjustedAmount) || 0) + (Number(a.remainingAmount) || 0), 0))}
-                </td>
-              </tr>
-            </tfoot>
           </table>
-
-          {/* Sub-total */}
-          <div style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            marginTop: '8px', paddingTop: '7px', borderTop: '1px solid #e2e8f0'
-          }}>
-            <span style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>
-              {adjs.length} line{adjs.length !== 1 ? 's' : ''} · Entry Total
-            </span>
-            <span style={{ fontSize: '12px', fontWeight: 900, color: '#1e293b' }}>₹{fmt(entry.amount)}</span>
-          </div>
         </div>
       )}
 
       {!hasAdjs && (
-        <div style={{ padding: '8px 14px', borderTop: '1px solid #f1f5f9' }}>
-          <p style={{ fontSize: '10px', color: '#94a3b8', fontStyle: 'italic', margin: 0 }}>Manual distribution — no invoice details</p>
+        <div className="px-3.5 py-2 border-t border-slate-100">
+          <p className="text-[10px] text-slate-400 italic m-0">No paid or partial adjustments recorded</p>
         </div>
       )}
     </div>
   )
 }
+
 
 // ─── Report Modal ─────────────────────────────────────────────
 const ReportModal = React.memo(({ record, onClose }) => {
@@ -319,6 +264,26 @@ const ReportModal = React.memo(({ record, onClose }) => {
   const generatedAt    = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   const recordRef      = record._id?.slice(-8).toUpperCase() || 'N/A'
 
+  const pmIconBg = pm.color === 'blue'
+    ? 'bg-blue-100'
+    : pm.color === 'violet'
+    ? 'bg-violet-100'
+    : pm.color === 'orange'
+    ? 'bg-orange-100'
+    : 'bg-emerald-100'
+
+  const typePillStyle = t.value === 'receivedDetails'
+    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+    : t.value === 'tdsProvision'
+    ? 'bg-amber-50 text-amber-800 border-amber-200'
+    : 'bg-violet-50 text-violet-800 border-violet-200'
+
+  const typeDotStyle = t.value === 'receivedDetails'
+    ? 'bg-emerald-400'
+    : t.value === 'tdsProvision'
+    ? 'bg-amber-400'
+    : 'bg-violet-500'
+
   return (
     <div
       className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-3 overflow-auto"
@@ -353,139 +318,129 @@ const ReportModal = React.memo(({ record, onClose }) => {
 
         {/* Scrollable body */}
         <div className="overflow-auto flex-1 bg-slate-100 p-4">
-          <div id="dist-report-printable" className="bg-white rounded-xl shadow-sm mx-auto" style={{ maxWidth: '800px', fontFamily: 'system-ui, sans-serif' }}>
+          <div id="dist-report-printable" className="bg-white rounded-xl shadow-sm mx-auto max-w-[800px] font-sans">
 
             {/* ── PDF HEADER ── */}
-            <div style={{ padding: '24px 28px 18px', borderBottom: '2px solid #f1f5f9' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div className="px-7 pt-6 pb-5 border-b-2 border-slate-100">
+              <div className="flex justify-between items-start">
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
-                    <div style={{ width: '42px', height: '42px', background: '#0f172a', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Banknote style={{ width: '22px', height: '22px', color: '#fff' }} />
+                  <div className="flex items-center gap-3 mb-2.5">
+                    <div className="w-[42px] h-[42px] bg-slate-900 rounded-[10px] flex items-center justify-center flex-shrink-0">
+                      <Banknote className="w-[22px] h-[22px] text-white" />
                     </div>
                     <div>
-                      <h1 style={{ fontSize: '20px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.5px', lineHeight: 1 }}>
+                      <h1 className="text-xl font-black text-slate-900 m-0 tracking-tight leading-none">
                         PAYMENT DISTRIBUTION REPORT
                       </h1>
-                      <p style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 600, margin: '4px 0 0', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
+                      <p className="text-[10px] text-slate-400 font-semibold mt-1 mb-0 uppercase tracking-[1.5px]">
                         Confidential · Internal Use Only
                       </p>
                     </div>
                   </div>
-                  <div style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '6px',
-                    padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 700,
-                    background: t.value === 'receivedDetails' ? '#ecfdf5' : t.value === 'tdsProvision' ? '#fffbeb' : '#f5f3ff',
-                    color:      t.value === 'receivedDetails' ? '#065f46' : t.value === 'tdsProvision' ? '#92400e' : '#5b21b6',
-                    border:     `1px solid ${t.value === 'receivedDetails' ? '#a7f3d0' : t.value === 'tdsProvision' ? '#fde68a' : '#ddd6fe'}`,
-                  }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: t.value === 'receivedDetails' ? '#34d399' : t.value === 'tdsProvision' ? '#fbbf24' : '#8b5cf6' }} />
+                  <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border ${typePillStyle}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${typeDotStyle}`} />
                     {t.label}
                   </div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <p style={{ fontSize: '9px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px', marginTop: 0 }}>Generated</p>
-                  <p style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b', marginBottom: '2px', marginTop: 0 }}>{generatedOn}</p>
-                  <p style={{ fontSize: '10px', color: '#64748b', marginBottom: '6px', marginTop: 0 }}>{generatedAt}</p>
-                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', display: 'inline-block' }}>
-                    <p style={{ fontSize: '9px', fontFamily: 'monospace', color: '#64748b', fontWeight: 700, margin: 0 }}>#{recordRef}</p>
+                <div className="text-right">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1 mt-0">Generated</p>
+                  <p className="text-[13px] font-bold text-slate-800 mb-0.5 mt-0">{generatedOn}</p>
+                  <p className="text-[10px] text-slate-500 mb-1.5 mt-0">{generatedAt}</p>
+                  <div className="bg-slate-50 border border-slate-200 rounded-[6px] px-2.5 py-1 inline-block">
+                    <p className="text-[9px] font-mono font-bold text-slate-500 m-0">#{recordRef}</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div style={{ padding: '18px 28px' }}>
+            <div className="px-7 py-5">
 
               {/* ── INFO GRID 4-col ── */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px', marginBottom: '14px' }}>
+              <div className="grid grid-cols-4 gap-2.5 mb-3.5">
                 {[
-                  { label: 'Company Group', value: record.companyGroup, bg: '#eff6ff', border: '#bfdbfe', color: '#1e40af' },
-                  { label: 'Payment Date',  value: record.paymentDate,  bg: '#f8fafc', border: '#e2e8f0', color: '#1e293b' },
-                  { label: 'Billing Month', value: record.billingMonth, bg: '#eef2ff', border: '#c7d2fe', color: '#3730a3' },
-                  { label: 'Payment Type',  value: t.label,             bg: '#f8fafc', border: '#e2e8f0', color: '#1e293b' },
-                ].map(({ label, value, bg, border, color }) => (
-                  <div key={label} style={{ background: bg, border: `1px solid ${border}`, borderRadius: '8px', padding: '10px 12px' }}>
-                    <p style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px', marginTop: 0 }}>{label}</p>
-                    <p style={{ fontSize: '13px', fontWeight: 900, color, margin: 0, lineHeight: 1.2 }}>{value || '—'}</p>
+                  { label: 'Company Group', value: record.companyGroup, cls: 'bg-blue-50 border-blue-200 text-blue-800' },
+                  { label: 'Payment Date',  value: record.paymentDate,  cls: 'bg-slate-50 border-slate-200 text-slate-800' },
+                  { label: 'Billing Month', value: record.billingMonth, cls: 'bg-indigo-50 border-indigo-200 text-indigo-800' },
+                  { label: 'Payment Type',  value: t.label,             cls: 'bg-slate-50 border-slate-200 text-slate-800' },
+                ].map(({ label, value, cls }) => (
+                  <div key={label} className={`border rounded-lg px-3 py-2.5 ${cls}`}>
+                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1 mt-0">{label}</p>
+                    <p className="text-[13px] font-black m-0 leading-snug">{value || '—'}</p>
                   </div>
                 ))}
               </div>
 
               {/* ── PAYMENT METHOD ── */}
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 16px', marginBottom: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
-                  <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: pm.color === 'blue' ? '#dbeafe' : pm.color === 'violet' ? '#ede9fe' : pm.color === 'orange' ? '#ffedd5' : '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <PmIcon style={{ width: '16px', height: '16px' }} />
+              <div className="bg-slate-50 border border-slate-200 rounded-[10px] px-4 py-3 mb-3.5">
+                <div className="flex items-center gap-3 mb-2.5">
+                  <div className={`w-[34px] h-[34px] rounded-lg ${pmIconBg} flex items-center justify-center flex-shrink-0`}>
+                    <PmIcon className="w-4 h-4" />
                   </div>
                   <div>
-                    <p style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px', marginTop: 0 }}>Payment Method</p>
-                    <p style={{ fontSize: '13px', fontWeight: 900, textTransform: 'uppercase', color: '#1e293b', margin: 0 }}>{pm.label}</p>
+                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5 mt-0">Payment Method</p>
+                    <p className="text-[13px] font-black uppercase text-slate-900 m-0">{pm.label}</p>
                   </div>
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                <div className="flex flex-wrap gap-2">
                   {record.bankName && (
-                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px' }}>
-                      <p style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px', marginTop: 0 }}>Bank</p>
-                      <p style={{ fontSize: '11px', fontWeight: 700, color: '#374151', margin: 0 }}>{record.bankName}</p>
+                    <div className="bg-white border border-slate-200 rounded-[6px] px-2.5 py-1.5">
+                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5 mt-0">Bank</p>
+                      <p className="text-[11px] font-bold text-slate-700 m-0">{record.bankName}</p>
                     </div>
                   )}
                   {record.chequeNumber && (
-                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px' }}>
-                      <p style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px', marginTop: 0 }}>Cheque No.</p>
-                      <p style={{ fontSize: '11px', fontFamily: 'monospace', fontWeight: 700, color: '#2563eb', margin: 0 }}>{record.chequeNumber}</p>
+                    <div className="bg-white border border-slate-200 rounded-[6px] px-2.5 py-1.5">
+                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5 mt-0">Cheque No.</p>
+                      <p className="text-[11px] font-mono font-bold text-blue-600 m-0">{record.chequeNumber}</p>
                     </div>
                   )}
                   {record.chequeDate && (
-                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px' }}>
-                      <p style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px', marginTop: 0 }}>Cheque Date</p>
-                      <p style={{ fontSize: '11px', fontFamily: 'monospace', fontWeight: 700, color: '#2563eb', margin: 0 }}>{record.chequeDate}</p>
+                    <div className="bg-white border border-slate-200 rounded-[6px] px-2.5 py-1.5">
+                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5 mt-0">Cheque Date</p>
+                      <p className="text-[11px] font-mono font-bold text-blue-600 m-0">{record.chequeDate}</p>
                     </div>
                   )}
                   {record.neftId && (
-                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px' }}>
-                      <p style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px', marginTop: 0 }}>NEFT ID</p>
-                      <p style={{ fontSize: '11px', fontFamily: 'monospace', fontWeight: 700, color: '#7c3aed', margin: 0 }}>{record.neftId}</p>
+                    <div className="bg-white border border-slate-200 rounded-[6px] px-2.5 py-1.5">
+                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5 mt-0">NEFT ID</p>
+                      <p className="text-[11px] font-mono font-bold text-violet-700 m-0">{record.neftId}</p>
                     </div>
                   )}
                   {record.transactionId && (
-                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px' }}>
-                      <p style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px', marginTop: 0 }}>Transaction ID</p>
-                      <p style={{ fontSize: '11px', fontFamily: 'monospace', fontWeight: 700, color: '#ea580c', margin: 0, wordBreak: 'break-all' }}>{record.transactionId}</p>
+                    <div className="bg-white border border-slate-200 rounded-[6px] px-2.5 py-1.5">
+                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5 mt-0">Transaction ID</p>
+                      <p className="text-[11px] font-mono font-bold text-orange-600 m-0 break-all">{record.transactionId}</p>
                     </div>
                   )}
                   {record.paymentNote && (
-                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px' }}>
-                      <p style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px', marginTop: 0 }}>Note</p>
-                      <p style={{ fontSize: '11px', color: '#374151', margin: 0 }}>{record.paymentNote}</p>
+                    <div className="bg-white border border-slate-200 rounded-[6px] px-2.5 py-1.5">
+                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5 mt-0">Note</p>
+                      <p className="text-[11px] text-slate-700 m-0">{record.paymentNote}</p>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* ── TOTAL AMOUNT BANNER ── */}
-              <div style={{
-                background: 'linear-gradient(135deg, #059669 0%, #0d9488 100%)',
-                borderRadius: '12px', padding: '16px 20px',
-                marginBottom: '14px', position: 'relative', overflow: 'hidden'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
+              <div className="bg-gradient-to-br from-emerald-600 to-teal-600 rounded-xl px-5 py-4 mb-3.5 relative overflow-hidden">
+                <div className="flex items-center justify-between relative z-10">
                   <div>
-                    <p style={{ fontSize: '9px', fontWeight: 900, color: '#a7f3d0', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '4px', marginTop: 0 }}>
+                    <p className="text-[9px] font-black text-emerald-200 uppercase tracking-[2px] mb-1 mt-0">
                       Total Amount Distributed
                     </p>
-                    <p style={{ fontSize: '32px', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-1px', lineHeight: 1 }}>
+                    <p className="text-[32px] font-black text-white m-0 tracking-tight leading-none">
                       ₹{fmt(record.totalAmount)}
                     </p>
                   </div>
-                  <div style={{ display: 'flex', gap: '10px' }}>
+                  <div className="flex gap-2.5">
                     {[
                       { label: 'Orders',     value: uniqueOrders   },
                       { label: 'Entries',    value: entries.length },
                       { label: 'Split Rows', value: splitCount     },
                     ].map(({ label, value }) => (
-                      <div key={label} style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '8px', padding: '8px 14px', textAlign: 'center' }}>
-                        <p style={{ fontSize: '20px', fontWeight: 900, color: '#fff', margin: 0, lineHeight: 1 }}>{value}</p>
-                        <p style={{ fontSize: '8px', fontWeight: 700, color: '#a7f3d0', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '4px', marginBottom: 0 }}>{label}</p>
+                      <div key={label} className="bg-white/15 rounded-lg px-3.5 py-2 text-center">
+                        <p className="text-xl font-black text-white m-0 leading-none">{value}</p>
+                        <p className="text-[8px] font-bold text-emerald-200 uppercase tracking-[0.5px] mt-1 mb-0">{label}</p>
                       </div>
                     ))}
                   </div>
@@ -494,32 +449,32 @@ const ReportModal = React.memo(({ record, onClose }) => {
 
               {/* Notes */}
               {record.notes && (
-                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px' }}>
-                  <p style={{ fontSize: '8px', fontWeight: 900, color: '#d97706', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px', marginTop: 0 }}>Reference / Notes</p>
-                  <p style={{ fontSize: '11px', color: '#92400e', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' }}>{record.notes}</p>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg px-3.5 py-2.5 mb-3.5">
+                  <p className="text-[8px] font-black text-amber-600 uppercase tracking-widest mb-1 mt-0">Reference / Notes</p>
+                  <p className="text-[11px] text-amber-900 leading-relaxed m-0 whitespace-pre-wrap">{record.notes}</p>
                 </div>
               )}
 
               {/* ── DISTRIBUTION BREAKDOWN ── */}
-              <div style={{ marginBottom: '18px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                  <h2 style={{ fontSize: '10px', fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '2px', margin: 0, whiteSpace: 'nowrap' }}>
+              <div className="mb-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-[2px] m-0 whitespace-nowrap">
                     Distribution Breakdown
                   </h2>
-                  <div style={{ height: '1px', flex: 1, background: '#e2e8f0' }} />
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748b', background: '#f1f5f9', padding: '3px 10px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
+                  <div className="h-px flex-1 bg-slate-200" />
+                  <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full whitespace-nowrap">
                     {entries.length} entr{entries.length !== 1 ? 'ies' : 'y'}
                   </span>
                   {splitCount > 0 && (
-                    <span style={{ fontSize: '10px', fontWeight: 700, color: '#7c3aed', background: '#ede9fe', padding: '3px 10px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
+                    <span className="text-[10px] font-bold text-violet-700 bg-violet-100 px-2.5 py-0.5 rounded-full whitespace-nowrap">
                       {splitCount} split
                     </span>
                   )}
                 </div>
 
                 {entries.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '30px', background: '#f8fafc', borderRadius: '10px', border: '1px dashed #e2e8f0', color: '#94a3b8' }}>
-                    <p style={{ fontSize: '13px', fontWeight: 700, margin: 0 }}>No entries recorded</p>
+                  <div className="text-center py-8 bg-slate-50 rounded-[10px] border border-dashed border-slate-200 text-slate-400">
+                    <p className="text-[13px] font-bold m-0">No entries recorded</p>
                   </div>
                 ) : (
                   <>
@@ -534,41 +489,38 @@ const ReportModal = React.memo(({ record, onClose }) => {
                     </div>
 
                     {/* Grand total */}
-                    <div style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '12px 18px', background: '#0f172a', borderRadius: '10px', marginTop: '4px'
-                    }}>
+                    <div className="flex items-center justify-between px-4.5 py-3 bg-slate-900 rounded-[10px] mt-1">
                       <div>
-                        <p style={{ fontSize: '9px', fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '2px', marginTop: 0 }}>
+                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-[1.5px] mb-0.5 mt-0">
                           Grand Total — {entries.length} entr{entries.length !== 1 ? 'ies' : 'y'} · {uniqueOrders} order{uniqueOrders !== 1 ? 's' : ''}
                         </p>
                         {Math.abs(totalAllocated - record.totalAmount) > 0.01 && (
-                          <p style={{ fontSize: '9px', color: '#fbbf24', fontWeight: 700, margin: 0 }}>
+                          <p className="text-[9px] text-amber-400 font-bold m-0">
                             ⚠ Sum ₹{fmt(totalAllocated)} vs Recorded ₹{fmt(record.totalAmount)}
                           </p>
                         )}
                       </div>
-                      <p style={{ fontSize: '22px', fontWeight: 900, color: '#fff', margin: 0 }}>₹{fmt(totalAllocated)}</p>
+                      <p className="text-[22px] font-black text-white m-0">₹{fmt(totalAllocated)}</p>
                     </div>
                   </>
                 )}
               </div>
 
               {/* ── FOOTER ── */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '14px', borderTop: '2px dashed #e2e8f0' }}>
+              <div className="flex items-center justify-between pt-3.5 border-t-2 border-dashed border-slate-200">
                 <div>
-                  <p style={{ fontSize: '9px', color: '#94a3b8', fontWeight: 500, marginBottom: '2px', marginTop: 0 }}>
+                  <p className="text-[9px] text-slate-400 font-medium mb-0.5 mt-0">
                     This is a system-generated report. No signature required.
                   </p>
-                  <p style={{ fontSize: '9px', color: '#94a3b8', margin: 0 }}>
+                  <p className="text-[9px] text-slate-400 m-0">
                     Generated on {generatedOn} at {generatedAt} · Record #{recordRef}
                   </p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ width: '28px', height: '28px', background: '#0f172a', borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Banknote style={{ width: '14px', height: '14px', color: '#fff' }} />
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 bg-slate-900 rounded-[7px] flex items-center justify-center flex-shrink-0">
+                    <Banknote className="w-3.5 h-3.5 text-white" />
                   </div>
-                  <span style={{ fontSize: '10px', fontWeight: 900, color: '#475569', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
                     Billing Management System
                   </span>
                 </div>
@@ -856,7 +808,7 @@ export default function DistributedPaymentsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
-                    {['#', 'Company Group', 'Billing Month', 'Payment Date', 'Method', 'Type', 'Total Amount', 'Monthly Amt', 'Entries', 'Submitted At', 'Actions'].map(h => (
+                    {['#', 'Company Group', 'Billing Month', 'Payment Date', 'Method', 'Type', 'Total Amount', 'Entries', 'Submitted At', 'Actions'].map(h => (
                       <th key={h} className="px-4 py-3.5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -866,14 +818,6 @@ export default function DistributedPaymentsPage() {
                     const t      = typeInfo(rec.paymentType)
                     const pm     = getPaymentMethodMeta(rec.paymentMethod)
                     const PmIcon = pm.icon
-
-                    // Monthly Amount = sum of (adjustedAmount + remainingAmount) across ALL entries' adjustments
-                    const monthlyAmt = (rec.entries || []).reduce((sum, entry) => {
-                      const entryTotal = getMonthlyTotal(entry)
-                      return entryTotal !== null ? sum + entryTotal : sum
-                    }, 0)
-                    const hasMonthlyData = (rec.entries || []).some(e => (e.monthlyAdjustments || []).length > 0)
-
                     return (
                       <tr key={rec._id} className="hover:bg-violet-50/30 transition-colors group relative">
                         <td className="px-4 py-3.5 text-xs font-black text-slate-300">{idx + 1}</td>
@@ -903,17 +847,6 @@ export default function DistributedPaymentsPage() {
                         </td>
                         <td className="px-4 py-3.5">
                           <span className="text-base font-black text-emerald-700">₹{fmt(rec.totalAmount)}</span>
-                        </td>
-                        {/* ── NEW: Monthly Amount column ── */}
-                        <td className="px-4 py-3.5">
-                          {hasMonthlyData ? (
-                            <div className="flex flex-col">
-                              <span className="text-sm font-black text-violet-700">₹{fmt(monthlyAmt)}</span>
-                              <span className="text-[9px] font-semibold text-slate-400 mt-0.5">adj + remaining</span>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-slate-300 font-semibold">—</span>
-                          )}
                         </td>
                         <td className="px-4 py-3.5">
                           <span className="inline-flex px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg">{rec.entryCount || 0} entries</span>
