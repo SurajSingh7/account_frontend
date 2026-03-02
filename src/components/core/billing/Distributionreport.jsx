@@ -40,10 +40,10 @@ const PAYMENT_TYPES = [
 ]
 
 const PAYMENT_METHOD_META = {
-  cash:  { label: 'Cash',  icon: Wallet,     color: 'emerald', bg: 'bg-emerald-100', text: 'text-emerald-700' },
-  check: { label: 'Check', icon: CreditCard, color: 'blue',    bg: 'bg-blue-100',    text: 'text-blue-700'    },
-  neft:  { label: 'NEFT',  icon: Building,   color: 'violet',  bg: 'bg-violet-100',  text: 'text-violet-700'  },
-  upi:   { label: 'UPI',   icon: Smartphone, color: 'orange',  bg: 'bg-orange-100',  text: 'text-orange-700'  },
+  cash:   { label: 'Cash',   icon: Wallet,     color: 'emerald', bg: 'bg-emerald-100', text: 'text-emerald-700' },
+  cheque: { label: 'Cheque', icon: CreditCard, color: 'blue',    bg: 'bg-blue-100',    text: 'text-blue-700'    },
+  neft:   { label: 'NEFT',   icon: Building,   color: 'violet',  bg: 'bg-violet-100',  text: 'text-violet-700'  },
+  upi:    { label: 'UPI',    icon: Smartphone, color: 'orange',  bg: 'bg-orange-100',  text: 'text-orange-700'  },
 }
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -63,6 +63,14 @@ const fmtCreatedAt = (iso) => {
     ' ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
 }
 const getPaymentMethodMeta = (method) => PAYMENT_METHOD_META[method] || PAYMENT_METHOD_META.cash
+
+// ─── Compute monthly total for an entry ──────────────────────
+// Sum of (adjustedAmount + remainingAmount) across all monthlyAdjustments
+const getMonthlyTotal = (entry) => {
+  const adjs = entry.monthlyAdjustments || []
+  if (!adjs.length) return null // no adj data — show dash
+  return adjs.reduce((s, a) => s + (Number(a.adjustedAmount) || 0) + (Number(a.remainingAmount) || 0), 0)
+}
 
 // ─── Status Pill ──────────────────────────────────────────────
 const StatusPill = ({ adj }) => {
@@ -91,6 +99,7 @@ const StatusPill = ({ adj }) => {
 const PdfEntryCard = ({ entry, index }) => {
   const adjs = (entry.monthlyAdjustments || []).filter(adj => Number(adj.adjustedAmount) > 0)
   const hasAdjs = adjs.length > 0
+  const monthlyTotal = getMonthlyTotal(entry)
 
   return (
     <div style={{
@@ -138,6 +147,11 @@ const PdfEntryCard = ({ entry, index }) => {
         <div style={{ textAlign: 'right' }}>
           <p style={{ fontSize: '8px', fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px', marginTop: 0 }}>Amount</p>
           <p style={{ fontSize: '16px', fontWeight: 900, color: '#34d399', marginTop: 0, marginBottom: 0, lineHeight: 1 }}>₹{fmt(entry.amount)}</p>
+          {monthlyTotal !== null && (
+            <p style={{ fontSize: '9px', color: '#94a3b8', marginTop: '3px', marginBottom: 0 }}>
+              Monthly Total: <span style={{ color: '#fbbf24', fontWeight: 800 }}>₹{fmt(monthlyTotal)}</span>
+            </p>
+          )}
         </div>
       </div>
 
@@ -175,7 +189,7 @@ const PdfEntryCard = ({ entry, index }) => {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
             <thead>
               <tr style={{ background: '#f1f5f9' }}>
-                {['#', 'Month', 'Invoice No', 'Invoice Date', 'Status', 'Amount', 'Remaining'].map(h => (
+                {['#', 'Month', 'Invoice No', 'Invoice Date', 'Status', 'Adjusted Amt', 'Remaining', 'Monthly Total'].map(h => (
                   <th key={h} style={{
                     padding: '5px 8px', textAlign: 'left', fontSize: '8px',
                     fontWeight: 900, color: '#64748b', textTransform: 'uppercase',
@@ -190,6 +204,7 @@ const PdfEntryCard = ({ entry, index }) => {
                 const isFullyPaid   = adj.amountStatus === 'Fully Paid'
                 const isPartialPaid = adj.amountStatus === 'Partially Paid'
                 const rowBg = isFullyPaid ? 'rgba(209,250,229,0.3)' : isPartialPaid ? 'rgba(254,243,199,0.3)' : 'rgba(254,226,226,0.3)'
+                const rowMonthlyTotal = (Number(adj.adjustedAmount) || 0) + (Number(adj.remainingAmount) || 0)
                 return (
                   <tr key={i} style={{ background: i % 2 === 0 ? rowBg : '#fff', borderBottom: '1px solid #f1f5f9' }}>
                     <td style={{ padding: '5px 8px', fontWeight: 700, color: '#94a3b8' }}>{i + 1}</td>
@@ -215,12 +230,30 @@ const PdfEntryCard = ({ entry, index }) => {
                       ₹{fmt(adj.adjustedAmount)}
                     </td>
                     <td style={{ padding: '5px 8px', color: '#d97706', fontWeight: 700, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      {isPartialPaid && adj.remainingAmount > 0 ? `₹${fmt(adj.remainingAmount)}` : '—'}
+                      {adj.remainingAmount > 0 ? `₹${fmt(adj.remainingAmount)}` : '—'}
+                    </td>
+                    <td style={{ padding: '5px 8px', fontWeight: 900, color: '#7c3aed', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      ₹{fmt(rowMonthlyTotal)}
                     </td>
                   </tr>
                 )
               })}
             </tbody>
+            {/* Adj totals footer */}
+            <tfoot>
+              <tr style={{ background: '#f1f5f9', borderTop: '2px solid #e2e8f0' }}>
+                <td colSpan="5" style={{ padding: '5px 8px', fontSize: '8px', fontWeight: 900, color: '#64748b', textTransform: 'uppercase' }}>Totals</td>
+                <td style={{ padding: '5px 8px', fontWeight: 900, color: '#1e293b', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  ₹{fmt(adjs.reduce((s, a) => s + (Number(a.adjustedAmount) || 0), 0))}
+                </td>
+                <td style={{ padding: '5px 8px', fontWeight: 900, color: '#d97706', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  ₹{fmt(adjs.reduce((s, a) => s + (Number(a.remainingAmount) || 0), 0))}
+                </td>
+                <td style={{ padding: '5px 8px', fontWeight: 900, color: '#7c3aed', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  ₹{fmt(adjs.reduce((s, a) => s + (Number(a.adjustedAmount) || 0) + (Number(a.remainingAmount) || 0), 0))}
+                </td>
+              </tr>
+            </tfoot>
           </table>
 
           {/* Sub-total */}
@@ -277,7 +310,6 @@ const ReportModal = React.memo(({ record, onClose }) => {
     return () => { document.getElementById('dist-report-print')?.remove() }
   }, [])
 
-  // Filter out zero-amount entries
   const entries        = (record.entries || []).filter(e => Number(e.amount) > 0)
   const totalAllocated = entries.reduce((s, e) => s + (Number(e.amount) || 0), 0)
   const splitCount     = entries.filter(e => e.isSplit).length
@@ -382,7 +414,7 @@ const ReportModal = React.memo(({ record, onClose }) => {
               {/* ── PAYMENT METHOD ── */}
               <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 16px', marginBottom: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
-                  <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: pm.bg.replace('bg-', '').includes('blue') ? '#dbeafe' : pm.bg.replace('bg-', '').includes('violet') ? '#ede9fe' : pm.bg.replace('bg-', '').includes('orange') ? '#ffedd5' : '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: pm.color === 'blue' ? '#dbeafe' : pm.color === 'violet' ? '#ede9fe' : pm.color === 'orange' ? '#ffedd5' : '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <PmIcon style={{ width: '16px', height: '16px' }} />
                   </div>
                   <div>
@@ -397,10 +429,16 @@ const ReportModal = React.memo(({ record, onClose }) => {
                       <p style={{ fontSize: '11px', fontWeight: 700, color: '#374151', margin: 0 }}>{record.bankName}</p>
                     </div>
                   )}
-                  {record.checkNumber && (
+                  {record.chequeNumber && (
                     <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px' }}>
-                      <p style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px', marginTop: 0 }}>Check No.</p>
-                      <p style={{ fontSize: '11px', fontFamily: 'monospace', fontWeight: 700, color: '#2563eb', margin: 0 }}>{record.checkNumber}</p>
+                      <p style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px', marginTop: 0 }}>Cheque No.</p>
+                      <p style={{ fontSize: '11px', fontFamily: 'monospace', fontWeight: 700, color: '#2563eb', margin: 0 }}>{record.chequeNumber}</p>
+                    </div>
+                  )}
+                  {record.chequeDate && (
+                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px' }}>
+                      <p style={{ fontSize: '8px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px', marginTop: 0 }}>Cheque Date</p>
+                      <p style={{ fontSize: '11px', fontFamily: 'monospace', fontWeight: 700, color: '#2563eb', margin: 0 }}>{record.chequeDate}</p>
                     </div>
                   )}
                   {record.neftId && (
@@ -485,7 +523,6 @@ const ReportModal = React.memo(({ record, onClose }) => {
                   </div>
                 ) : (
                   <>
-                    {/* Single-column cards */}
                     <div>
                       {entries.map((entry, idx) => (
                         <PdfEntryCard
@@ -819,7 +856,7 @@ export default function DistributedPaymentsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
-                    {['#', 'Company Group', 'Billing Month', 'Payment Date', 'Method', 'Type', 'Total Amount', 'Entries', 'Submitted At', 'Actions'].map(h => (
+                    {['#', 'Company Group', 'Billing Month', 'Payment Date', 'Method', 'Type', 'Total Amount', 'Monthly Amt', 'Entries', 'Submitted At', 'Actions'].map(h => (
                       <th key={h} className="px-4 py-3.5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -829,6 +866,14 @@ export default function DistributedPaymentsPage() {
                     const t      = typeInfo(rec.paymentType)
                     const pm     = getPaymentMethodMeta(rec.paymentMethod)
                     const PmIcon = pm.icon
+
+                    // Monthly Amount = sum of (adjustedAmount + remainingAmount) across ALL entries' adjustments
+                    const monthlyAmt = (rec.entries || []).reduce((sum, entry) => {
+                      const entryTotal = getMonthlyTotal(entry)
+                      return entryTotal !== null ? sum + entryTotal : sum
+                    }, 0)
+                    const hasMonthlyData = (rec.entries || []).some(e => (e.monthlyAdjustments || []).length > 0)
+
                     return (
                       <tr key={rec._id} className="hover:bg-violet-50/30 transition-colors group relative">
                         <td className="px-4 py-3.5 text-xs font-black text-slate-300">{idx + 1}</td>
@@ -858,6 +903,17 @@ export default function DistributedPaymentsPage() {
                         </td>
                         <td className="px-4 py-3.5">
                           <span className="text-base font-black text-emerald-700">₹{fmt(rec.totalAmount)}</span>
+                        </td>
+                        {/* ── NEW: Monthly Amount column ── */}
+                        <td className="px-4 py-3.5">
+                          {hasMonthlyData ? (
+                            <div className="flex flex-col">
+                              <span className="text-sm font-black text-violet-700">₹{fmt(monthlyAmt)}</span>
+                              <span className="text-[9px] font-semibold text-slate-400 mt-0.5">adj + remaining</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-300 font-semibold">—</span>
+                          )}
                         </td>
                         <td className="px-4 py-3.5">
                           <span className="inline-flex px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg">{rec.entryCount || 0} entries</span>

@@ -40,7 +40,7 @@ const AMOUNT_TYPES = [
 
 const PAYMENT_METHODS = [
   { value: 'cash', label: 'Cash', icon: Wallet, color: 'emerald' },
-  { value: 'check', label: 'Check', icon: CreditCard, color: 'blue' },
+  { value: 'cheque', label: 'Cheque', icon: CreditCard, color: 'blue' },
   { value: 'neft', label: 'NEFT', icon: Building, color: 'violet' },
   { value: 'upi', label: 'UPI', icon: Smartphone, color: 'orange' },
 ]
@@ -843,7 +843,6 @@ const InlineDistributionTable = ({ billingRows, paymentData, amountType, onBack,
   const typeInfo = AMOUNT_TYPES.find(t => t.value === amountType)
   const todayStr = todayDDMMYYYY()
 
-  // ✅ FIX 1: Added monthlyAdjustments: [] to initial row state
   const [rows, setRows] = useState(() =>
     billingRows.map(({ order, state, splitPct, rowKey, isSplit }) => ({
       rowKey, orderId: order.orderId, companyName: order.companyName,
@@ -871,7 +870,6 @@ const InlineDistributionTable = ({ billingRows, paymentData, amountType, onBack,
     })
   }, []) // eslint-disable-line
 
-  // ✅ FIX 2: applyMode now correctly destructures { allocated, monthlyAdjustments }
   const applyMode = useCallback((currentRows, mode) => {
     if (mode === 'auto') {
       if (currentRows.some(r => r.checked && r.balanceLoading)) {
@@ -885,7 +883,6 @@ const InlineDistributionTable = ({ billingRows, paymentData, amountType, onBack,
         : { ...r, amount: String(allocated[r.rowKey] ?? 0), monthlyAdjustments: monthlyAdjustments[r.rowKey] || [] }
       )
     }
-    // Manual mode: clear auto-generated adjustments
     return currentRows.map(r => ({ ...r, monthlyAdjustments: [] }))
   }, [paymentData.amount])
 
@@ -933,7 +930,6 @@ const InlineDistributionTable = ({ billingRows, paymentData, amountType, onBack,
   const displayMonth = (() => { const [y, m] = paymentData.month.split('-'); return `${ALL_MONTHS[parseInt(m) - 1]} ${y}` })()
   const pct = paymentData.amount > 0 ? Math.min(100, (totalAlloc / paymentData.amount) * 100) : 0
 
-  // ✅ FIX 3: handleSubmit forwards monthlyAdjustments per entry
   const handleSubmit = () => {
     if (!canSubmit) return
     const entries = rows.filter(r => r.checked && Number(r.amount) >= 0).map(r => ({
@@ -1140,7 +1136,8 @@ export default function BulkUpdate() {
     notes: buildPoint1(initialDate, ''),
     paymentMethod: 'cash',
     bankName: '',
-    checkNumber: '',
+    chequeNumber: '',
+    chequeDate: '',
     neftId: '',
     transactionId: '',
     paymentNote: ''
@@ -1195,7 +1192,8 @@ export default function BulkUpdate() {
       if (k === 'amount') { const e = getUserExtra(prev.notes); next.notes = buildPoint1(prev.date, v) + (e ? `\n${e}` : '') }
       if (k === 'paymentMethod') {
         next.bankName = ''
-        next.checkNumber = ''
+        next.chequeNumber = ''
+        next.chequeDate = ''
         next.neftId = ''
         next.transactionId = ''
         next.paymentNote = ''
@@ -1248,12 +1246,12 @@ export default function BulkUpdate() {
               notes:         capturedPaymentData.notes || '',
               paymentMethod: capturedPaymentData.paymentMethod || 'cash',
               bankName:      capturedPaymentData.bankName      || '',
-              checkNumber:   capturedPaymentData.checkNumber   || '',
+              chequeNumber:  capturedPaymentData.chequeNumber  || '',
+              chequeDate:    capturedPaymentData.chequeDate    || '',
               neftId:        capturedPaymentData.neftId        || '',
               transactionId: capturedPaymentData.transactionId || '',
               paymentNote:   capturedPaymentData.paymentNote   || '',
               entryCount:    entries.length,
-              // ✅ monthlyAdjustments forwarded per entry to API
               entries: entries.map(e => ({
                 orderId:     e.orderId,
                 companyName: e.companyName  || '',
@@ -1304,7 +1302,8 @@ export default function BulkUpdate() {
         notes: buildPoint1(nd, ''),
         paymentMethod: 'cash',
         bankName: '',
-        checkNumber: '',
+        chequeNumber: '',
+        chequeDate: '',
         neftId: '',
         transactionId: '',
         paymentNote: ''
@@ -1447,7 +1446,7 @@ export default function BulkUpdate() {
                               className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white" />
                           </div>
                         )}
-                        {form.paymentMethod === 'check' && (
+                        {form.paymentMethod === 'cheque' && (
                           <>
                             <div>
                               <label className="block text-xs font-medium text-slate-600 mb-1.5">Bank Name <span className="text-slate-400">(optional)</span></label>
@@ -1455,8 +1454,13 @@ export default function BulkUpdate() {
                                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white" />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-slate-600 mb-1.5">Check Number</label>
-                              <input type="text" value={form.checkNumber} onChange={e => handleField('checkNumber', e.target.value)} placeholder="Enter check number..."
+                              <label className="block text-xs font-medium text-slate-600 mb-1.5">Cheque Number</label>
+                              <input type="text" value={form.chequeNumber} onChange={e => handleField('chequeNumber', e.target.value)} placeholder="Enter cheque number..."
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white" />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 mb-1.5">Cheque Date</label>
+                              <input type="date" value={form.chequeDate} onChange={e => handleField('chequeDate', e.target.value)}
                                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white" />
                             </div>
                             <div>
@@ -1552,16 +1556,22 @@ export default function BulkUpdate() {
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Method</p>
                         <p className={`text-sm font-bold text-${selectedPaymentMethod?.color}-700`}>{selectedPaymentMethod?.label}</p>
                       </div>
-                      {form.paymentMethod === 'check' && form.bankName && (
+                      {form.paymentMethod === 'cheque' && form.bankName && (
                         <div className="bg-white rounded-lg p-3 border border-slate-200">
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Bank Name</p>
                           <p className="text-sm font-semibold text-slate-800">{form.bankName}</p>
                         </div>
                       )}
-                      {form.paymentMethod === 'check' && form.checkNumber && (
+                      {form.paymentMethod === 'cheque' && form.chequeNumber && (
                         <div className="bg-white rounded-lg p-3 border border-slate-200">
-                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Check Number</p>
-                          <p className="text-sm font-mono font-bold text-blue-700">{form.checkNumber}</p>
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Cheque Number</p>
+                          <p className="text-sm font-mono font-bold text-blue-700">{form.chequeNumber}</p>
+                        </div>
+                      )}
+                      {form.paymentMethod === 'cheque' && form.chequeDate && (
+                        <div className="bg-white rounded-lg p-3 border border-slate-200">
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Cheque Date</p>
+                          <p className="text-sm font-mono font-bold text-blue-700">{toDisplayDate(form.chequeDate)}</p>
                         </div>
                       )}
                       {form.paymentMethod === 'neft' && form.bankName && (

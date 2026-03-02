@@ -43,7 +43,7 @@ export async function POST(request) {
     const {
       companyGroup, paymentType, paymentDate, billingMonth, totalAmount,
       notes, entries,
-      paymentMethod, bankName, checkNumber, neftId, transactionId, paymentNote,
+      paymentMethod, bankName, chequeNumber, chequeDate, neftId, transactionId, paymentNote,
     } = body;
 
     if (!companyGroup || !paymentType || !paymentDate || !billingMonth || totalAmount === undefined) {
@@ -88,7 +88,8 @@ export async function POST(request) {
       entryCount:    cleanEntries.length,
       paymentMethod:  String(paymentMethod  || 'cash'),
       bankName:       String(bankName       || ''),
-      checkNumber:    String(checkNumber    || ''),
+      chequeNumber:   String(chequeNumber   || ''),
+      chequeDate:     String(chequeDate     || ''),
       neftId:         String(neftId         || ''),
       transactionId:  String(transactionId  || ''),
       paymentNote:    String(paymentNote    || ''),

@@ -47,10 +47,11 @@ const DistributedPaymentSchema = new mongoose.Schema({
   paymentMethod: {
     type: String,
     default: 'cash',
-    enum: ['cash', 'check', 'neft', 'upi'],
+    enum: ['cash', 'cheque', 'neft', 'upi'],
   },
   bankName:      { type: String, default: '' },
-  checkNumber:   { type: String, default: '' },
+  chequeNumber:  { type: String, default: '' },
+  chequeDate:    { type: String, default: '' },   // DD-MM-YYYY
   neftId:        { type: String, default: '' },
   transactionId: { type: String, default: '' },
   paymentNote:   { type: String, default: '' },
