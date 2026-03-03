@@ -51,9 +51,8 @@ const calculateCreditNotesTotal = (arr, isSelfGST = false) => {
     const amt = Number(item.amount) || 0;
     const saved = Number(item.totalWithGst) || 0;
     if (saved > 0) return sum + saved;
-    // Old record: amount exists but GST was never calculated — derive it
     if (amt > 0) {
-      const gst = amt * 0.18; // 9+9 CGST+SGST or 18 IGST — both equal 18%
+      const gst = amt * 0.18;
       return sum + Math.round((amt + gst) * 100) / 100;
     }
     return sum;
@@ -61,12 +60,10 @@ const calculateCreditNotesTotal = (arr, isSelfGST = false) => {
 };
 
 // ── Auto-fix existing credit notes loaded from DB that have amount but missing GST.
-//    Called once when BillingDetailModal initialises, so view/edit both see correct values.
 const recalcCreditNoteGST = (creditNotes, isSelfGST) => {
   if (!creditNotes || creditNotes.length === 0) return [];
   return creditNotes.map((cn) => {
     const amt = Number(cn.amount) || 0;
-    // Only patch records where amount > 0 but totalWithGst was never set
     if (amt > 0 && (Number(cn.totalWithGst) || 0) === 0) {
       const cgst = isSelfGST ? Math.round(amt * 0.09 * 100) / 100 : 0;
       const sgst = isSelfGST ? Math.round(amt * 0.09 * 100) / 100 : 0;
@@ -89,8 +86,6 @@ const buildCNInvoiceNumber = (billingMonth) => {
 
 // ─── BillingDetailModal ────────────────────────────────────────────────────────
 const BillingDetailModal = ({ billing, mode, onClose, onSave, onDelete, onModeChange }) => {
-  // ── KEY FIX: auto-recalculate GST for credit notes that lack it (old DB records)
-  //    so both view and edit modes show correct pre-filled values immediately.
   const buildInitialData = (b) => ({
     ...b,
     creditNotes: recalcCreditNoteGST(b.creditNotes, b.isSelfGST || false),
@@ -99,7 +94,6 @@ const BillingDetailModal = ({ billing, mode, onClose, onSave, onDelete, onModeCh
   const [editFormData, setEditFormData] = useState(() => buildInitialData(billing));
   const isEditMode = mode === 'edit';
 
-  // Re-sync if parent billing changes (e.g. after save+refresh)
   useEffect(() => {
     setEditFormData(buildInitialData(billing));
   }, [billing]);
@@ -146,6 +140,14 @@ const BillingDetailModal = ({ billing, mode, onClose, onSave, onDelete, onModeCh
     }
     setEditFormData(prev => ({ ...prev, [arrayName]: updated }));
   };
+
+  // ── Derive invoice date label hint
+  const invoiceDateHint = (() => {
+    const sd = editFormData.startDate || '';
+    const parts = sd.split('-');
+    if (parts.length === 3 && parts[0] === '01') return '2nd of month';
+    return 'start + 1 day';
+  })();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50">
@@ -245,6 +247,7 @@ const BillingDetailModal = ({ billing, mode, onClose, onSave, onDelete, onModeCh
               <input type="number" value={editFormData.totalWithGst.toFixed(2)} disabled className="w-full px-4 py-3 border-2 border-green-300 rounded-lg bg-green-50 text-green-900 font-bold" />
             </div>
 
+            {/* Invoice Number */}
             <div>
               <label className="text-sm font-semibold text-gray-600 mb-2 block">Invoice Number</label>
               <input type="text"
@@ -255,6 +258,34 @@ const BillingDetailModal = ({ billing, mode, onClose, onSave, onDelete, onModeCh
                 className={`w-full px-4 py-3 border-2 rounded-lg font-medium ${isEditMode ? 'border-blue-300 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none' : 'border-gray-200 bg-gray-50 text-gray-900'}`} />
             </div>
 
+            {/* Invoice Date — auto-filled as startDate + 1 day, editable */}
+            <div>
+              <label className="text-sm font-semibold text-gray-600 mb-2 flex items-center gap-2">
+                Invoice Date
+                <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-bold leading-none">
+                  {invoiceDateHint}
+                </span>
+              </label>
+              <input
+                type="date"
+                value={formatDateToInput(editFormData.invoiceDate || '')}
+                onChange={(e) =>
+                  isEditMode &&
+                  setEditFormData(prev => ({ ...prev, invoiceDate: formatDateToDisplay(e.target.value) }))
+                }
+                disabled={!isEditMode}
+                className={`w-full px-4 py-3 border-2 rounded-lg font-medium ${
+                  isEditMode
+                    ? 'border-blue-300 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none'
+                    : 'border-gray-200 bg-gray-50 text-gray-900'
+                }`}
+              />
+              {editFormData.invoiceDate && (
+                <p className="text-xs text-gray-500 mt-1">{editFormData.invoiceDate}</p>
+              )}
+            </div>
+
+            {/* Status */}
             <div>
               <label className="text-sm font-semibold text-gray-600 mb-2 block">Status</label>
               <select
@@ -434,7 +465,6 @@ const CreditNotesSection = ({
           const selectedDays = s && e && e > s ? Math.round((e - s) / (1000 * 60 * 60 * 24)) : 0;
           const hasPeriod = !!detail.periodStart && !!detail.periodEnd && selectedDays > 0;
 
-          // ── Always derive correct display values (handles old records with missing GST)
           const amt = Number(detail.amount) || 0;
           const displayCGST = Number(detail.cgst) || (isSelfGST ? Math.round(amt * 0.09 * 100) / 100 : 0);
           const displaySGST = Number(detail.sgst) || (isSelfGST ? Math.round(amt * 0.09 * 100) / 100 : 0);
@@ -446,7 +476,6 @@ const CreditNotesSection = ({
           return (
             <div key={index} className="rounded-xl border border-gray-200 overflow-hidden bg-gray-50">
 
-              {/* Formula / info banner */}
               {hasPeriod ? (
                 <div className="px-4 py-2.5 bg-gradient-to-r from-cyan-50 to-teal-50 border-b border-cyan-200 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-cyan-800 font-semibold">
                   <CalendarIcon className="w-3.5 h-3.5 flex-shrink-0 text-cyan-600" />
@@ -461,7 +490,6 @@ const CreditNotesSection = ({
                   <span className="ml-auto text-cyan-500 font-normal">({detail.periodStart} → {detail.periodEnd})</span>
                 </div>
               ) : amt > 0 ? (
-                // Old records: no period but has amount — show derived GST info
                 <div className="px-4 py-2.5 bg-gradient-to-r from-amber-50 to-yellow-50 border-b border-amber-200 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-amber-800 font-semibold">
                   <Receipt className="w-3.5 h-3.5 flex-shrink-0 text-amber-600" />
                   <span>
@@ -527,7 +555,6 @@ const CreditNotesSection = ({
                   <label className="text-xs font-semibold text-gray-600 mb-1 flex items-center gap-1">
                     Amount (Basic) <span className="px-1.5 py-0.5 bg-teal-100 text-teal-700 rounded text-[10px] font-bold leading-none">AUTO</span>
                   </label>
-                  {/* ── Always shows the stored basic amount */}
                   <input type="number" value={amt.toFixed(2)} disabled
                     className="w-full px-3 py-2 border border-teal-300 rounded-lg text-sm bg-teal-50 text-teal-900 font-extrabold cursor-not-allowed" />
                   {hasPeriod
@@ -538,7 +565,6 @@ const CreditNotesSection = ({
                   <label className="text-xs font-semibold text-gray-600 mb-1 flex items-center gap-1">
                     CGST (9%) <span className="px-1.5 py-0.5 bg-teal-100 text-teal-700 rounded text-[10px] font-bold leading-none">AUTO</span>
                   </label>
-                  {/* ── Shows derived CGST even for old records */}
                   <input type="number" value={displayCGST.toFixed(2)} disabled className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-700 cursor-not-allowed" />
                 </div>
                 <div>
@@ -557,7 +583,6 @@ const CreditNotesSection = ({
                   <label className="text-xs font-semibold text-gray-600 mb-1 flex items-center gap-1">
                     Total + GST <span className="px-1.5 py-0.5 bg-teal-100 text-teal-700 rounded text-[10px] font-bold leading-none">AUTO</span>
                   </label>
-                  {/* ── KEY: shows correct total+GST even for old records — never 0 when amount exists */}
                   <input type="number" value={displayTotal.toFixed(2)} disabled className="w-full px-3 py-2 border border-green-300 rounded-lg text-sm bg-green-50 text-green-900 font-extrabold cursor-not-allowed" />
                 </div>
                 <div>
@@ -721,13 +746,11 @@ const MonthlyBillGeneratorComp = () => {
       const pm = (s) => { const [mn, y] = s.split(' '); return new Date(parseInt(y), monthOrder.indexOf(mn)); };
       return pm(a.month) - pm(b.month);
     });
-    // ── Use GST-aware credit total for credit pool
     const totalCreditPool = sorted.reduce((sum, b) =>
       sum + calculateTotal(b.receivedDetails) + calculateCreditNotesTotal(b.creditNotes, b.isSelfGST) + calculateTotal(b.tdsConfirm), 0);
     let creditPool = totalCreditPool;
     return sorted.map((billing) => {
       const monthlyReceived = calculateTotal(billing.receivedDetails);
-      // ── Credit Notes: always include GST (handles old and new records)
       const monthlyCreditNotes = calculateCreditNotesTotal(billing.creditNotes, billing.isSelfGST);
       const monthlyMiscSell = calculateMiscSellTotal(billing.miscellaneousSell);
       const monthlyTDSProv = calculateTotal(billing.tdsProvision);
@@ -769,7 +792,8 @@ const MonthlyBillGeneratorComp = () => {
     } catch (e) { alert(`❌ Failed to generate billings:\n${e.message}`); }
     finally { setLoading(false); }
   };
-  const formatDateToDisplay = (storedDate) => {
+
+  const formatDateToDisplayLocal = (storedDate) => {
     if (!storedDate) return '';
     try {
       const d = new Date(storedDate);
@@ -778,9 +802,7 @@ const MonthlyBillGeneratorComp = () => {
         const month = String(d.getMonth() + 1).padStart(2, '0');
         return `${day}-${month}-${d.getFullYear()}`;
       }
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) { console.error(e); }
     return storedDate;
   };
 
@@ -891,7 +913,7 @@ const MonthlyBillGeneratorComp = () => {
             <div className="space-y-1"><p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Company Name</p><p className="text-base font-bold text-gray-900">{orderDetails.companyName}</p></div>
             <div className="space-y-1"><p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Entity</p><span className="inline-block px-3 py-1 bg-orange-100 text-orange-700 rounded-lg text-sm font-bold">{orderDetails.entity}</span></div>
             <div className="space-y-1"><p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Product</p><span className="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm font-bold">{orderDetails.product}</span></div>
-            <div className="space-y-1"><p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">PCD Date</p><p className="text-base font-bold text-gray-900 flex items-center gap-1"><CalendarIcon className="w-4 h-4 text-blue-600" />{formatDateToDisplay(orderDetails.pcdDate)}</p></div>
+            <div className="space-y-1"><p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">PCD Date</p><p className="text-base font-bold text-gray-900 flex items-center gap-1"><CalendarIcon className="w-4 h-4 text-blue-600" />{formatDateToDisplayLocal(orderDetails.pcdDate)}</p></div>
             <div className="space-y-1"><p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Capacity</p><p className="text-base font-bold text-gray-900">{orderDetails.capacity} Mbps</p></div>
             {orderDetails.splitFactor?.isApplicable && (
               <div className="space-y-1"><p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Split Factor</p>
@@ -961,6 +983,7 @@ const MonthlyBillGeneratorComp = () => {
                   <th className="px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Month</th>
                   <th className="px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Days</th>
                   <th className="px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Period</th>
+                  <th className="px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Invoice Date</th>
                   <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Monthly Billing</th>
                   {hasGSTColumns.hasCGST && <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">CGST (9%)</th>}
                   {hasGSTColumns.hasSGST && <th className="px-3 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">SGST (9%)</th>}
@@ -984,7 +1007,12 @@ const MonthlyBillGeneratorComp = () => {
                     <tr key={billing._id} className={`border-b border-gray-100 transition-all ${index % 2 === 0 ? 'bg-white hover:bg-blue-50/50' : 'bg-gray-50/50 hover:bg-blue-50/50'}`}>
                       <td className="px-3 py-4 text-sm font-semibold text-gray-900">{billing.month}</td>
                       <td className="px-3 py-4 text-center text-sm font-semibold text-gray-900">{billing.billingDays}</td>
-                      <td className="px-3 py-4 text-sm text-gray-700 font-medium"><div className="flex flex-col text-xs"><span>{billing.startDate}</span><span>{billing.endDate}</span></div></td>
+                      <td className="px-3 py-4 text-sm text-gray-700 font-medium">
+                        <div className="flex flex-col text-xs"><span>{billing.startDate}</span><span>{billing.endDate}</span></div>
+                      </td>
+                      <td className="px-3 py-4 text-sm font-semibold text-blue-700">
+                        {billing.invoiceDate || <span className="text-gray-400 text-xs">—</span>}
+                      </td>
                       <td className="px-3 py-4 text-right text-sm font-bold text-gray-900">₹{fmt(billing.monthlyBilling ?? 0)}</td>
                       {hasGSTColumns.hasCGST && <td className="px-3 py-4 text-right text-sm font-semibold text-gray-700">₹{fmt(billing.cgst ?? 0)}</td>}
                       {hasGSTColumns.hasSGST && <td className="px-3 py-4 text-right text-sm font-semibold text-gray-700">₹{fmt(billing.sgst ?? 0)}</td>}
@@ -1017,7 +1045,7 @@ const MonthlyBillGeneratorComp = () => {
               </tbody>
               <tfoot className="bg-gradient-to-r from-gray-100 to-blue-100 border-t-2 border-gray-300">
                 <tr className="font-bold">
-                  <td className="px-3 py-4 text-sm text-gray-900" colSpan="3">TOTAL</td>
+                  <td className="px-3 py-4 text-sm text-gray-900" colSpan="4">TOTAL</td>
                   <td className="px-3 py-4 text-right text-sm text-gray-900">₹{fmt(totals.monthlyBilling)}</td>
                   {hasGSTColumns.hasCGST && <td className="px-3 py-4 text-right text-sm text-gray-700">₹{fmt(totals.cgst)}</td>}
                   {hasGSTColumns.hasSGST && <td className="px-3 py-4 text-right text-sm text-gray-700">₹{fmt(totals.sgst)}</td>}
