@@ -9,6 +9,7 @@ const ENTITIES   = ["WIBRO", "GTEL", "GISPL"];
 const PRODUCTS   = ["ILL", "NLD", "DIA"];
 const STATUSES   = ["PCD", "Terminate"];
 const ORDER_TYPES= ["NEW-ORDER", "UPGRADE", "DOWNGRADE"];
+const BSO_OPTIONS= ["Airtel", "Tata", "Vodafone"];
 
 export const INDIAN_STATES = [
   { key: "AP", name: "Andhra Pradesh",          code: "28" },
@@ -76,7 +77,6 @@ const convertDateForStorage = (inputDate) => {
   const [year, month, day] = inputDate.split('-');
   return `${day}-${month}-${year}`;
 };
-// Converts ANY date format → "yyyy-mm-dd" string for <input type="date">
 const convertDateForInput = (storedDate) => {
   if (!storedDate) return '';
   try {
@@ -97,36 +97,30 @@ const convertDateForInput = (storedDate) => {
   }
 };
 
-
 const formatDateToDisplay = (storedDate) => {
   if (!storedDate) return '';
   try {
     const d = new Date(storedDate);
     if (!isNaN(d.getTime())) {
-      const day = String(d.getDate()).padStart(2, '0');      // ✅ local
-      const month = String(d.getMonth() + 1).padStart(2, '0'); // ✅ local
-      return `${day}-${month}-${d.getFullYear()}`; // ✅ local
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      return `${day}-${month}-${d.getFullYear()}`;
     }
   } catch(e) { console.error(e); }
   return storedDate;
 };
 
-
-// Converts ANY stored date format → JS Date object for filter comparisons
 const parseStoredDate = (storedDate) => {
   if (!storedDate) return null;
   try {
-    // ISO string or anything new Date() can parse
     if (storedDate.includes('T') || storedDate.includes('Z') || storedDate.length > 10) {
       const d = new Date(storedDate);
       if (!isNaN(d.getTime())) return d;
     }
-    // "dd-mm-yyyy"
     if (storedDate.includes('-') && storedDate.split('-')[0].length <= 2) {
       const [day, month, year] = storedDate.split('-');
       return new Date(Number(year), Number(month) - 1, Number(day));
     }
-    // "yyyy-mm-dd"
     if (storedDate.includes('-') && storedDate.split('-')[0].length === 4) {
       const d = new Date(storedDate);
       if (!isNaN(d.getTime())) return d;
@@ -286,7 +280,6 @@ const CompanyNamePopup = ({ companyName, onClose }) => {
 // ─── ViewDetailsModal ────────────────────────────────────────────────────────
 const ViewDetailsModal = ({ order, onClose }) => {
   if (!order) return null;
-  // Resolve GST details for display
   const gst1 = order.gstDetails1 || order.gstDetails || {};
   const gst2 = order.gstDetails2 || {};
   const isNLD = order.product === 'NLD';
@@ -303,19 +296,20 @@ const ViewDetailsModal = ({ order, onClose }) => {
         </div>
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
           <Section title="Basic Info">
-            <Detail label="Company"     value={order.companyName} />
+            <Detail label="Company"       value={order.companyName} />
             <Detail label="Company Group" value={order.companyGroup} />
-            <Detail label="Entity"      value={order.entity} />
-            <Detail label="Product"     value={order.product} />
-            <Detail label="Order Type"  value={order.orderType} />
-            <Detail label="Status"      value={order.status} />
+            <Detail label="Entity"        value={order.entity} />
+            <Detail label="Product"       value={order.product} />
+            <Detail label="BSO"           value={order.bso} />
+            <Detail label="Order Type"    value={order.orderType} />
+            <Detail label="Status"        value={order.status} />
             <div className="grid grid-cols-2 gap-3">
-              <Detail label="PCD Date"        value={formatDateToDisplay(order.pcdDate)} />
+              <Detail label="PCD Date"         value={formatDateToDisplay(order.pcdDate)} />
               <Detail label="Termination Date" value={formatDateToDisplay(order.terminateDate)} />
             </div>
           </Section>
           <Section title="Technical Details">
-            <Detail label="LSI ID"         value={order.lsiId} />
+            <Detail label="LSI ID"          value={order.lsiId} />
             <Detail label="Capacity (Mbps)" value={order.capacity} />
             <Detail label="Capacity (Kbps)" value={Number(order.capacity) * 1024} />
           </Section>
@@ -340,7 +334,6 @@ const ViewDetailsModal = ({ order, onClose }) => {
             </div>
           </Section>
 
-          {/* ─── GST Details (split or single) ─────────────────────────── */}
           {showSplitGST ? (
             <>
               <GSTViewSection title={`GST Details – ${order.billing1.state} (State 1)`} gst={gst1} className="md:col-span-1" />
@@ -364,13 +357,12 @@ const ViewDetailsModal = ({ order, onClose }) => {
   );
 };
 
-// Helper: GST section inside ViewDetailsModal
 const GSTViewSection = ({ title, gst, className = "" }) => (
   <Section title={title} className={className}>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <Detail label="Transaction Type" value={gst.isSelfGST ? "Intra-state (Same State)" : "Inter-state (Different State)"} />
-      <Detail label="GST State"      value={gst.gstState} />
-      <Detail label="GST State Code" value={gst.gstStateCode} />
+      <Detail label="GST State"        value={gst.gstState} />
+      <Detail label="GST State Code"   value={gst.gstStateCode} />
       {gst.isSelfGST ? (
         <>
           <Detail label="CGST (%)"      value={gst.cgst} />
@@ -406,8 +398,6 @@ const BillingBlock = ({ title, data }) => (
 );
 
 // ─── GSTDetailsForm ──────────────────────────────────────────────────────────
-// title   = string shown in the header (e.g. "GST Details – Maharashtra (State 1)")
-// stateTag = optional badge text
 const GSTDetailsForm = ({ gstDetails, onChange, title = "GST Details", stateTag = null }) => {
   const handleRadioChange = (value) => {
     const isSelfGST = value === 'yes';
@@ -435,7 +425,6 @@ const GSTDetailsForm = ({ gstDetails, onChange, title = "GST Details", stateTag 
         )}
       </h3>
       <div className="space-y-4">
-        {/* Same State? */}
         <div className="bg-white p-4 rounded-lg border border-gray-200">
           <label className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3 block">
             Same State Transaction (Self GST)?
@@ -453,7 +442,6 @@ const GSTDetailsForm = ({ gstDetails, onChange, title = "GST Details", stateTag 
           </div>
         </div>
 
-        {/* Tax rates */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {!gstDetails.isSelfGST && (
             <div className="md:col-span-3">
@@ -481,7 +469,6 @@ const GSTDetailsForm = ({ gstDetails, onChange, title = "GST Details", stateTag 
           )}
         </div>
 
-        {/* GST State */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2 block">GST State</label>
@@ -497,7 +484,6 @@ const GSTDetailsForm = ({ gstDetails, onChange, title = "GST Details", stateTag 
           </div>
         </div>
 
-        {/* Summary */}
         <div className="bg-white p-4 rounded-lg border border-gray-200">
           <p className="text-sm font-semibold text-gray-600 mb-2">GST Summary:</p>
           {gstDetails.isSelfGST ? (
@@ -527,7 +513,7 @@ const CreateOrderForm = ({ onAddOrder }) => {
     gstDetails1: defaultGST(), gstDetails2: defaultGST(),
     splitFactor: defaultSplit(),
     orderId:'', companyName:'', companyGroup:'',
-    entity: ENTITIES[0], capacity:'', lsiId:'', amount:'',
+    entity: ENTITIES[0], bso: '', capacity:'', lsiId:'', amount:'',
     status: STATUSES[0], orderType: ORDER_TYPES[0],
     pcdDate:'', terminateDate:'',
   });
@@ -569,7 +555,6 @@ const CreateOrderForm = ({ onAddOrder }) => {
       pcdDate:       convertDateForStorage(formData.pcdDate),
       terminateDate: convertDateForStorage(formData.terminateDate),
       splitFactor: { ...formData.splitFactor, isApplicable: areStatesDifferent },
-      // keep legacy gstDetails in sync with gstDetails1
       gstDetails: formData.gstDetails1,
     };
     onAddOrder(payload);
@@ -579,7 +564,7 @@ const CreateOrderForm = ({ onAddOrder }) => {
       gstDetails1: defaultGST(), gstDetails2: defaultGST(),
       splitFactor: defaultSplit(),
       orderId:'', companyName:'', companyGroup:'',
-      entity: ENTITIES[0], capacity:'', lsiId:'', amount:'',
+      entity: ENTITIES[0], bso: '', capacity:'', lsiId:'', amount:'',
       status: STATUSES[0], orderType: ORDER_TYPES[0],
       pcdDate:'', terminateDate:'',
     });
@@ -592,8 +577,8 @@ const CreateOrderForm = ({ onAddOrder }) => {
         Create New Order
       </h2>
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Row 1: product / entity / orderType / status */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Row 1: product / entity / bso / orderType / status */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <InputGroup label="Product">
             <select name="product" value={formData.product} onChange={handleInputChange} className="input-field">
               {PRODUCTS.map(p => <option key={p}>{p}</option>)}
@@ -602,6 +587,12 @@ const CreateOrderForm = ({ onAddOrder }) => {
           <InputGroup label="Entity">
             <select name="entity" value={formData.entity} onChange={handleInputChange} className="input-field">
               {ENTITIES.map(e => <option key={e}>{e}</option>)}
+            </select>
+          </InputGroup>
+          <InputGroup label="BSO">
+            <select name="bso" value={formData.bso} onChange={handleInputChange} className="input-field">
+              <option value="">Select BSO</option>
+              {BSO_OPTIONS.map(b => <option key={b}>{b}</option>)}
             </select>
           </InputGroup>
           <InputGroup label="Order Type">
@@ -650,7 +641,7 @@ const CreateOrderForm = ({ onAddOrder }) => {
             onChange={(e,field) => handleInputChange(e,'billing2',field)} />}
         </div>
 
-        {/* ─── GST Details ─── */}
+        {/* GST Details */}
         {areStatesDifferent ? (
           <div className="space-y-4">
             <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
@@ -729,10 +720,10 @@ const EditOrderModal = ({ order, onClose, onSave }) => {
     ...order,
     pcdDate:       convertDateForInput(order.pcdDate),
     terminateDate: convertDateForInput(order.terminateDate),
-    // Prefer gstDetails1; fall back to legacy gstDetails for old records
     gstDetails1: order.gstDetails1 || order.gstDetails || defaultGST(),
     gstDetails2: order.gstDetails2 || defaultGST(),
     splitFactor: order.splitFactor || defaultSplit(),
+    bso: order.bso || '',
   });
 
   if (!order) return null;
@@ -768,7 +759,7 @@ const EditOrderModal = ({ order, onClose, onSave }) => {
       pcdDate:       convertDateForStorage(formData.pcdDate),
       terminateDate: convertDateForStorage(formData.terminateDate),
       splitFactor: { ...formData.splitFactor, isApplicable: areStatesDifferent },
-      gstDetails: formData.gstDetails1, // keep legacy field in sync
+      gstDetails: formData.gstDetails1,
     });
   };
 
@@ -780,7 +771,8 @@ const EditOrderModal = ({ order, onClose, onSave }) => {
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-6 h-6 text-gray-600" /></button>
         </div>
         <div className="p-6 space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Row 1: product / entity / bso / orderType / status */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <InputGroup label="Product">
               <select name="product" value={formData.product} onChange={handleInputChange} className="input-field">
                 {PRODUCTS.map(p => <option key={p}>{p}</option>)}
@@ -789,6 +781,12 @@ const EditOrderModal = ({ order, onClose, onSave }) => {
             <InputGroup label="Entity">
               <select name="entity" value={formData.entity} onChange={handleInputChange} className="input-field">
                 {ENTITIES.map(e => <option key={e}>{e}</option>)}
+              </select>
+            </InputGroup>
+            <InputGroup label="BSO">
+              <select name="bso" value={formData.bso} onChange={handleInputChange} className="input-field">
+                <option value="">Select BSO</option>
+                {BSO_OPTIONS.map(b => <option key={b}>{b}</option>)}
               </select>
             </InputGroup>
             <InputGroup label="Order Type">
@@ -827,7 +825,7 @@ const EditOrderModal = ({ order, onClose, onSave }) => {
               onChange={(e,field) => handleInputChange(e,'billing2',field)} />}
           </div>
 
-          {/* ─── GST Details ─── */}
+          {/* GST Details */}
           {areStatesDifferent ? (
             <div className="space-y-4">
               <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
@@ -934,9 +932,8 @@ const OrderList = ({ orders, onView, onEdit, onDelete }) => {
       let matchDate = true;
 
       if (orderDate && !isNaN(orderDate.getTime())) {
-        // Use UTC parts so "2026-01-08T18:30:00Z" stays Jan 8, not Jan 9 (IST)
         const orderYear  = orderDate.getUTCFullYear();
-        const orderMonth = orderDate.getUTCMonth(); // 0-indexed
+        const orderMonth = orderDate.getUTCMonth();
 
         if (filters.periodType === 'period') {
           if (filters.selectedYear !== 'All') {
@@ -944,19 +941,16 @@ const OrderList = ({ orders, onView, onEdit, onDelete }) => {
             if (filters.selectedMonth === 'All') {
               matchDate = orderYear === y;
             } else {
-              const m = ALL_MONTHS.indexOf(filters.selectedMonth); // 0-indexed
+              const m = ALL_MONTHS.indexOf(filters.selectedMonth);
               matchDate = orderYear === y && orderMonth === m;
             }
           }
-          // selectedYear === 'All' → no date filter, matchDate stays true
         } else if (filters.periodType === 'dateRange') {
           if (filters.fromDate && filters.toDate) {
-            // Build UTC boundaries from the yyyy-mm-dd picker values
             const [fy, fm, fd] = filters.fromDate.split('-').map(Number);
             const [ty, tm, td] = filters.toDate.split('-').map(Number);
             const from = new Date(Date.UTC(fy, fm - 1, fd, 0, 0, 0));
             const to   = new Date(Date.UTC(ty, tm - 1, td, 23, 59, 59, 999));
-            // Compare using UTC timestamp
             const orderUTC = Date.UTC(orderYear, orderMonth, orderDate.getUTCDate());
             matchDate = orderUTC >= from.getTime() && orderUTC <= to.getTime();
           }
@@ -1113,12 +1107,6 @@ const OrderCard = ({ order, onView, onEdit, onDelete }) => {
     );
   };
 
-  // ─── renderRow ───────────────────────────────────────────────────────────────
-  // New column layout (% rate embedded in header label):
-  //   CGST+SGST case  →  CGST {n}%  |  SGST {n}%  |  CGST+SGST Amt
-  //   IGST case       →  IGST {n}%
-  //   Mixed           →  CGST {n}%  |  SGST {n}%  |  CGST+SGST Amt  |  IGST {n}%
-  //                      (row fills its own cols, dashes the other)
   const renderRow = (billingObj, gstObj, splitPercentage = 100, showAllCols = false) => {
     const pct        = splitPercentage / 100;
     const rowBase    = totalAmountLink * pct;
@@ -1154,9 +1142,7 @@ const OrderCard = ({ order, onView, onEdit, onDelete }) => {
         <td className="py-4 px-4 font-bold text-blue-700">₹{splitRate.toFixed(2)}</td>
         <td className="py-4 px-4 font-bold text-blue-600">₹{rowBase.toFixed(0)}</td>
 
-        {/* GST amount cells — no separate % cells, rate lives in the <th> */}
         {showAllCols ? (
-          // Mixed types: show all 4 cols, dash unused ones
           <>
             <td className="py-4 px-4 font-semibold text-green-700">{isSelf  ? `₹${cgstAmt.toFixed(0)}`     : '–'}</td>
             <td className="py-4 px-4 font-semibold text-green-700">{isSelf  ? `₹${sgstAmt.toFixed(0)}`     : '–'}</td>
@@ -1164,14 +1150,12 @@ const OrderCard = ({ order, onView, onEdit, onDelete }) => {
             <td className="py-4 px-4 font-semibold text-green-700">{!isSelf ? `₹${igstAmt.toFixed(0)}`     : '–'}</td>
           </>
         ) : isSelf ? (
-          // Intra-state only: CGST Amt | SGST Amt | CGST+SGST Amt
           <>
             <td className="py-4 px-4 font-semibold text-green-700">₹{cgstAmt.toFixed(0)}</td>
             <td className="py-4 px-4 font-semibold text-green-700">₹{sgstAmt.toFixed(0)}</td>
             <td className="py-4 px-4 font-semibold text-purple-700">₹{cgstSgstAmt.toFixed(0)}</td>
           </>
         ) : (
-          // Inter-state only: IGST Amt
           <td className="py-4 px-4 font-semibold text-green-700">₹{igstAmt.toFixed(0)}</td>
         )}
 
@@ -1193,23 +1177,18 @@ const OrderCard = ({ order, onView, onEdit, onDelete }) => {
     );
   };
 
-  // Resolve GST objects
   const gst1 = order.gstDetails1 || order.gstDetails || {};
   const gst2 = order.gstDetails2 || order.gstDetails || {};
   const isSelf1 = gst1?.isSelfGST || false;
   const isSelf2 = gst2?.isSelfGST || false;
-  // When split rows have DIFFERENT GST types, show all columns in one table
   const mixedGSTTypes = isSplitApplicable && isSelf1 !== isSelf2;
 
-  // Derive rates for header labels
-  // For mixed: the isSelf row supplies CGST/SGST rates; the non-isSelf row supplies IGST rate
-  const selfGst  = isSelf1 ? gst1 : gst2;   // whichever row is intra-state
-  const interGst = isSelf1 ? gst2 : gst1;   // whichever row is inter-state
+  const selfGst  = isSelf1 ? gst1 : gst2;
+  const interGst = isSelf1 ? gst2 : gst1;
   const cgstRate = selfGst?.cgst  || 9;
   const sgstRate = selfGst?.sgst  || 9;
   const igstRate = interGst?.igst || 18;
 
-  // ─── Single unified header — rate is embedded in the <th> label ───────────
   const buildHeaders = () => (
     <tr>
       <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">Order ID</th>
@@ -1222,7 +1201,6 @@ const OrderCard = ({ order, onView, onEdit, onDelete }) => {
       <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">Total Basic</th>
 
       {mixedGSTTypes ? (
-        // Mixed: CGST {n}% | SGST {n}% | CGST+SGST Amt | IGST {n}%
         <>
           <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">CGST {cgstRate}%</th>
           <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">SGST {sgstRate}%</th>
@@ -1230,14 +1208,12 @@ const OrderCard = ({ order, onView, onEdit, onDelete }) => {
           <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">IGST {igstRate}%</th>
         </>
       ) : isSelf1 ? (
-        // Intra-state: CGST {n}% | SGST {n}% | CGST+SGST Amt
         <>
           <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">CGST {gst1.cgst || 9}%</th>
           <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">SGST {gst1.sgst || 9}%</th>
           <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">CGST+SGST Amt</th>
         </>
       ) : (
-        // Inter-state: IGST {n}%
         <th className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">IGST {gst1.igst || 18}%</th>
       )}
 
@@ -1293,12 +1269,13 @@ const OrderCard = ({ order, onView, onEdit, onDelete }) => {
               <Badge color="orange">{order.entity}</Badge>
               <Badge color="blue">{order.orderType}</Badge>
               <Badge color="purple">{order.product}</Badge>
+              {order.bso && <Badge color="teal">{order.bso}</Badge>}
               <Badge color={order.status === 'PCD' ? 'green' : 'red'}>{order.status}</Badge>
             </div>
           </div>
         </div>
 
-        {/* ─── Always ONE table ─── */}
+        {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="text-sm font-semibold text-gray-700 uppercase bg-gray-50 border-b border-gray-200">
@@ -1307,20 +1284,7 @@ const OrderCard = ({ order, onView, onEdit, onDelete }) => {
             <tbody>
               {isSplitApplicable ? (
                 <>
-                  {/* ── State 1 label row ── */}
-                  {/* <tr className="bg-green-50 border-t border-green-200">
-                    <td colSpan={99} className="px-4 py-2 text-xs font-bold text-green-800 uppercase tracking-widest">
-                      State 1 – {state1} ({isSelf1 ? 'CGST + SGST' : 'IGST'})
-                    </td>
-                  </tr> */}
                   {renderRow(order.billing1, gst1, order.splitFactor.state1Percentage, mixedGSTTypes)}
-
-                  {/* ── State 2 label row ── */}
-                  {/* <tr className="bg-blue-50 border-t border-blue-200">
-                    <td colSpan={99} className="px-4 py-2 text-xs font-bold text-blue-800 uppercase tracking-widest">
-                      State 2 – {state2} ({isSelf2 ? 'CGST + SGST' : 'IGST'})
-                    </td>
-                  </tr> */}
                   {renderRow(order.billing2, gst2, order.splitFactor.state2Percentage, mixedGSTTypes)}
                 </>
               ) : (
@@ -1340,12 +1304,13 @@ const OrderCard = ({ order, onView, onEdit, onDelete }) => {
 
 const Badge = ({ children, color }) => {
   const colors = {
-    blue: "bg-blue-100 text-blue-800 border border-blue-200",
-    green: "bg-green-100 text-green-800 border border-green-200",
-    red: "bg-red-100 text-red-800 border border-red-200",
+    blue:   "bg-blue-100 text-blue-800 border border-blue-200",
+    green:  "bg-green-100 text-green-800 border border-green-200",
+    red:    "bg-red-100 text-red-800 border border-red-200",
     purple: "bg-purple-100 text-purple-800 border border-purple-200",
-    gray: "bg-gray-100 text-gray-800 border border-gray-200",
+    gray:   "bg-gray-100 text-gray-800 border border-gray-200",
     orange: "bg-orange-200 text-gray-800 border border-gray-200",
+    teal:   "bg-teal-100 text-teal-800 border border-teal-200",
   };
   return <span className={`px-3 py-1 rounded-lg text-sm font-semibold ${colors[color] || colors.gray}`}>{children}</span>;
 };
