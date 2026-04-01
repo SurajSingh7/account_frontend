@@ -1078,7 +1078,7 @@ const OrderList = ({ orders, onView, onEdit, onDelete }) => {
   );
 };
 
-// ─── OrderCard ────────────────────────────────────────────────────────────────
+// ───   OrderCard  ────────────────────────────────────────────────────────────────────────
 const OrderCard = ({ order, onView, onEdit, onDelete }) => {
   const [showBillingPopup, setShowBillingPopup] = useState(null);
   const [showEndPopup,     setShowEndPopup]     = useState(null);
