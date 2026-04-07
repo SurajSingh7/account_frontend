@@ -12,7 +12,7 @@ const ORDER_TYPES= ["NEW-ORDER", "UPGRADE", "DOWNGRADE"];
 const BSO_OPTIONS= ["Airtel", "Tata", "Vodafone"];
 
 export const INDIAN_STATES = [
-  { key: "AP", name: "Andhra Pradesh",          code: "28" },
+  { key: "AP", name: "Andhra Pradesh",           code: "28" },
   { key: "AR", name: "Arunachal Pradesh",        code: "12" },
   { key: "AS", name: "Assam",                    code: "18" },
   { key: "BR", name: "Bihar",                    code: "10" },
@@ -218,8 +218,8 @@ const SplitFactorForm = ({ splitFactor, onChange, billing1State, billing2State, 
   );
 };
 
-// ─── Billing Address Popup ───────────────────────────────────────────────────
-const BillingPopup = ({ billing, onClose }) => {
+// ─── Billing Address Popup ─────────────────────────────────────────────────────────────────────────────────────────
+const BillingPopup = ({billing, onClose}) => {
   if (!billing) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
@@ -242,14 +242,14 @@ const BillingPopup = ({ billing, onClose }) => {
   );
 };
 
-// ─── End Address Popup ───────────────────────────────────────────────────────
+// ─── End Address Popup ─────────────────────────────────────────────────────────────────────────────────────────────────
 const EndAddressPopup = ({ endLabel, endAddress, onClose }) => {
   if (!endAddress) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 border border-gray-200" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center p-5 border-b border-gray-200 bg-gray-50">
-          <h3 className="text-xl font-semibold text-gray-900">{endLabel} Address</h3>
+          <h3 className="text-xl font-semibold text-gray-900">{endLabel} Address </h3>
           <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg"><X className="w-5 h-5 text-gray-600" /></button>
         </div>
         <div className="p-6">
