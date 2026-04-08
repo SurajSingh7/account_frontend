@@ -1,4 +1,4 @@
-import ReceiptSummaryReport from '@/components/core/billing/ReceiptSummaryReport';
+import ReceiptSummaryReport from '@/modules/billing/ReceiptSummaryReport';
 import React from 'react'
 
 const page = () => {

@@ -1,11 +1,11 @@
 'use client'
-import ViewCircuitComp from '@/components/core/billing/ViewCircuitComp'
+import BillingManagementSystem from '@/modules/billing/ViewCircuitComp'
 import React from 'react'
 
 const page = () => {
   return (
     <div>
-        <ViewCircuitComp/>
+        <BillingManagementSystem/>
     </div>
   )
 }

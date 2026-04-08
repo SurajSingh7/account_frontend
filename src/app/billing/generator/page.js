@@ -1,12 +1,10 @@
-import MonthlyBillGeneratorComp from '@/components/core/billing/generator/MonthlyBillGeneratorComp';
-import TestComp from '@/components/core/billing/TestComp';
+import MonthlyBillGeneratorComp from '@/modules/billing/generator/MonthlyBillGeneratorComp';
 import React from 'react'
 
 const page = () => {
   return (
     <div>
         <MonthlyBillGeneratorComp/>
-        {/* <TestComp/> */}
     </div>
   )
 }

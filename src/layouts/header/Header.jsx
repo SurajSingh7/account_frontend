@@ -1,11 +1,10 @@
 "use client";
 
 import React from "react";
-import { Profile } from "./Profile";
-import { Navbar } from "./NavBar/Navbar";
+import { Profile } from "./components/Profile";
+import { Navbar } from "./components/NavBar/Navbar";
 import { usePermissions } from "@/context/PermissionContext";
-import ZoomButton from "./zoom/ZoomButton";
-import ZoomButtons from "./zoom/ZoomButton";
+import ZoomButtons from "./components/zoom/ZoomButton";
 
 const Header = () => {
     const { userData } = usePermissions();

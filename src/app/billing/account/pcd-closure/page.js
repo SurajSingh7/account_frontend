@@ -1,4 +1,4 @@
-import PcdClosureComp from '@/components/core/billing/pcd-closure/PcdClosureComp';
+import PcdClosureComp from '@/modules/billing/pcd-closure/PcdClosureComp';
 import React from 'react'
 
 const page = () => {

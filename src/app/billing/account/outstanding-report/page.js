@@ -1,4 +1,4 @@
-import OutstandingReportComp from '@/components/core/billing/OutstandingReportComp';
+import OutstandingReportComp from '@/modules/billing/OutstandingReportComp';
 import React from 'react'
 
 const page = () => {

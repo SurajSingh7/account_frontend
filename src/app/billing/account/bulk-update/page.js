@@ -1,4 +1,4 @@
-import BulkUpdate from '@/components/core/billing/BlukUpdate';
+import BulkUpdate from '@/modules/billing/BlukUpdate';
 import React from 'react'
 
 const page = () => {
