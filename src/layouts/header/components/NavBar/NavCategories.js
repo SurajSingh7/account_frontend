@@ -17,6 +17,7 @@ export const navCategories = [
     category: "Collection",
     items: [
       { name: "Outstanding Report", path: "/billing/collection/outstanding-report", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
+      { name: "Test Psage", path: "/test-page", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
      
     ],
   },
