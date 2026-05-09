@@ -1,8 +1,8 @@
 'use client';
 import React from 'react';
-import { useOrders } from './helpers/hooks/useOrders';
-import { useFilters } from './helpers/hooks/useFilters';
-import FilterBar from './useCompanies/filters/FilterBar';
+import { useOrders } from './hooks/useOrders';
+import { useFilters } from '../shared/helpers/hooks/useFilters';
+import FilterBar from '../shared/filters/FilterBar';
 import OrderList from './useCompanies/orders/OrderList';
 
 const PcdClosureComp = () => {

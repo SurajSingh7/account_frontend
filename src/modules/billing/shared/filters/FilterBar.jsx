@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Search, Filter, X, ChevronDown } from 'lucide-react';
 import SearchableDropdown from './SearchableDropdown';
 import PeriodSelector from './PeriodSelector';
-import {useStates, useEntities, useBsos, useCompanies } from '../../helpers/hooks/useFilterOptions';
+import {useStates, useEntities, useBsos, useCompanies } from '../helpers/hooks/useFilterOptions';
 
 
 const truncateLabel = (str, n) => (!str ? '' : str.length > n ? str.slice(0, n) + '…' : str);

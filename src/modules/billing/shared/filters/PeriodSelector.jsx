@@ -1,6 +1,6 @@
 import React from 'react';
-import { ALL_MONTHS, getYearOptions, getAvailableMonths, getCurrentYear, getCurrentMonth } from '../../constants';
-import { toStartOfDayISO,toEndOfDayISO } from '../../buildListParams/utils';
+import { ALL_MONTHS, getYearOptions, getAvailableMonths, getCurrentYear, getCurrentMonth } from '../constants';
+import { toStartOfDayISO,toEndOfDayISO } from '../buildListParams/utils';
 
 /**
  * PeriodSelector — exact original visual:

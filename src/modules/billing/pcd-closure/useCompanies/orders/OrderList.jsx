@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import OrderCard from './OrderCard';
-import OrderViewModal from './OrderViewModal';
 import Pagination from '@/shared/ui/pagination/Pagination';
 
 

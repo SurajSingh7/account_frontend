@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { API_BACKEND_URL } from '@/config/getEnvVariables';
-import { buildListParams } from '../../constants';
+import { buildListParams } from '../../shared/constants';
 
 const BASE_URL = `${API_BACKEND_URL}/billing/sale/ready-order/all`;
 

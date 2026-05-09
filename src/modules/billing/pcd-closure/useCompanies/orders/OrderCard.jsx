@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Edit, Eye } from 'lucide-react';
-import { formatDateDisplay, truncateWithMore } from '../../buildListParams/utils';
+import { formatDateDisplay, truncateWithMore } from '../../../shared/buildListParams/utils';
 import { useRouter } from 'next/navigation'; 
 import EditPcdModal from './modal/EditPcdModal';
 
