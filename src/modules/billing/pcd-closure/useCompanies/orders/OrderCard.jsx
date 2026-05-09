@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Eye } from 'lucide-react';
+import { Edit, Eye } from 'lucide-react';
 import { formatDateDisplay, truncateWithMore } from '../../buildListParams/utils';
+import { useRouter } from 'next/navigation'; 
+import EditPcdModal from './modal/EditPcdModal';
 
 // ─── Badge ────────────────────────────────────────────────────────────────────
 const Badge = ({ children, color }) => {
@@ -21,8 +23,10 @@ const Badge = ({ children, color }) => {
 };
 
 // ─── OrderCard ────────────────────────────────────────────────────────────────
-const OrderCard = ({ order, onView }) => {
+const OrderCard = ({ order, onRefetch }) => {
+  const router = useRouter();
   const [showEndPopup, setShowEndPopup] = useState(null);
+  const [editModalOpen, setEditModalOpen] = useState(false); // ← ADD THIS
 
   // ── Safely resolve fields from the NEW data shape ──────────────────────────
   const billingItems = order.billingItems || [];
@@ -39,7 +43,7 @@ const OrderCard = ({ order, onView }) => {
 
   const capacityMbps = Number(order.capacity) || 0;
   const capacityKbps = Number(order.capacityKbps) || capacityMbps * 1024;
-  const baseRate = Number(order.offeredPrice?.rate) || 0;  // ← FIXED: was order.amount
+  const baseRate = Number(order.offeredPrice?.rate) || 0;
 
   const companyLabel = order.company?.name || '';
   const entityLabel = order.entity?.alias || order.entity?.name || '';
@@ -51,14 +55,11 @@ const OrderCard = ({ order, onView }) => {
   const terminateDate = order.terminateDate;
 
   // ── Detect GST type per billing item ──────────────────────────────────────
-  // taxType is also available in order.summary.circuits[i].taxType
-  
   const circuits = order.summary?.circuits || [];
   const getIsSelf = (item, index) => {
     if (item.cgst > 0 || item.sgst > 0) return true;
     if (item.igst > 0) return false;
 
-    // fallback to summary
     const taxType = circuits[index]?.taxType || '';
     if (taxType === 'CGST' || taxType === 'SGST') return true;
     if (taxType === 'IGST') return false;
@@ -71,12 +72,10 @@ const OrderCard = ({ order, onView }) => {
   const hasMultiple = billingItems.length > 1;
   const mixedGSTTypes = hasMultiple && isSelf0 !== isSelf1;
 
-
   // ── Table headers ──────────────────────────────────────────────────────────
   const buildHeaders = () => {
-    // Pick representative GST rates for header labels
     const item0 = billingItems[0] || {};
-    const cgstRate = item0.cgst ? 9 : 9;   // or derive dynamically if needed
+    const cgstRate = item0.cgst ? 9 : 9;
     const sgstRate = item0.sgst ? 9 : 9;
     const igstRate = 18;
 
@@ -108,7 +107,7 @@ const OrderCard = ({ order, onView }) => {
     );
   };
 
-  // ── Render a single billing row from billingItems[i] ──────────────────────
+  // ── Render a single billing row ────────────────────────────────────────────
   const renderBillingRow = (item, isSelf, showAllCols) => {
     if (!item) return null;
 
@@ -124,7 +123,7 @@ const OrderCard = ({ order, onView }) => {
         <td className="py-4 px-4 font-semibold text-gray-700">{capacityMbps} Mbps</td>
         <td className="py-4 px-4 font-semibold text-gray-600">{capacityKbps.toLocaleString()}</td>
         <td className="py-4 px-4 font-semibold text-gray-600">
-          <span className="block  max-w-[180px]" >
+          <span className="block max-w-[180px]">
             {truncateWithMore(item.billingAddress, 20, "...more", setShowEndPopup)}
           </span>
         </td>
@@ -209,10 +208,22 @@ const OrderCard = ({ order, onView }) => {
                   Terminate: {formatDateDisplay(terminateDate)}
                 </span>
               )}
-              <button onClick={() => onView(order)} className="p-2 hover:bg-blue-50 rounded-lg" title="View">
-                <Eye className="w-5 h-5 text-blue-600" />
+
+              {/* View button */}
+              <button onClick={() => router.push(`/billing/account/pcd-closure/view?pcdId=${order._id}`)}>
+                <Eye className='text-blue-600'/>
+              </button>
+
+              {/* Edit button — opens EditPcdModal */}
+              <button
+                className="p-2 hover:bg-blue-50 rounded-lg"
+                title="Edit"
+                onClick={() => setEditModalOpen(true)} // ← CHANGED
+              >
+                <Edit className="w-5 h-5 text-red-600" />
               </button>
             </div>
+
             <div className="flex flex-wrap gap-2 justify-end">
               {entityLabel && <Badge color="orange">{entityLabel}</Badge>}
               {orderTypeLabel && <Badge color="blue">{orderTypeLabel}</Badge>}
@@ -279,37 +290,25 @@ const OrderCard = ({ order, onView }) => {
             className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6 animate-scaleIn"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close Icon */}
             <button
               className="absolute top-3 right-3 text-gray-400 hover:text-red-700 font-bold text-xl"
               onClick={() => setShowEndPopup(null)}
             >
               ✕
             </button>
-
-            {/* Header */}
-            <h4 className="text-lg font-semibold text-gray-900 mb-4">
-              Full Address
-            </h4>
-
-            {/* Content */}
+            <h4 className="text-lg font-semibold text-gray-900 mb-4">Full Address</h4>
             <div className="max-h-[300px] overflow-y-auto pr-2">
               <p className="text-gray-700 text-sm leading-relaxed break-words">
                 {showEndPopup}
               </p>
             </div>
-
-            {/* Footer */}
             <div className="mt-6 flex justify-between items-center">
               <button
-                onClick={() => {
-                  navigator.clipboard.writeText(showEndPopup);
-                }}
+                onClick={() => { navigator.clipboard.writeText(showEndPopup); }}
                 className="text-sm text-blue-600 hover:underline"
               >
                 Copy
               </button>
-
               <button
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition"
                 onClick={() => setShowEndPopup(null)}
@@ -320,6 +319,14 @@ const OrderCard = ({ order, onView }) => {
           </div>
         </div>
       )}
+
+      {/* ── Edit PCD Modal ── */}
+      <EditPcdModal                   // ← ADD THIS BLOCK
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        order={order}
+         onSuccess={onRefetch} 
+      />
     </>
   );
 };

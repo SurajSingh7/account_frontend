@@ -27,7 +27,6 @@ const SkeletonCard = () => (
 
 // ─── OrderList ────────────────────────────────────────────────────────────────
 const OrderList = ({ orders, pagination, loading, error, onRefetch, onPageChange }) => {
-  const [viewOrder, setViewOrder] = useState(null);
 
   if (loading) {
     return (
@@ -79,7 +78,7 @@ const OrderList = ({ orders, pagination, loading, error, onRefetch, onPageChange
       {/* Cards */}
       <div className="space-y-5">
         {orders.map(order => (
-          <OrderCard key={order._id} order={order} onView={setViewOrder} />
+          <OrderCard key={order._id} order={order} onRefetch={onRefetch} />
         ))}
       </div>
 
@@ -93,8 +92,6 @@ const OrderList = ({ orders, pagination, loading, error, onRefetch, onPageChange
           />
         </div>
       )}
-
-      {viewOrder && <OrderViewModal order={viewOrder} onClose={() => setViewOrder(null)} />}
     </>
   );
 };
