@@ -1,4 +1,4 @@
-import MonthlyBillGeneratorComp from '@/modules/billing/generator/MonthlyBillGeneratorComp';
+import MonthlyBillGeneratorComp from '@/modules/billing/demo/generator/MonthlyBillGeneratorComp';
 import React from 'react'
 
 const page = () => {

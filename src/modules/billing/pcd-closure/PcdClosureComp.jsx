@@ -6,6 +6,7 @@ import FilterBar from './useCompanies/filters/FilterBar';
 import OrderList from './useCompanies/orders/OrderList';
 
 const PcdClosureComp = () => {
+  
   const { filters, setFilter, resetFilters, hasActiveFilters } = useFilters();
   const { orders, pagination, loading, error, refetch } = useOrders(filters);
 

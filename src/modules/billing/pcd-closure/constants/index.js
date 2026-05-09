@@ -4,7 +4,8 @@ export const ALL_MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP'
 export const getCurrentYear  = () => new Date().getFullYear();
 export const getCurrentMonth = () => new Date().getMonth(); // 0-indexed
 
-export const getYearOptions = () => ['All', ...Array.from({ length: 8 }, (_, i) => getCurrentYear() - i)];
+// export const getYearOptions = () => ['All', ...Array.from({ length: 8 }, (_, i) => getCurrentYear() - i)];
+export const getYearOptions = () => [ ...Array.from({ length: 10 }, (_, i) => getCurrentYear() - i)];
 
 export const getAvailableMonths = (selectedYear) => {
   if (selectedYear === getCurrentYear()) return ALL_MONTHS.slice(0, getCurrentMonth() + 1);

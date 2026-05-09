@@ -16,6 +16,7 @@ const FilterBar = ({ filters, onChange, onClear, hasActive }) => {
   const { entities, loading: entitiesLoading } = useEntities();
   const { bsos,     loading: bsosLoading     } = useBsos();
 
+  // Need search from api if like 50+ 
   const [companySearch, setCompanySearch] = useState('');
   const { companies, loading: companiesLoading } = useCompanies(companySearch);
 

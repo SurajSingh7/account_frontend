@@ -2,7 +2,6 @@ import React from 'react';
 import { ALL_MONTHS, getYearOptions, getAvailableMonths, getCurrentYear, getCurrentMonth } from '../../constants';
 import { toStartOfDayISO,toEndOfDayISO } from '../../buildListParams/utils';
 
-
 /**
  * PeriodSelector — exact original visual:
  * teal underline tabs, rounded-xl month pills, gradient active, shadow-sm wrappers
@@ -121,6 +120,7 @@ const PeriodSelector = ({ filters, onChange }) => {
               />
             </div>
           ))}
+
           {_startRaw && _endRaw && (
             <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
               <span className="text-sm font-semibold text-blue-700">
@@ -128,6 +128,7 @@ const PeriodSelector = ({ filters, onChange }) => {
               </span>
             </div>
           )}
+
         </div>
       )}
     </div>

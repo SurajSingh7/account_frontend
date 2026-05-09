@@ -1,5 +1,5 @@
 
-import DistributedPaymentsPage from '@/modules/billing/Distributionreport';
+import DistributedPaymentsPage from '@/modules/billing/demo/Distributionreport';
 import React from 'react'
 
 const page = () => {
