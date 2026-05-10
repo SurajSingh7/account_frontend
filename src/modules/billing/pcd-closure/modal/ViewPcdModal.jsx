@@ -6,7 +6,7 @@ import {
   Building2, Cpu, MapPin, ReceiptText, FileSpreadsheet, Tag
 } from 'lucide-react';
 import { API_BACKEND_URL } from '@/config/getEnvVariables';
-import { formatDateDisplay, formatINR } from '../../../../shared/buildListParams/utils';
+import { formatDateDisplay, formatINR } from '../../shared/buildListParams/utils';
 
 
 // ─── Design Tokens ─────────────────────────────────────────────────────────────

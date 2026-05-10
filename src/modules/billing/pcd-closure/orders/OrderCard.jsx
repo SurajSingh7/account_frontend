@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Edit, Eye } from 'lucide-react';
-import { formatDateDisplay, truncateWithMore } from '../../../shared/buildListParams/utils';
+import { formatDateDisplay, truncateWithMore } from '../../shared/buildListParams/utils';
 import { useRouter } from 'next/navigation'; 
-import EditPcdModal from './modal/EditPcdModal';
+import EditPcdModal from '../modal/EditPcdModal';
 
 // ─── Badge ────────────────────────────────────────────────────────────────────
 const Badge = ({ children, color }) => {
@@ -221,6 +221,11 @@ const OrderCard = ({ order, onRefetch }) => {
                 onClick={() => setEditModalOpen(true)} // ← CHANGED
               >
                 <Edit className="w-5 h-5 text-red-600" />
+              </button>
+              
+              {/* Generate bill remove in future */}
+               <button onClick={() => router.push(`/billing/account/pcd-closure/generate-bill?pcdId=${order._id}`)}>
+                <div className='bg-black text-amber-50 font-bold px-1.5 text-center rounded-full'> G </div>
               </button>
             </div>
 

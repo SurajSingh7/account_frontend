@@ -1,14 +1,15 @@
 'use client';
 import React from 'react';
-import { useOrders } from './hooks/useOrders';
 import { useFilters } from '../shared/helpers/hooks/useFilters';
 import FilterBar from '../shared/filters/FilterBar';
-import OrderList from './useCompanies/orders/OrderList';
+import OrderList from './orders/OrderList';
+import { useFetchList } from '../shared/helpers/hooks/useFetchList';
+const ENDPOINT = '/billing/sale/ready-order/all';
 
 const PcdClosureComp = () => {
   
   const { filters, setFilter, resetFilters, hasActiveFilters } = useFilters();
-  const { orders, pagination, loading, error, refetch } = useOrders(filters);
+  const { data, pagination, loading, error, refetch } =useFetchList({filters, endpoint:ENDPOINT});
 
   return (
     <div
@@ -31,7 +32,7 @@ const PcdClosureComp = () => {
           hasActive={hasActiveFilters}
         />
         <OrderList
-          orders={orders}
+          orders={data}
           pagination={pagination}
           loading={loading}
           error={error}
