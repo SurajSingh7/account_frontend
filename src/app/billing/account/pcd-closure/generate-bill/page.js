@@ -1,12 +1,12 @@
-import GenerateBillModal from '@/modules/billing/pcd-closure/modal/GenerateBillModal';
-import React from 'react'
+import React, { Suspense } from 'react'
+import GenerateBillModal from '@/modules/billing/pcd-closure/modal/GenerateBillModal'
 
 const page = () => {
   return (
-    <div>
-        <GenerateBillModal/>
-    </div>
+    <Suspense fallback={<div>Loading...</div>}>
+      <GenerateBillModal />
+    </Suspense>
   )
 }
 
-export default page;
+export default page

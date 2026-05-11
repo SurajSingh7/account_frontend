@@ -1,12 +1,12 @@
-import MonthlyBillGeneratorComp from '@/modules/billing/demo/generator/MonthlyBillGeneratorComp';
-import React from 'react'
+import React, { Suspense } from 'react'
+import MonthlyBillGeneratorComp from '@/modules/billing/demo/generator/MonthlyBillGeneratorComp'
 
 const page = () => {
   return (
-    <div>
-        <MonthlyBillGeneratorComp/>
-    </div>
+    <Suspense fallback={<div>Loading...</div>}>
+      <MonthlyBillGeneratorComp />
+    </Suspense>
   )
 }
 
-export default page;
+export default page

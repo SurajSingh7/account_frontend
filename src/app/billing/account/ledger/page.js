@@ -1,12 +1,12 @@
-import LedgerAllDetailsComp from '@/modules/billing/ledger/LedgerAllDetailsComp';
-import React from 'react'
+import React, { Suspense } from 'react'
+import LedgerAllDetailsComp from '@/modules/billing/ledger/LedgerAllDetailsComp'
 
 const page = () => {
   return (
-    <div>
-        <LedgerAllDetailsComp/>
-    </div>
+    <Suspense fallback={<div>Loading...</div>}>
+      <LedgerAllDetailsComp />
+    </Suspense>
   )
 }
 
-export default page;
+export default page

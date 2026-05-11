@@ -1,12 +1,12 @@
-import ViewPcdModal from '@/modules/billing/pcd-closure/modal/ViewPcdModal';
-import React from 'react'
+import React, { Suspense } from 'react'
+import ViewPcdModal from '@/modules/billing/pcd-closure/modal/ViewPcdModal'
 
 const page = () => {
   return (
-    <div>
-        <ViewPcdModal/>
-    </div>
+    <Suspense fallback={<div>Loading...</div>}>
+      <ViewPcdModal />
+    </Suspense>
   )
 }
 
-export default page;
+export default page
