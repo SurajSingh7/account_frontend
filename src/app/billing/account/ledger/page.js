@@ -1,10 +1,10 @@
 import React, { Suspense } from 'react'
-import MonthlyBillGeneratorComp from '@/modules/billing/demo/generator/MonthlyBillGeneratorComp'
+import LedgerAllDetailsComp from '@/modules/billing/ledger/LedgerAllDetailsComp'
 
 const page = () => {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <MonthlyBillGeneratorComp />
+      <LedgerAllDetailsComp />
     </Suspense>
   )
 }

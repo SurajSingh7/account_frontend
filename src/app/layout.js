@@ -4,9 +4,9 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import { PermissionProvider } from "../context/PermissionContext";
-import Footer from "@/components/common/Footer";
-import Header from "@/components/common/header/Header";
-import { ZoomProvider } from "@/components/common/header/zoom/ZoomProvider";
+import { ZoomProvider } from "@/layouts/header/components/zoom/ZoomProvider";
+import Header from "@/layouts/header/Header";
+import Footer from "@/shared/ui/footer/Footer";
 
 const inter = Inter({ subsets: ["latin"] });
 

@@ -1,10 +1,10 @@
 import React, { Suspense } from 'react'
-import MonthlyBillGeneratorComp from '@/modules/billing/demo/generator/MonthlyBillGeneratorComp'
+import ViewPcdModal from '@/modules/billing/pcd-closure/modal/ViewPcdModal'
 
 const page = () => {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <MonthlyBillGeneratorComp />
+      <ViewPcdModal />
     </Suspense>
   )
 }

@@ -1,11 +1,12 @@
-'use client'
-
-import BillingReportComp from '@/components/core/billing/BillingReportComp'
+import BillingReportComp from '@/modules/billing/billing-report/BillingReportComp'
 import React from 'react'
+
 
 const page = () => {
   return (
+    <div>
         <BillingReportComp/>
+    </div>
   )
 }
 

@@ -1,11 +1,11 @@
 import mongoose from 'mongoose';
 
 const BillingSchema = new mongoose.Schema({
-  address: { type: String, default: '' },
-  area:    { type: String, default: '' },
-  city:    { type: String, default: '' },
-  pincode: { type: String, default: '' },
-  state:   { type: String, default: '' },
+  address:   { type: String, default: '' },
+  area:      { type: String, default: '' },
+  city:      { type: String, default: '' },
+  pincode:   { type: String, default: '' },
+  state:     { type: String, default: '' },
   stateCode: { type: String, default: '' },
 }, { _id: false });
 
@@ -19,9 +19,9 @@ const GSTDetailsSchema = new mongoose.Schema({
 }, { _id: false });
 
 const SplitFactorSchema = new mongoose.Schema({
-  isApplicable:       { type: Boolean, default: false },
-  state1Percentage:   { type: Number,  default: 50, min: 0, max: 100 },
-  state2Percentage:   { type: Number,  default: 50, min: 0, max: 100 },
+  isApplicable:     { type: Boolean, default: false },
+  state1Percentage: { type: Number,  default: 50, min: 0, max: 100 },
+  state2Percentage: { type: Number,  default: 50, min: 0, max: 100 },
 }, { _id: false });
 
 const OrderSchema = new mongoose.Schema({
@@ -30,13 +30,14 @@ const OrderSchema = new mongoose.Schema({
   companyGroup: { type: String, required: true },
   entity:       { type: String, required: true },
   product:      { type: String, required: true },
+  bso:          { type: String, default: '' },        // ← NEW: BSO field
   orderType:    { type: String, required: true },
   status:       { type: String, required: true },
   capacity:     { type: String, default: '' },
   lsiId:        { type: String, default: '' },
   amount:       { type: Number, default: 0 },
-  pcdDate:      { type: Date, default: null },
-  terminateDate:{ type: Date, default: null },
+  pcdDate:      { type: Date,   default: null },
+  terminateDate:{ type: Date,   default: null },
   endA:         { type: String, default: '' },
   endB:         { type: String, default: '' },
   billing1:     { type: BillingSchema, default: () => ({}) },
