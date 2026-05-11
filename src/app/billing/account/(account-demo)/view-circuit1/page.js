@@ -1,11 +1,12 @@
 'use client'
-import BillingManagementSystem from '../../../../../../ztest/billing/ViewCircuitComp'
+
+import ViewCircuitComp from '@/modules/billing/demo/ViewCircuitComp'
 import React from 'react'
 
 const page = () => {
   return (
     <div>
-        <BillingManagementSystem/>
+        <ViewCircuitComp/>
     </div>
   )
 }
