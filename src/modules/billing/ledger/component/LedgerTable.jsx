@@ -1,7 +1,8 @@
 'use client'
 import React from 'react'
 import { useRouter } from 'next/navigation'
-import { Eye, Pencil, FileText, ArrowLeft, EyeClosed } from 'lucide-react'
+import { Eye, Pencil, FileText, ArrowLeft, EyeClosed, CheckCheck } from 'lucide-react'
+import { enrichOutstandingLedger } from '../helpers/buildOutstandingLedger'
 
 const fmt = (n) =>
   (n || 0).toLocaleString('en-IN', {
@@ -10,63 +11,78 @@ const fmt = (n) =>
   })
 
 const MONTH_NAMES = [
-  'Jan','Feb','Mar','Apr','May','Jun',
-  'Jul','Aug','Sep','Oct','Nov','Dec'
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
 ]
 
 const normalizeRow = (item) => {
   const monthYear = item.monthYear
     ?? (item.billingMonth && item.billingYear
-        ? `${MONTH_NAMES[(item.billingMonth ?? 1) - 1]}-${item.billingYear}`
-        : item.month ?? '–')
+      ? `${MONTH_NAMES[(item.billingMonth ?? 1) - 1]}-${item.billingYear}`
+      : item.month ?? '–')
 
   const fmtDate = (iso) => {
     if (!iso) return '–'
     const d = new Date(iso)
-    return `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`
+    return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`
   }
 
   return {
     ...item,
     monthYear,
     startDate: item.startDate ?? fmtDate(item.billingStartDate),
-    endDate:   item.endDate   ?? fmtDate(item.billingEndDate),
-    basicBill:     item.basicAmount       ?? item.monthlyBilling  ?? item.basicBill     ?? 0,
-    cgst:          item.cgst              ?? 0,
-    sgst:          item.sgst              ?? 0,
-    igst:          item.igst              ?? 0,
-    basicGst:      item.totalPlusGst      ?? item.totalWithGst    ?? item.basicGst      ?? 0,
-    miscBill:      item.miscPlusGst       ?? item.miscSell        ?? item.miscBill      ?? 0,
-    received:      item.received          ?? item.totalReceived   ?? 0,
-    creditNotes:   item.creditNote        ?? item.creditNotes     ?? item.totalCreditNotes ?? 0,
-    tdsConfirm:    item.tdsConf           ?? item.tdsConfirm      ?? item.tdsConfirmed  ?? 0,
-    tdsProvision:  item.tdsProvision      ?? 0,
-    totalBalance:  item.totalBalance      ?? item.balance         ?? 0,
-    remainingAdj:  item.remainingAdjustment ?? item.remainingAdj  ?? item.remaining     ?? item.totalBalance ?? 0,
-    billingDays:   item.billingDays       ?? item.days            ?? '–',
-    billIds:       item.billIds           ?? [],   // ← keep billIds as-is
+    endDate: item.endDate ?? fmtDate(item.billingEndDate),
+    basicBill: item.basicAmount ?? item.monthlyBilling ?? item.basicBill ?? 0,
+    cgst: item.cgst ?? 0,
+    sgst: item.sgst ?? 0,
+    igst: item.igst ?? 0,
+    basicGst: item.totalPlusGst ?? item.totalWithGst ?? item.basicGst ?? 0,
+    miscBill: item.miscPlusGst ?? item.miscSell ?? item.miscBill ?? 0,
+    received: item.received ?? item.totalReceived ?? 0,
+    creditNotes: item.creditNote ?? item.creditNotes ?? item.totalCreditNotes ?? 0,
+    tdsConfirm: item.tdsConf ?? item.tdsConfirm ?? item.tdsConfirmed ?? 0,
+    tdsProvision: item.tdsProvision ?? 0,
+    totalBalance: item.totalBalance ?? item.balance ?? 0,
+    remainingAdj: item.remainingAdjustment ?? item.remainingAdj ?? item.remaining ?? item.totalBalance ?? 0,
+    billingDays: item.billingDays ?? item.days ?? '–',
+    billIds: item.billIds ?? [],
+    // NEW — pass-through enriched fields set by enrichOutstandingLedger
+    runningOutstanding: item.runningOutstanding ?? 0,
+    outstandingAfterAdjustment: item.outstandingAfterAdjustment ?? 0,
   }
 }
 
+// STEP 3: Added runningOutstanding and outstandingAfterAdjustment columns
+// below totalBalance — existing columns unchanged
 export const LEDGER_COLUMNS = [
-  { id: 'month',        label: 'Month',          align: 'left'   },
-  { id: 'days',         label: 'Days',           align: 'center' },
-  { id: 'period',       label: 'Period',         align: 'left'   },
-  { id: 'basicBill',    label: 'Basic Bill',     align: 'right'  },
-  { id: 'cgst',         label: 'CGST (9%)',      align: 'right'  },
-  { id: 'sgst',         label: 'SGST (9%)',      align: 'right'  },
-  { id: 'igst',         label: 'IGST (18%)',     align: 'right'  },
-  { id: 'basicGst',     label: 'Basic + GST',    align: 'right'  },
-  { id: 'miscBill',     label: 'Misc+GST Bill',  align: 'right'  },
-  { id: 'received',     label: 'Received',       align: 'right'  },
-  { id: 'creditNotes',  label: 'Credit Notes',   align: 'right'  },
-  { id: 'tdsConfirm',   label: 'TDS Conf',       align: 'right'  },
-  { id: 'tdsProvision', label: 'TDS Prov',       align: 'right'  },
-  { id: 'totalBalance', label: 'Total Balance',  align: 'right'  },
-  { id: 'remaining',    label: 'Remaining Adj',  align: 'right'  },
-  { id: 'actions',      label: 'Actions',        align: 'center' },
+  { id: 'month', label: 'Month', align: 'left' },
+  { id: 'days', label: 'Days', align: 'center' },
+  { id: 'period', label: 'Period', align: 'left' },
+  { id: 'basicBill', label: 'Basic Bill', align: 'right' },
+  { id: 'cgst', label: 'CGST (9%)', align: 'right' },
+  { id: 'sgst', label: 'SGST (9%)', align: 'right' },
+  { id: 'igst', label: 'IGST (18%)', align: 'right' },
+  { id: 'basicGst', label: 'Basic + GST', align: 'right' },
+  { id: 'miscBill', label: 'Misc+GST Bill', align: 'right' },
+  { id: 'received', label: 'Received', align: 'right' },
+  { id: 'creditNotes', label: 'Credit Notes', align: 'right' },
+  { id: 'tdsConfirm', label: 'TDS Conf', align: 'right' },
+  { id: 'tdsProvision', label: 'TDS Prov', align: 'right' },
+  // { id: 'totalBalance',               label: 'Total Balance',              align: 'right'  },
+
+  // ↓ NEW — inserted immediately after totalBalance
+  {
+    id: 'runningOutstanding', label: (<> Running <br /> Outstanding </>), align: 'right'
+  },
+  {
+    id: 'outstandingAfterAdjustment', label: (<>   Outstanding   <br />   After Adjustment </>), align: 'right'
+  },
+  // { id: 'remaining',                  label: 'Remaining Adj',              align: 'right'  },
+
+  { id: 'actions', label: 'Actions', align: 'center' },
 ]
 
+// STEP 4: Added runningOutstanding and outstandingAfterAdjustment cells
 const LedgerRow = ({ item: rawItem, visibleColumns }) => {
   const router = useRouter()
   const item = normalizeRow(rawItem)
@@ -166,6 +182,38 @@ const LedgerRow = ({ item: rawItem, visibleColumns }) => {
         </td>
       )}
 
+      {/* ↓ NEW */}
+      {isVisible('runningOutstanding') && (
+        <td className="px-3 py-3 text-right font-extrabold text-rose-600 bg-rose-50/40">
+          ₹{fmt(item.runningOutstanding)}
+        </td>
+      )}
+
+      {isVisible('outstandingAfterAdjustment') && (
+        <td className="px-3 py-3 text-right bg-yellow-50/40">
+
+          {item.outstandingAfterAdjustment <= 0 ? (
+
+            <span className="inline-flex items-center gap-1 font-extrabold text-emerald-600">
+              <CheckCheck className="w-4 h-4 stroke-[3]" />
+              {/* Settled */}
+              ₹0.00
+            </span>
+
+          ) : (
+
+            <span className="inline-flex items-center gap-1 font-extrabold text-rose-600">
+              <span className="text-rose-400 font-bold">×</span>
+              ₹{fmt(item.outstandingAfterAdjustment)}
+            </span>
+
+          )}
+
+        </td>
+      )}
+
+      {/* ↑ NEW */}
+
       {isVisible('remaining') && (
         <td className="px-3 py-3 text-right bg-yellow-50/40">
           <span className="inline-flex items-center gap-1 font-extrabold text-rose-600">
@@ -191,10 +239,10 @@ const LedgerRow = ({ item: rawItem, visibleColumns }) => {
               <EyeClosed className="w-4 h-4" />
             </button> */}
 
-              <button
+            <button
               type="button"
               title="View details"
-              onClick={() =>                                                   
+              onClick={() =>
                 router.push(
                   `/billing/account/ledger/form?mode=view?month=${item.monthYear}&billIds=${(item.billIds ?? []).join(',')}`
                 )
@@ -204,12 +252,11 @@ const LedgerRow = ({ item: rawItem, visibleColumns }) => {
               <Eye className="w-4 h-4" />
             </button>
 
-
-            {console.log("fgh",item)}
+            {console.log("fgh", item)}
             <button
               type="button"
               title="Edit record"
-              onClick={() =>                                                  
+              onClick={() =>
                 router.push(
                   `/billing/account/ledger/form?mode=edit&month=${item.monthYear}&billIds=${(item.billIds ?? []).join(',')}`
                 )
@@ -225,31 +272,49 @@ const LedgerRow = ({ item: rawItem, visibleColumns }) => {
   )
 }
 
-const LedgerFooter = ({ rows, visibleColumns }) => {
+
+// STEP 5: Added runningOutstanding and outstandingAfterAdjustment footer cells
+// ✅ FIXED: Uses API-provided totals instead of re-summing row data
+const LedgerFooter = ({ totals, visibleColumns }) => {
   const isVisible = (id) => visibleColumns.includes(id)
-  const normalizedRows = rows.map(normalizeRow)
-  const sum = (field) =>
-    normalizedRows.reduce((acc, r) => acc + Number(r[field] ?? 0), 0)
+
+  // Map API totals fields to column ids
+  const t = totals ?? {}
 
   return (
     <tfoot className="bg-gradient-to-r from-gray-100 to-blue-100 border-t-2 border-gray-300">
       <tr className="font-bold text-sm">
-        {isVisible('month')        && <td className="px-3 py-3 text-gray-900">TOTAL</td>}
-        {isVisible('days')         && <td className="px-3 py-3" />}
-        {isVisible('period')       && <td className="px-3 py-3" />}
-        {isVisible('basicBill')    && <td className="px-3 py-3 text-right text-slate-900">₹{fmt(sum('basicBill'))}</td>}
-        {isVisible('cgst')         && <td className="px-3 py-3 text-right text-slate-700">₹{fmt(sum('cgst'))}</td>}
-        {isVisible('sgst')         && <td className="px-3 py-3 text-right text-slate-700">₹{fmt(sum('sgst'))}</td>}
-        {isVisible('igst')         && <td className="px-3 py-3 text-right text-slate-700">₹{fmt(sum('igst'))}</td>}
-        {isVisible('basicGst')     && <td className="px-3 py-3 text-right text-indigo-700">₹{fmt(sum('basicGst'))}</td>}
-        {isVisible('miscBill')     && <td className="px-3 py-3 text-right text-purple-700">₹{fmt(sum('miscBill'))}</td>}
-        {isVisible('received')     && <td className="px-3 py-3 text-right text-emerald-700">₹{fmt(sum('received'))}</td>}
-        {isVisible('creditNotes')  && <td className="px-3 py-3 text-right text-cyan-700">₹{fmt(sum('creditNotes'))}</td>}
-        {isVisible('tdsConfirm')   && <td className="px-3 py-3 text-right text-indigo-600">₹{fmt(sum('tdsConfirm'))}</td>}
-        {isVisible('tdsProvision') && <td className="px-3 py-3 text-right text-orange-600">₹{fmt(sum('tdsProvision'))}</td>}
-        {isVisible('totalBalance') && <td className="px-3 py-3 text-right text-rose-700 bg-rose-50">₹{fmt(sum('totalBalance'))}</td>}
-        {isVisible('remaining')    && <td className="px-3 py-3 text-right text-rose-700 bg-yellow-50">₹{fmt(sum('remainingAdj'))}</td>}
-        {isVisible('actions')      && <td className="px-3 py-3" />}
+        {isVisible('month') && <td className="px-3 py-3 text-gray-900">TOTAL</td>}
+        {isVisible('days') && <td className="px-3 py-3" />}
+        {isVisible('period') && <td className="px-3 py-3" />}
+        {isVisible('basicBill') && <td className="px-3 py-3 text-right text-slate-900">₹{fmt(t.basicTotal ?? 0)}</td>}
+        {isVisible('cgst') && <td className="px-3 py-3 text-right text-slate-700">₹{fmt(t.cgst ?? 0)}</td>}
+        {isVisible('sgst') && <td className="px-3 py-3 text-right text-slate-700">₹{fmt(t.sgst ?? 0)}</td>}
+        {isVisible('igst') && <td className="px-3 py-3 text-right text-slate-700">₹{fmt(t.igst ?? 0)}</td>}
+        {isVisible('basicGst') && <td className="px-3 py-3 text-right text-indigo-700">₹{fmt(t.totalPlusGst ?? 0)}</td>}
+        {isVisible('miscBill') && <td className="px-3 py-3 text-right text-purple-700">₹{fmt(t.miscPlusGst ?? 0)}</td>}
+        {isVisible('received') && <td className="px-3 py-3 text-right text-emerald-700">₹{fmt(t.received ?? 0)}</td>}
+        {isVisible('creditNotes') && <td className="px-3 py-3 text-right text-cyan-700">₹{fmt(t.creditNote ?? 0)}</td>}
+        {isVisible('tdsConfirm') && <td className="px-3 py-3 text-right text-indigo-600">₹{fmt(t.tdsConf ?? 0)}</td>}
+        {isVisible('tdsProvision') && <td className="px-3 py-3 text-right text-orange-600">₹{fmt(t.tdsProvision ?? 0)}</td>}
+        {isVisible('totalBalance') && <td className="px-3 py-3 text-right text-rose-700 bg-rose-50">₹{fmt(t.totalBalance ?? 0)}</td>}
+
+        {/* ↓ NEW */}
+        {isVisible('runningOutstanding') && (
+          <td className="px-3 py-3 text-right text-rose-700 bg-rose-50">
+            ₹{fmt(t.runningOutstanding ?? 0)}
+          </td>
+        )}
+
+        {isVisible('outstandingAfterAdjustment') && (
+          <td className="px-3 py-3 text-right text-rose-700 bg-yellow-50">
+            ₹{fmt(t.outstandingAfterAdjustment ?? 0)}
+          </td>
+        )}
+        {/* ↑ NEW */}
+
+        {isVisible('remaining') && <td className="px-3 py-3 text-right text-rose-700 bg-yellow-50">₹{fmt(t.remainingAdjustment ?? 0)}</td>}
+        {isVisible('actions') && <td className="px-3 py-3" />}
       </tr>
     </tfoot>
   )
@@ -286,7 +351,9 @@ const LedgerHeader = ({ title, meta, chips, onBack }) => {
           <div className="flex items-center gap-2 flex-wrap">
             {chips.map(({ label, value }) => (
               <div key={label} className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1.5">
-                <p className="text-[10px] font-bold text-blue-100 uppercase leading-none">{label}</p>
+                <p className="text-[10px] font-bold text-blue-100 uppercase leading-none"><span className="leading-tight">
+                  {label}
+                </span></p>
                 <p className="text-sm font-bold text-white leading-none mt-0.5">{value}</p>
               </div>
             ))}
@@ -306,7 +373,24 @@ const LedgerTable = ({
   onBack,
   showHeader = true,
 }) => {
-  const rows = data?.data?.data ?? data?.data ?? data ?? []
+
+  // STEP 2: Extract raw rows + apiTotals, then enrich with calculated fields
+  const rawRows =
+    data?.data?.data ??
+    data?.data ??
+    data ??
+    []
+
+  const apiTotals =
+    data?.data?.totals ??
+    data?.totals ??
+    {}
+
+  const { rows, totals } = enrichOutstandingLedger(rawRows, apiTotals)
+
+  console.log("rows-->", rows)
+  console.log("data", data)
+  console.log("totals-->", totals)
 
   const visibleColumns = LEDGER_COLUMNS
     .filter((col) => !hiddenColumns.includes(col.id))
@@ -339,7 +423,9 @@ const LedgerTable = ({
                   key={id}
                   className={`px-3 py-3.5 text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap text-${align}`}
                 >
-                  {label}
+                  <span className="leading-tight">
+                    {label}
+                  </span>
                 </th>
               ))}
             </tr>
@@ -353,7 +439,8 @@ const LedgerTable = ({
               />
             ))}
           </tbody>
-          <LedgerFooter rows={rows} visibleColumns={visibleColumns} />
+
+          <LedgerFooter totals={totals} visibleColumns={visibleColumns} />
         </table>
       </div>
     </div>

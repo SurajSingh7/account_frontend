@@ -76,7 +76,7 @@ if (!rows.length) {
   return (
     <>
       <LedgerTable
-        data={rows}
+        data={data}
         hiddenColumns={hiddenColumns}
       />
 
