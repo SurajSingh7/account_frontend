@@ -2,7 +2,7 @@
 import React, { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import { FileText, X, Info, FileSpreadsheet } from 'lucide-react'
+import { FileText, X, Info } from 'lucide-react'
 import { truncateWithMore } from '@/modules/billing/shared/buildListParams/utils'
 
 const fmt = (n) =>
@@ -41,8 +41,14 @@ const TextPopup = ({ text, onClose }) => {
   }, [onClose])
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[70vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[70vh] overflow-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
           <p className="font-semibold text-slate-800">Full Text</p>
           <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
@@ -61,12 +67,9 @@ const BillingRow = ({ item }) => {
   const router = useRouter()
   const [popupText, setPopupText] = useState(null)
 
-  // ✅ stateCode se match karke state nikalo — endA/endB state strings unreliable hain split rows mein
   const getStateByCode = (code) => {
-    // endA aur endB dono mein se jo stateCode se match kare
     if (item.endA?.stateCode === code) return item.endA.state
     if (item.endB?.stateCode === code) return item.endB.state
-    // fallback
     return item.endB?.state || item.endA?.state || '–'
   }
 
@@ -78,22 +81,16 @@ const BillingRow = ({ item }) => {
       orderId:       item.orderId,
       billingReadId: item.billingReadId,
       dsrId:         item.dsrId,
-      stateCode:     item.stateCode,
-      splitPercent:  item.splitPercent,
-      company:       item.company,
-      product:       item.product,
-      entity:        item.entity?.alias || '',
-      lsi:           item.lsi || '',
-      circuitId:     item.circuitId || '',
-      endAState:     item.endA?.state || '',
-      endBState:     item.endB?.state || '',
+      circuitKey:    item.circuitKey || '',
     }).toString()
 
-  const handleViewBreakdown = () =>
-    router.push(`/billing/ledger/${item.billingReadId}?${buildQuery()}`)
+  const handleViewBreakdown = () => router.push(`/billing/account/ledger?${buildQuery()}`)
 
-  const handleGenerate = () =>
-    router.push(`/billing/generate/${item.billingReadId}?${buildQuery()}`)
+  // ✅ Normalized field access for new API shape
+  const billingAmt    = item.billing    ?? 0
+  const miscAmt       = item.miscCharge ?? 0   // was: item.misc
+  const creditNoteAmt = item.creditNote ?? 0   // was: item.creditNotes
+  const netBillingAmt = item.netBilling ?? 0
 
   return (
     <>
@@ -119,39 +116,39 @@ const BillingRow = ({ item }) => {
           {truncateWithMore(item.company, 18, '...more', (t) => setPopupText(t))}
         </td>
 
-        {/* State — ✅ stateCode se correct state */}
+        {/* State */}
         <td className="px-4 py-2.5">
           <span className={`inline-flex px-3 py-1 text-xs font-bold rounded border ${stateBadge}`}>
             {stateValue}
           </span>
         </td>
 
-        {/* Billing (indigo) */}
+        {/* Billing */}
         <td className="px-4 py-2.5 text-right">
           <span className="text-base font-extrabold text-indigo-600 tabular-nums">
-            ₹{fmt(item.billing ?? item.totalBilling ?? 0)}
+            ₹{fmt(billingAmt)}
           </span>
         </td>
 
-        {/* Misc (purple) */}
+        {/* Misc */}
         <td className="px-4 py-2.5 text-right bg-purple-50/40">
           <span className="text-base font-extrabold text-purple-600 tabular-nums">
-            ₹{fmt(item.misc ?? item.totalMisc ?? 0)}
+            ₹{fmt(miscAmt)}
           </span>
         </td>
 
-        {/* Credit Notes incl. GST (teal/cyan) */}
+        {/* Credit Notes incl. GST */}
         <td className="px-4 py-2.5 text-right bg-cyan-50/40">
           <span className="text-base font-extrabold text-cyan-700 tabular-nums">
-            ₹{fmt(item.creditNotes ?? item.totalCreditNotes ?? 0)}
+            ₹{fmt(creditNoteAmt)}
           </span>
         </td>
 
-        {/* Net Billing (rose) + Info button */}
+        {/* Net Billing + Info button */}
         <td className="px-4 py-2.5 text-right bg-rose-50/40">
           <div className="flex items-center justify-end gap-2">
             <span className="text-base font-extrabold text-rose-600 tabular-nums">
-              ₹{fmt(item.netBilling ?? item.totalNetBilling ?? item.balance)}
+              ₹{fmt(netBillingAmt)}
             </span>
             <button
               onClick={handleViewBreakdown}
@@ -172,7 +169,6 @@ const BillingRow = ({ item }) => {
 
       </tr>
 
-      {/* ✅ Portal outside <tr> — correct HTML */}
       {popupText && (
         <TextPopup text={popupText} onClose={() => setPopupText(null)} />
       )}
@@ -181,8 +177,9 @@ const BillingRow = ({ item }) => {
 }
 
 // ── Main Table ────────────────────────────────────────────────
-const BillingTable = ({ data, onRefetch }) => {
-  const rows = data?.data || []
+const BillingTable = ({ data }) => {
+  // ✅ API shape: data.data.data is the rows array
+  const rows = data?.data?.data || data?.data || []
 
   if (!rows.length) {
     return (
@@ -194,16 +191,16 @@ const BillingTable = ({ data, onRefetch }) => {
   }
 
   const columns = [
-    { label: 'Order ID',                    align: 'left'   },
-    { label: 'End A',                       align: 'left'   },
-    { label: 'End B',                       align: 'left'   },
-    { label: 'Company',                     align: 'left'   },
-    { label: 'State',                       align: 'left'   },
-    { label: 'Billing',                     align: 'right'  },
-    { label: 'Misc',                        align: 'right'  },
-    { label: 'Credit Notes (incl. GST)',    align: 'right'  },
-    { label: 'Net Billing',                 align: 'right'  },
-    { label: 'Split',                       align: 'center' },
+    { label: 'Order ID',                 align: 'left'   },
+    { label: 'End A',                    align: 'left'   },
+    { label: 'End B',                    align: 'left'   },
+    { label: 'Company',                  align: 'left'   },
+    { label: 'State',                    align: 'left'   },
+    { label: 'Billing',                  align: 'right'  },
+    { label: 'Misc',                     align: 'right'  },
+    { label: 'Credit Notes (incl. GST)', align: 'right'  },
+    { label: 'Net Billing',              align: 'right'  },
+    { label: 'Split',                    align: 'center' },
   ]
 
   return (

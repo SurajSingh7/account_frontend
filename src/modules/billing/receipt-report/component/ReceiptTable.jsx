@@ -41,8 +41,14 @@ const TextPopup = ({ text, onClose }) => {
   }, [onClose])
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[70vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[70vh] overflow-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
           <p className="font-semibold text-slate-800">Full Text</p>
           <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
@@ -61,7 +67,6 @@ const ReceiptRow = ({ item }) => {
   const router = useRouter()
   const [popupText, setPopupText] = useState(null)
 
-  // ✅ stateCode se sahi state nikalo (same as BillingTable fix)
   const getStateByCode = (code) => {
     if (item.endA?.stateCode === code) return item.endA.state
     if (item.endB?.stateCode === code) return item.endB.state
@@ -76,17 +81,17 @@ const ReceiptRow = ({ item }) => {
       orderId:       item.orderId,
       billingReadId: item.billingReadId,
       dsrId:         item.dsrId,
-      stateCode:     item.stateCode,
-      splitPercent:  item.splitPercent,
-      company:       item.company,
-      product:       item.product,
-      entity:        item.entity?.alias || '',
-      lsi:           item.lsi || '',
-      circuitId:     item.circuitId || '',
+      circuitKey:    item.circuitKey || '',
     }).toString()
 
-  const handleViewBreakdown = () =>
-    router.push(`/billing/receipt/${item.billingReadId}?${buildQuery()}`)
+  const handleViewBreakdown = () => router.push(`/billing/account/ledger?${buildQuery()}`)
+
+  // ✅ Normalized field access for new API shape
+  const receivedAmt     = item.received     ?? 0
+  const creditNoteAmt   = item.creditNote   ?? 0   // was: creditNotes / totalCreditNotes
+  const tdsConfirmAmt   = item.tdsConfirm   ?? 0   // ⚠️ Not in API yet — shows ₹0.00
+  const tdsProvisionAmt = item.tdsProvision ?? 0
+  const totalReceiptsAmt = item.totalReceipts ?? 0
 
   return (
     <>
@@ -119,39 +124,39 @@ const ReceiptRow = ({ item }) => {
           </span>
         </td>
 
-        {/* Received (emerald) */}
+        {/* Received */}
         <td className="px-4 py-2.5 text-right">
           <span className="text-base font-extrabold text-emerald-600 tabular-nums">
-            ₹{fmt(item.received ?? item.totalReceived ?? 0)}
+            ₹{fmt(receivedAmt)}
           </span>
         </td>
 
-        {/* Credit Notes + GST (cyan) */}
+        {/* Credit Notes + GST */}
         <td className="px-4 py-2.5 text-right bg-cyan-50/40">
           <span className="text-base font-extrabold text-cyan-700 tabular-nums">
-            ₹{fmt(item.creditNotes ?? item.totalCreditNotes ?? 0)}
+            ₹{fmt(creditNoteAmt)}
           </span>
         </td>
 
-        {/* TDS Confirm (indigo) */}
+        {/* TDS Confirm */}
         <td className="px-4 py-2.5 text-right bg-indigo-50/40">
           <span className="text-base font-extrabold text-indigo-600 tabular-nums">
-            ₹{fmt(item.tdsConfirm ?? item.tdsConfirmed ?? 0)}
+            ₹{fmt(tdsConfirmAmt)}
           </span>
         </td>
 
-        {/* TDS Provision (orange) */}
+        {/* TDS Provision */}
         <td className="px-4 py-2.5 text-right bg-orange-50/40">
           <span className="text-base font-extrabold text-orange-600 tabular-nums">
-            ₹{fmt(item.tdsProvision ?? 0)}
+            ₹{fmt(tdsProvisionAmt)}
           </span>
         </td>
 
-        {/* Total Receipts (green) + Info */}
+        {/* Total Receipts + Info */}
         <td className="px-4 py-2.5 text-right bg-green-50/60">
           <div className="flex items-center justify-end gap-2">
             <span className="text-base font-extrabold text-green-700 tabular-nums">
-              ₹{fmt(item.totalReceipts ?? item.totalReceived ?? 0)}
+              ₹{fmt(totalReceiptsAmt)}
             </span>
             <button
               onClick={handleViewBreakdown}
@@ -172,7 +177,6 @@ const ReceiptRow = ({ item }) => {
 
       </tr>
 
-      {/* ✅ Portal outside <tr> */}
       {popupText && (
         <TextPopup text={popupText} onClose={() => setPopupText(null)} />
       )}
@@ -181,8 +185,9 @@ const ReceiptRow = ({ item }) => {
 }
 
 // ── Main Table ────────────────────────────────────────────────
-const ReceiptTable = ({ data, onRefetch }) => {
-  const rows = data?.data || []
+const ReceiptTable = ({ data }) => {
+  // ✅ API shape: data.data.data is the rows array
+  const rows = data?.data?.data || data?.data || []
 
   if (!rows.length) {
     return (

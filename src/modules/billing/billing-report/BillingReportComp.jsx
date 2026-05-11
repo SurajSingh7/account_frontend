@@ -7,7 +7,7 @@ import FilterBar from '../shared/filters/FilterBar';
 import BillingList from './component/BillingList';
 import SummaryCard from './component/SummaryCard';
 
-const ENDPOINT = '/billing/sale/monthly/all';
+const ENDPOINT = '/billing/sale/monthly/orders/report';
 
 const BillingReportComp = () => {
   const { filters, setFilter, resetFilters, hasActiveFilters } = useFilters();

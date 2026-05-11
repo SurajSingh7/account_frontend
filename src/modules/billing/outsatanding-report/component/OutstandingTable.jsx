@@ -90,20 +90,20 @@ const OrderRow = ({ item, index, showLsi }) => {
         new URLSearchParams({
             orderId: item.orderId,
             billingReadId: item.billingReadId,
-            dsrId: item.dsrId,
-            stateCode: item.stateCode,
-            splitPercent: item.splitPercent,
-            company: item.company,
-            product: item.product,
-            entity: item.entity?.alias || '',
-            lsi: item.lsi || '',
-            circuitId: item.circuitId || '',
-            endAState: item.endA?.state || '',
-            endBState: item.endB?.state || '',
+            // dsrId: item.dsrId,
+            // stateCode: item.stateCode,
+            // splitPercent: item.splitPercent,
+            // company: item.company,
+            // product: item.product,
+            // entity: item.entity?.alias || '',
+            // lsi: item.lsi || '',
+            circuitKey: item.circuitKey || '',
+            // endAState: item.endA?.state || '',
+            // endBState: item.endB?.state || '',
         }).toString()
 
-    const handleViewBreakdown = () => router.push(`/billing/ledger/${item.billingReadId}?${buildQuery()}`)
-    const handleGenerate = () => router.push(`/billing/generate/${item.billingReadId}?${buildQuery()}`)
+    const handleViewBreakdown = () => router.push(`/billing/account/ledger?${buildQuery()}`)
+    const handleGenerate = () => router.push(`/billing/account/ledger?${buildQuery()}`)
 
     return (
         <tr className="hover:bg-blue-50/30 transition-colors border-b border-slate-100">

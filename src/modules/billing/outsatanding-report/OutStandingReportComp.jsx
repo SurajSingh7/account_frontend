@@ -8,7 +8,7 @@ import OutstandingList from './component/OutstandingList';
 import SummaryCards from './component/SummaryCards';
 
 
-const ENDPOINT = '/billing/sale/monthly/all';
+const ENDPOINT = '/billing/sale/monthly/orders/outstanding/';
 
 const OutStandingReportComp = () => {
    const [showLsi, setShowLsi] = useState(false)

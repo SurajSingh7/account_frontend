@@ -8,11 +8,12 @@ const SummaryCard = ({ summary }) => {
       maximumFractionDigits: 2,
     })
 
+  // ✅ New API summary shape:
+  // { totalOrders, billing, miscCharge, creditNote, netBilling }
   const cards = [
     {
       label:   'Orders',
       value:   summary?.totalOrders ?? 0,
-      display: String(summary?.totalOrders ?? 0),
       icon:    Hash,
       border:  'border-gray-200',
       bg:      'from-gray-50/80',
@@ -24,7 +25,7 @@ const SummaryCard = ({ summary }) => {
     },
     {
       label:   'Billing',
-      value:   summary?.totalBilling ?? summary?.totalBilled ?? summary?.totalBalance,
+      value:   summary?.billing ?? 0,           // was: totalBilling / totalBilled
       icon:    FileText,
       border:  'border-indigo-100',
       bg:      'from-indigo-50/80',
@@ -35,7 +36,7 @@ const SummaryCard = ({ summary }) => {
     },
     {
       label:   'Misc',
-      value:   summary?.totalMisc ?? 0,
+      value:   summary?.miscCharge ?? 0,        // was: totalMisc
       icon:    Layers,
       border:  'border-purple-100',
       bg:      'from-purple-50/80',
@@ -46,7 +47,7 @@ const SummaryCard = ({ summary }) => {
     },
     {
       label:   'Credit Notes +GST',
-      value:   summary?.totalCreditNotes ?? 0,
+      value:   summary?.creditNote ?? 0,        // was: totalCreditNotes
       icon:    FileX,
       border:  'border-cyan-100',
       bg:      'from-cyan-50/80',
@@ -57,7 +58,7 @@ const SummaryCard = ({ summary }) => {
     },
     {
       label:   'Net Billing',
-      value:   summary?.totalNetBilling ?? summary?.totalBalance,
+      value:   summary?.netBilling ?? 0,        // was: totalNetBilling / totalBalance
       icon:    TrendingUp,
       border:  'border-rose-100',
       bg:      'from-rose-50/80',

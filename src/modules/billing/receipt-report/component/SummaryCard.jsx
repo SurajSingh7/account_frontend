@@ -8,6 +8,8 @@ const SummaryCard = ({ summary }) => {
       maximumFractionDigits: 2,
     })
 
+  // ✅ New API summary shape:
+  // { totalOrders, billing, received, creditNote, tdsProvision, totalReceipts, pendingRecovery }
   const cards = [
     {
       label:   'Orders',
@@ -23,7 +25,7 @@ const SummaryCard = ({ summary }) => {
     },
     {
       label:   'Received',
-      value:   summary?.totalReceived ?? 0,
+      value:   summary?.received ?? 0,              // was: totalReceived
       icon:    TrendingUp,
       border:  'border-emerald-100',
       bg:      'from-emerald-50/80',
@@ -34,7 +36,7 @@ const SummaryCard = ({ summary }) => {
     },
     {
       label:   'Credit Notes+ GST',
-      value:   summary?.totalCreditNotes ?? 0,
+      value:   summary?.creditNote ?? 0,            // was: totalCreditNotes
       icon:    FileX,
       border:  'border-cyan-100',
       bg:      'from-cyan-50/80',
@@ -45,7 +47,7 @@ const SummaryCard = ({ summary }) => {
     },
     {
       label:   'TDS Confirm',
-      value:   summary?.totalTdsConfirm ?? summary?.totalTdsConfirmed ?? 0,
+      value:   summary?.tdsConfirm ?? 0,            // ⚠️ Not in API yet — shows ₹0.00 until backend adds it
       icon:    CheckCircle,
       border:  'border-indigo-100',
       bg:      'from-indigo-50/80',
@@ -56,7 +58,7 @@ const SummaryCard = ({ summary }) => {
     },
     {
       label:   'TDS Provision',
-      value:   summary?.totalTdsProvision ?? 0,
+      value:   summary?.tdsProvision ?? 0,          // was: totalTdsProvision
       icon:    Clock,
       border:  'border-orange-100',
       bg:      'from-orange-50/80',
@@ -67,7 +69,7 @@ const SummaryCard = ({ summary }) => {
     },
     {
       label:   'Total Receipts',
-      value:   summary?.totalReceipts ?? summary?.totalReceived ?? 0,
+      value:   summary?.totalReceipts ?? 0,         // was: totalReceipts ?? totalReceived (direct key now)
       icon:    Receipt,
       border:  'border-green-100',
       bg:      'from-green-50/80',
@@ -104,4 +106,4 @@ const SummaryCard = ({ summary }) => {
   )
 }
 
-export default SummaryCard;
+export default SummaryCard
