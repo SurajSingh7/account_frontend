@@ -82,6 +82,7 @@ const BillingRow = ({ item }) => {
       billingReadId: item.billingReadId,
       dsrId:         item.dsrId,
       circuitKey:    item.circuitKey || '',
+      ledgerName:"bill"
     }).toString()
 
   const handleViewBreakdown = () => router.push(`/billing/account/ledger?${buildQuery()}`)

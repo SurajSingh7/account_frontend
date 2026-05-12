@@ -20,14 +20,14 @@ export const navCategories = [
       { name: "Outstanding Report D", path: "/billing/account/outstanding-report1", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
       { name: "Billing sell Report D", path: "/billing/account/billing-report1", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
       { name: "Receipt Report D", path: "/billing/account/receipt1", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
-      { name: "Bulk update D", path: "/billing/account/bulk-update1", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
+      // { name: "Bulk update D", path: "/billing/account/bulk-update1", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
     
     ],
   },
   {
     category: "Collection",
     items: [
-      { name: "Outstanding Report", path: "/billing/collection/outstanding-report", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
+      // { name: "Outstanding Report", path: "/billing/collection/outstanding-report", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
       { name: "Test Psage", path: "/test-page", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
      
     ],

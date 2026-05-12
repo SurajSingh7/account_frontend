@@ -98,6 +98,7 @@ const OrderRow = ({ item, index, showLsi }) => {
             // entity: item.entity?.alias || '',
             // lsi: item.lsi || '',
             circuitKey: item.circuitKey || '',
+            ledgerName:"outstanding"
             // endAState: item.endA?.state || '',
             // endBState: item.endB?.state || '',
         }).toString()
