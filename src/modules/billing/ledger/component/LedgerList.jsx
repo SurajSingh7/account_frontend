@@ -29,6 +29,7 @@ const LedgerList = ({
   onRefetch,
   onPageChange,
   hiddenColumns = [],
+  ledgerName
 }) => {
 
   if (loading) {
@@ -78,6 +79,7 @@ if (!rows.length) {
       <LedgerTable
         data={data}
         hiddenColumns={hiddenColumns}
+        ledgerName={ledgerName}
       />
 
       {pagination && pagination.totalPages > 1 && (

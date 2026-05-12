@@ -4,23 +4,29 @@ import { useSearchParams } from 'next/navigation';
 import { useLedgerList } from './hook/useLedgerList';
 import LedgerList from './component/LedgerList';
 
+const HIDDEN_COLUMNS_MAP = {
+  bill:        ['runningOutstanding', 'outstandingAfterAdjustment', 'receiptAmount','actions','tdsConfirm','tdsProvision','received'],
+  recipt:      ['runningOutstanding','miscBill', 'outstandingAfterAdjustment', ,'actions','netBilling','days','period','basicBill','cgst','sgst','igst','basicGst'],
+  outstanding: ['netBilling','receiptAmount'],
+};
+
 const LedgerAllDetailsComp = () => {
   const searchParams = useSearchParams();
 
-  const orderId = searchParams.get('orderId') ?? '';
+  const orderId       = searchParams.get('orderId')       ?? '';
   const billingReadId = searchParams.get('billingReadId') ?? '';
-  const circuitKey = searchParams.get('circuitKey') ?? '';
+  const circuitKey    = searchParams.get('circuitKey')    ?? '';
+  const ledgerName    = searchParams.get('ledgerName')    ?? '';   // ← new
 
-  const {  data, pagination, loading, error, refetch, setPage, } = useLedgerList({
+  const hiddenColumns = HIDDEN_COLUMNS_MAP[ledgerName] ?? [];      // ← new
+
+  const { data, pagination, loading, error, refetch, setPage } = useLedgerList({
     endpoint: '/billing/sale/monthly/order',
-    payload: {
-      circuitKey,
-      orderId,
-    },
+    payload: { circuitKey, orderId },
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 p-5 md:p-6">
+    <div className="min-h-screen mx-auto  p-7 md:p-6">
       <main className="mx-auto space-y-5">
         <LedgerList
           data={data}
@@ -31,7 +37,8 @@ const LedgerAllDetailsComp = () => {
           onPageChange={(page) => setPage(page)}
           title="Monthly Billing Breakdown"
           meta={`Order: ${orderId || '–'}`}
-
+          hiddenColumns={hiddenColumns}
+          ledgerName={ledgerName}
         />
       </main>
     </div>
