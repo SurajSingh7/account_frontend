@@ -30,7 +30,7 @@ const FilterBar = ({ filters, onChange, onClear, hasActive }) => {
 
   const bsoOptions = bsos.map(b => ({ value: b._id, label: b.name, sublabel: b.completeCompanyName }));
   const companyOptions = companies.map(c => ({
-    value: c.panNumber,
+    value: c?._id,
     label: truncateLabel(c.companyName, 15),
     sublabel: c.panNumber,
   }));
@@ -115,8 +115,8 @@ const FilterBar = ({ filters, onChange, onClear, hasActive }) => {
         <div className="flex-1 min-w-[200px]">
           <SearchableDropdown
             options={companyOptions}
-            value={filters.panNumber}
-            onChange={v => onChange({ panNumber: v, page: 1 })}
+            value={filters.companyGroupId}
+            onChange={v => onChange({ companyGroupId: v, page: 1 })}
             placeholder="Filter by Company"
             onSearch={setCompanySearch}
             loading={companiesLoading}

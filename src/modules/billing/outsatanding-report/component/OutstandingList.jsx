@@ -41,10 +41,11 @@ const OutstandingList = ({
   error,
   onRefetch,
   onPageChange,
-  showLsi,  
+  showLsi,
 }) => {
 
-      {console.log("dfghdatasuraj",data)}
+  {console.log("dfghdatasuraj", data)}
+
   // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -84,53 +85,33 @@ const OutstandingList = ({
   }
 
   // ── Empty State ────────────────────────────────────────────────────────────
+  const rows = data?.data || [];
 
-const rows = data?.data || [];
+  if (!rows.length) {
+    return (
+      <div className="text-center text-gray-500 py-20 bg-white rounded-lg border border-gray-200 border-dashed">
 
-if (!rows.length) {
-  return (
-    <div className="text-center text-gray-500 py-20 bg-white rounded-lg border border-gray-200 border-dashed">
+        <p className="text-xl font-semibold">
+          No outstanding records found.
+        </p>
 
-      <p className="text-xl font-semibold">
-        No outstanding records found.
-      </p>
+        <p className="text-base font-semibold text-gray-400 mt-2">
+          Try adjusting your filters.
+        </p>
 
-      <p className="text-base font-semibold text-gray-400 mt-2">
-        Try adjusting your filters.
-      </p>
-
-    </div>
-  );
-}
+      </div>
+    );
+  }
 
   // ── Main UI ────────────────────────────────────────────────────────────────
   return (
     <>
 
-      {/* Result Count */}
-      {/* {pagination && (
-        <div className="flex items-center justify-between mb-4">
-
-          <p className="text-base font-semibold text-gray-600">
-            Showing{' '}
-            <span className="text-gray-900">
-              {data.length}
-            </span>{' '}
-            of{' '}
-            <span className="text-gray-900">
-              {pagination.total}
-            </span>{' '}
-            outstanding records
-          </p>
-
-        </div>
-      )} */}
-
       {/* Table */}
       <OutstandingTable
         data={data}
         onRefetch={onRefetch}
-         showLsi={showLsi} 
+        showLsi={showLsi}
       />
 
       {/* Pagination */}
@@ -139,7 +120,8 @@ if (!rows.length) {
 
           <Pagination
             currentPage={pagination.page}
-            totalPages={pagination.totalPages}
+            totalItems={pagination.total}
+            itemsPerPage={pagination.limit}
             onPageChange={onPageChange}
           />
 

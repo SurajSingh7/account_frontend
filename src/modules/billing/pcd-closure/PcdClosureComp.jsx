@@ -1,15 +1,34 @@
 'use client';
 import React from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useFilters } from '../shared/helpers/hooks/useFilters';
 import FilterBar from '../shared/filters/FilterBar';
 import OrderList from './orders/OrderList';
 import { useFetchList } from '../shared/helpers/hooks/useFetchList';
+
 const ENDPOINT = '/billing/sale/ready-order/all';
 
 const PcdClosureComp = () => {
-  
-  const { filters, setFilter, resetFilters, hasActiveFilters } = useFilters();
-  const { data, pagination, loading, error, refetch } =useFetchList({filters, endpoint:ENDPOINT});
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const initialPage = Number(searchParams.get('page')) || 1;
+
+  const { filters, setFilter, resetFilters, hasActiveFilters } = useFilters({
+    page: initialPage,
+  });
+
+  const { data, pagination, loading, error, refetch } = useFetchList({
+    filters,
+    endpoint: ENDPOINT,
+  });
+
+  const handlePageChange = (page) => {
+    setFilter({ page });
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('page', page);
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
 
   return (
     <div
@@ -37,7 +56,7 @@ const PcdClosureComp = () => {
           loading={loading}
           error={error}
           onRefetch={refetch}
-          onPageChange={(page) => setFilter({ page })}
+          onPageChange={handlePageChange}
         />
       </main>
     </div>

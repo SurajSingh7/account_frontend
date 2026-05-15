@@ -74,7 +74,8 @@ const BillingList = ({
         <div className="mt-6">
           <Pagination
             currentPage={pagination.page}
-            totalPages={pagination.totalPages}
+            totalItems={pagination.total}
+            itemsPerPage={pagination.limit}
             onPageChange={onPageChange}
           />
         </div>
