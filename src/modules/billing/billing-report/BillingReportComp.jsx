@@ -4,9 +4,11 @@ import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useFilters } from '../shared/helpers/hooks/useFilters';
 import { useFetchList } from '../shared/helpers/hooks/useFetchList';
+import { saveLimit } from '../shared/constants';
 import FilterBar from '../shared/filters/FilterBar';
 import BillingList from './component/BillingList';
 import SummaryCard from './component/SummaryCard';
+import Pagination from '@/shared/ui/pagination/Pagination';
 
 const ENDPOINT = '/billing/sale/monthly/orders/report';
 
@@ -14,11 +16,7 @@ const BillingReportComp = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const initialPage = Number(searchParams.get('page')) || 1;
-
-  const { filters, setFilter, resetFilters, hasActiveFilters } = useFilters({
-    page: initialPage,
-  });
+  const { filters, setFilter, resetFilters, hasActiveFilters } = useFilters();
 
   const { data, pagination, loading, error, refetch } = useFetchList({
     filters,
@@ -27,22 +25,32 @@ const BillingReportComp = () => {
 
   const summary = data?.data?.summary || data?.summary || {};
 
+const syncUrl = (updates) => {
+  const params = new URLSearchParams(searchParams.toString());
+  params.set('page',  String(filters.page));
+  params.set('limit', String(filters.limit));
+  Object.entries(updates).forEach(([k, v]) => params.set(k, String(v)));
+  router.push(`?${params.toString()}`, { scroll: false });
+};
+
   const handlePageChange = (page) => {
     setFilter({ page });
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('page', page);
-    router.push(`?${params.toString()}`, { scroll: false });
+    syncUrl({ page });
+  };
+
+  const handleLimitChange = (limit) => {
+    saveLimit(limit);
+    setFilter({ limit, page: 1 });
+    syncUrl({ limit, page: 1 });
   };
 
   return (
     <div
       className="min-h-screen bg-gray-50 p-5 md:p-6"
       style={{
-        fontFamily:
-          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
       }}
     >
-      {/* ── Header ── */}
       <header className="mx-auto mb-8 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold text-gray-900">
@@ -52,11 +60,11 @@ const BillingReportComp = () => {
             Month-wise billing summary per order up to selected period
           </p>
         </div>
-
         <SummaryCard summary={summary} />
       </header>
 
       <main className="mx-auto space-y-5">
+
         <FilterBar
           filters={filters}
           onChange={setFilter}
@@ -66,12 +74,21 @@ const BillingReportComp = () => {
 
         <BillingList
           data={data}
-          pagination={pagination}
           loading={loading}
           error={error}
           onRefetch={refetch}
-          onPageChange={handlePageChange}
         />
+
+        {pagination?.total > 0 && (
+          <Pagination
+            currentPage={filters.page}
+            totalItems={pagination.total}
+            itemsPerPage={filters.limit}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleLimitChange}
+          />
+        )}
+
       </main>
     </div>
   );

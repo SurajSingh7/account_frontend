@@ -1,8 +1,6 @@
 import React from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import OrderCard from './OrderCard';
-import Pagination from '@/shared/ui/pagination/Pagination';
-
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 const SkeletonCard = () => (
@@ -25,8 +23,15 @@ const SkeletonCard = () => (
 );
 
 // ─── OrderList ────────────────────────────────────────────────────────────────
-const OrderList = ({ orders, pagination, loading, error, onRefetch, onPageChange }) => {
+// Sirf teen kaam: loading / error / cards — pagination yahan nahi
+const OrderList = ({
+  orders,
+  loading,
+  error,
+  onRefetch,
+}) => {
 
+  // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="space-y-5">
@@ -35,6 +40,7 @@ const OrderList = ({ orders, pagination, loading, error, onRefetch, onPageChange
     );
   }
 
+  // ── Error ──────────────────────────────────────────────────────────────────
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-24 bg-white rounded-lg border border-gray-200 border-dashed text-center gap-4">
@@ -47,13 +53,15 @@ const OrderList = ({ orders, pagination, loading, error, onRefetch, onPageChange
           onClick={onRefetch}
           className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-blue-600 border border-blue-200 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
         >
-          <RefreshCw className="w-4 h-4" /> Retry
+          <RefreshCw className="w-4 h-4" />
+          Retry
         </button>
       </div>
     );
   }
 
-  if (!orders.length) {
+  // ── Empty ──────────────────────────────────────────────────────────────────
+  if (!orders?.length) {
     return (
       <div className="text-center text-gray-500 py-20 bg-white rounded-lg border border-gray-200 border-dashed">
         <p className="text-xl font-semibold">No orders found.</p>
@@ -62,37 +70,13 @@ const OrderList = ({ orders, pagination, loading, error, onRefetch, onPageChange
     );
   }
 
+  // ── Cards only ─────────────────────────────────────────────────────────────
   return (
-    <>
-      {/* Result count */}
-      {pagination && (
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-base font-semibold text-gray-600">
-            Showing <span className="text-gray-900">{orders.length}</span> of{' '}
-            <span className="text-gray-900">{pagination.total}</span> orders
-          </p>
-        </div>
-      )}
-
-      {/* Cards */}
-      <div className="space-y-5">
-        {orders.map(order => (
-          <OrderCard key={order._id} order={order} onRefetch={onRefetch} />
-        ))}
-      </div>
-
-      {/* Pagination */}
-      {pagination && pagination.totalPages > 1 && (
-        <div className="mt-6">
-          <Pagination
-            currentPage={pagination.page}
-            totalItems={pagination.total}
-            itemsPerPage={pagination.limit}
-            onPageChange={onPageChange}
-          />
-        </div>
-      )}
-    </>
+    <div className="space-y-5">
+      {orders.map(order => (
+        <OrderCard key={order._id} order={order} onRefetch={onRefetch} />
+      ))}
+    </div>
   );
 };
 

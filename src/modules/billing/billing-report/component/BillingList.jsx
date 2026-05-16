@@ -1,9 +1,10 @@
-'use client'
+'use client';
+
 import React from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
-import Pagination from '@/shared/ui/pagination/Pagination';
 import BillingTable from './BillingTable';
 
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
 const SkeletonTable = () => (
   <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden animate-pulse">
     <div className="border-b border-gray-200 p-5">
@@ -23,13 +24,13 @@ const SkeletonTable = () => (
   </div>
 );
 
+// ─── BillingList ──────────────────────────────────────────────────────────────
+// Sirf teen kaam: loading / error / table — pagination yahan nahi
 const BillingList = ({
   data,
-  pagination,
   loading,
   error,
   onRefetch,
-  onPageChange,
 }) => {
 
   if (loading) {
@@ -67,20 +68,7 @@ const BillingList = ({
   }
 
   return (
-    <>
-      <BillingTable data={data} onRefetch={onRefetch} />
-
-      {pagination && pagination.totalPages > 1 && (
-        <div className="mt-6">
-          <Pagination
-            currentPage={pagination.page}
-            totalItems={pagination.total}
-            itemsPerPage={pagination.limit}
-            onPageChange={onPageChange}
-          />
-        </div>
-      )}
-    </>
+    <BillingTable data={data} onRefetch={onRefetch} />
   );
 };
 

@@ -1,7 +1,7 @@
-'use client'
+'use client';
+
 import React from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
-import Pagination from '@/shared/ui/pagination/Pagination';
 import ReceiptTable from './ReceiptTable';
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
@@ -25,13 +25,12 @@ const SkeletonTable = () => (
 );
 
 // ─── ReceiptList ──────────────────────────────────────────────────────────────
+// Sirf teen kaam: loading / error / table — pagination yahan nahi
 const ReceiptList = ({
   data,
-  pagination,
   loading,
   error,
   onRefetch,
-  onPageChange,
 }) => {
 
   // ── Loading ────────────────────────────────────────────────────────────────
@@ -67,7 +66,7 @@ const ReceiptList = ({
     );
   }
 
-  // ── Empty State ────────────────────────────────────────────────────────────
+  // ── Empty ──────────────────────────────────────────────────────────────────
   const rows = data?.data || [];
 
   if (!rows.length) {
@@ -81,25 +80,12 @@ const ReceiptList = ({
     );
   }
 
-  // ── Main UI ────────────────────────────────────────────────────────────────
+  // ── Table only ─────────────────────────────────────────────────────────────
   return (
-    <>
-      <ReceiptTable
-        data={data}
-        onRefetch={onRefetch}
-      />
-
-      {pagination && pagination.totalPages > 1 && (
-        <div className="mt-6">
-          <Pagination
-            currentPage={pagination.page}
-            totalItems={pagination.total}
-            itemsPerPage={pagination.limit}
-            onPageChange={onPageChange}
-          />
-        </div>
-      )}
-    </>
+    <ReceiptTable
+      data={data}
+      onRefetch={onRefetch}
+    />
   );
 };
 

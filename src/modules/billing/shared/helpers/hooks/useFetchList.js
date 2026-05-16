@@ -6,10 +6,10 @@ import { buildListParams } from '../../constants';
 
 export const useFetchList = ({ endpoint, filters }) => {
 
-  const [data,       setData]       = useState([]);
+  const [data, setData] = useState([]);
   const [pagination, setPagination] = useState(null);
-  const [loading,    setLoading]    = useState(false);
-  const [error,      setError]      = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -32,6 +32,9 @@ export const useFetchList = ({ endpoint, filters }) => {
       if (json.success) {
         setData(json.data || []);
         setPagination(json.pagination || null);
+      } else if (json.message === 'No data found') {
+        setData([]);
+        setPagination(null);
       } else {
         throw new Error(json.message || 'Failed to fetch data');
       }
