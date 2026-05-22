@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useFilters } from '../shared/helpers/hooks/useFilters';
 import { useFetchList } from '../shared/helpers/hooks/useFetchList';
 import FilterBar from '../shared/filters/FilterBar';
@@ -10,7 +11,14 @@ import SummaryCard from './component/SummaryCard';
 const ENDPOINT = '/billing/sale/monthly/orders/receipt/';
 
 const ReceiptReportComp = () => {
-  const { filters, setFilter, resetFilters, hasActiveFilters } = useFilters();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const initialPage = Number(searchParams.get('page')) || 1;
+
+  const { filters, setFilter, resetFilters, hasActiveFilters } = useFilters({
+    page: initialPage,
+  });
 
   const { data, pagination, loading, error, refetch } = useFetchList({
     filters,
@@ -18,6 +26,13 @@ const ReceiptReportComp = () => {
   });
 
   const summary = data?.data?.summary || data?.summary || {};
+
+  const handlePageChange = (page) => {
+    setFilter({ page });
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('page', page);
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
 
   return (
     <div
@@ -57,7 +72,7 @@ const ReceiptReportComp = () => {
           loading={loading}
           error={error}
           onRefetch={refetch}
-          onPageChange={(page) => setFilter({ page })}
+          onPageChange={handlePageChange}
         />
       </main>
     </div>

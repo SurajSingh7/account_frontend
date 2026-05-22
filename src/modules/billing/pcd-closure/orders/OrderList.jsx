@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import OrderCard from './OrderCard';
 import Pagination from '@/shared/ui/pagination/Pagination';
@@ -86,7 +86,8 @@ const OrderList = ({ orders, pagination, loading, error, onRefetch, onPageChange
         <div className="mt-6">
           <Pagination
             currentPage={pagination.page}
-            totalPages={pagination.totalPages}
+            totalItems={pagination.total}
+            itemsPerPage={pagination.limit}
             onPageChange={onPageChange}
           />
         </div>

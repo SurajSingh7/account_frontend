@@ -19,7 +19,7 @@ export const getDefaultFilters = () => ({
   entityId:     '',
   active:       'true',          // 'true' | 'false'
   bsoId:        '',
-  panNumber:    '',              // company filter sent as panNumber
+  companyGroupId:    '',              // company filter sent as companyGroupId
   periodType:   'period',        // 'period' | 'dateRange'
   year:         getCurrentYear(),
   month:        getCurrentMonth() + 1,  // 1-indexed; '' = All
@@ -39,7 +39,7 @@ export const buildListParams = (filters) => {
   if (filters.stateCode) params.set('stateCode', filters.stateCode);
   if (filters.entityId)  params.set('entityId',  filters.entityId);
   if (filters.bsoId)     params.set('bsoId',     filters.bsoId);
-  if (filters.panNumber) params.set('panNumber', filters.panNumber);
+  if (filters.companyGroupId) params.set('companyGroupId', filters.companyGroupId);
 
   // Active / Inactive
   params.set('Active', filters.active);

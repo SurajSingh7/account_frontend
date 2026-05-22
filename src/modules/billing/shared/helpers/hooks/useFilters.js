@@ -24,7 +24,7 @@ export const useFilters = () => {
     filters.entityId  !== defaults.entityId  ||
     filters.active    !== defaults.active    ||
     filters.bsoId     !== defaults.bsoId     ||
-    filters.panNumber !== defaults.panNumber ||
+    filters.companyGroupId !== defaults.companyGroupId ||
     filters.periodType !== defaults.periodType ||
     filters.year      !== defaults.year      ||
     filters.month     !== defaults.month     ||

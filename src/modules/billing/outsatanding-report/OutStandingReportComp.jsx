@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useFilters } from '../shared/helpers/hooks/useFilters';
 import { useFetchList } from '../shared/helpers/hooks/useFetchList';
 import FilterBar from '../shared/filters/FilterBar';
@@ -11,16 +12,29 @@ import SummaryCards from './component/SummaryCards';
 const ENDPOINT = '/billing/sale/monthly/orders/outstanding/';
 
 const OutStandingReportComp = () => {
-   const [showLsi, setShowLsi] = useState(false)
-  const { filters, setFilter, resetFilters, hasActiveFilters } = useFilters();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [showLsi, setShowLsi] = useState(false);
+
+  const initialPage = Number(searchParams.get('page')) || 1;
+
+  const { filters, setFilter, resetFilters, hasActiveFilters } = useFilters({
+    page: initialPage,
+  });
 
   const { data, pagination, loading, error, refetch } = useFetchList({
     filters,
     endpoint: ENDPOINT,
   });
 
-  // summary data.data.summary se aata hai
-  const summary = data?.data?.summary || data?.summary || {}
+  const summary = data?.data?.summary || data?.summary || {};
+
+  const handlePageChange = (page) => {
+    setFilter({ page });
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('page', page);
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
 
   return (
     <div
@@ -38,12 +52,12 @@ const OutStandingReportComp = () => {
             Outstanding Report Overview
           </h1>
           <p className="text-gray-600 text-base font-semibold mt-2">
-             Cumulative balances per order up to selected period
+            Cumulative balances per order up to selected period
           </p>
         </div>
 
         {/* Right: Summary Cards */}
-         <SummaryCards
+        <SummaryCards
           summary={summary}
           showLsi={showLsi}
           onToggleLsi={() => setShowLsi((v) => !v)}
@@ -64,8 +78,8 @@ const OutStandingReportComp = () => {
           loading={loading}
           error={error}
           onRefetch={refetch}
-          onPageChange={(page) => setFilter({ page })}
-           showLsi={showLsi}         
+          onPageChange={handlePageChange}
+          showLsi={showLsi}
           onToggleLsi={() => setShowLsi((v) => !v)}
         />
       </main>
