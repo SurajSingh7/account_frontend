@@ -65,7 +65,7 @@ const PcdClosureComp = () => {
 
         {/* OrderList — sirf table/cards, pagination yahan nahi */}
         <OrderList
-          orders={data}
+          orders={data?.data}
           loading={loading}
           error={error}
           onRefetch={refetch}

@@ -24,7 +24,8 @@ export const useFilters = () => {
       page: 1,
     };
   });
-
+  
+  
   const setFilter = useCallback((partial) => {
     setFilters(prev => ({ ...prev, ...partial }));
   }, []);

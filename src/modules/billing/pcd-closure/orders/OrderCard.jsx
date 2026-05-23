@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Edit, Eye } from 'lucide-react';
 import { formatDateDisplay, truncateWithMore } from '../../shared/buildListParams/utils';
-import { useRouter } from 'next/navigation'; 
+import { useRouter } from 'next/navigation';
 import EditPcdModal from '../modal/EditPcdModal';
 
 // ─── Badge ────────────────────────────────────────────────────────────────────
@@ -81,7 +81,7 @@ const OrderCard = ({ order, onRefetch }) => {
 
     return (
       <tr>
-        {['Order ID', 'Circuit ID', 'Cap (Mb)', 'Cap (Kb)', 'Billing Address', 'State', 'Rate', 'Total Basic'].map(h => (
+        {['Order ID', 'Circuit ID', 'Cap (Mb)', 'Cap (Kb)', 'Billing Address', 'State', 'Product', 'Rate', 'Total Basic'].map(h => (
           <th key={h} className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">{h}</th>
         ))}
         {mixedGSTTypes ? (
@@ -115,6 +115,7 @@ const OrderCard = ({ order, onRefetch }) => {
     const sgstAmt = Number(item.sgst) || 0;
     const igstAmt = Number(item.igst) || 0;
     const cgstSgstAmt = cgstAmt + sgstAmt;
+    { console.log("product", item) }
 
     return (
       <tr key={item._id} className="border-t border-gray-200 text-base hover:bg-gray-50 transition-colors">
@@ -128,6 +129,7 @@ const OrderCard = ({ order, onRefetch }) => {
           </span>
         </td>
         <td className="py-4 px-4 font-semibold text-gray-900">{item.state || '–'}</td>
+        <td className="py-4 px-4 font-semibold text-gray-900">{<Badge color="purple">{productLabel}</Badge> || '-'}</td>
         <td className="py-4 px-4 font-bold text-blue-700">₹{Number(item.splitPrice || 0).toFixed(2)}</td>
         <td className="py-4 px-4 font-bold text-blue-600">₹{Number(item.basicTotal || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
 
@@ -176,6 +178,9 @@ const OrderCard = ({ order, onRefetch }) => {
                 <span className="px-3 py-1 bg-purple-100 text-purple-900 rounded-lg text-base font-bold border border-purple-200">
                   {order.orderId}
                 </span>
+
+                {orderTypeLabel && <Badge color="blue">{orderTypeLabel}</Badge>}
+                {entityLabel && <Badge color="orange">{entityLabel}</Badge>}
                 <span className="text-gray-400">•</span>
                 <span className="text-gray-600 font-semibold text-base">Company:</span>
                 <span className="px-2.5 py-0.5 bg-blue-100 text-blue-900 rounded-lg text-base font-semibold border border-blue-200">
@@ -211,7 +216,7 @@ const OrderCard = ({ order, onRefetch }) => {
 
               {/* View button */}
               <button onClick={() => router.push(`/billing/account/pcd-closure/view?pcdId=${order._id}`)}>
-                <Eye className='text-blue-600'/>
+                <Eye className='text-blue-600' />
               </button>
 
               {/* Edit button — opens EditPcdModal */}
@@ -222,19 +227,19 @@ const OrderCard = ({ order, onRefetch }) => {
               >
                 <Edit className="w-5 h-5 text-red-600" />
               </button>
-              
+
               {/* Generate bill remove in future */}
-               <button onClick={() => router.push(`/billing/account/pcd-closure/generate-bill?pcdId=${order._id}`)}>
+              <button onClick={() => router.push(`/billing/account/pcd-closure/generate-bill?pcdId=${order._id}`)}>
                 <div className='bg-black text-amber-50 font-bold px-1.5 text-center rounded-full'> G </div>
               </button>
             </div>
 
             <div className="flex flex-wrap gap-2 justify-end">
-              {entityLabel && <Badge color="orange">{entityLabel}</Badge>}
-              {orderTypeLabel && <Badge color="blue">{orderTypeLabel}</Badge>}
-              {productLabel && <Badge color="purple">{productLabel}</Badge>}
-              {bsoLabel && <Badge color="teal">{bsoLabel}</Badge>}
-              <Badge color={isActive ? 'green' : 'red'}>{isActive ? 'Active' : 'Inactive'}</Badge>
+              {/* {entityLabel && <Badge color="orange">{entityLabel}</Badge>}
+              {orderTypeLabel && <Badge color="blue">{orderTypeLabel}</Badge>} */}
+              {/* {productLabel && <Badge color="purple">{productLabel}</Badge>} */}
+              {/* {bsoLabel && <Badge color="teal">{bsoLabel}</Badge>} */}
+              {/* <Badge color={isActive ? 'green' : 'red'}>{isActive ? 'Active' : 'Inactive'}</Badge> */}
             </div>
           </div>
         </div>
@@ -283,6 +288,7 @@ const OrderCard = ({ order, onRefetch }) => {
             </span>
           </div>
         )} */}
+
       </div>
 
       {/* ── End Address Popup ── */}
@@ -326,11 +332,11 @@ const OrderCard = ({ order, onRefetch }) => {
       )}
 
       {/* ── Edit PCD Modal ── */}
-      <EditPcdModal                   // ← ADD THIS BLOCK
+      <EditPcdModal                  
         isOpen={editModalOpen}
         onClose={() => setEditModalOpen(false)}
         order={order}
-         onSuccess={onRefetch} 
+        onSuccess={onRefetch}
       />
     </>
   );
