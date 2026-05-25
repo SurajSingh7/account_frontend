@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { API_BACKEND_URL } from '@/config/getEnvVariables';
-import { buildListParams } from '../../constants';
+import { buildListParams } from '../../buildListParams';
 
 export const useFetchList = ({ endpoint, filters }) => {
 
