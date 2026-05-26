@@ -1,16 +1,22 @@
-import React from 'react';
-import { ALL_MONTHS, getYearOptions, getAvailableMonths, getCurrentYear, getCurrentMonth } from '../constants';
-import { toStartOfDayISO,toEndOfDayISO } from '../buildListParams/utils';
+import React, { useCallback } from 'react';
+import {
+  ALL_MONTHS, getYearOptions, getAvailableMonths,
+  getCurrentYear, getCurrentMonth,
+} from '../../constants';
+import { toStartOfDayISO, toEndOfDayISO } from '../../buildListParams/utils';
+import MonthRangeSelector from './MonthRangeSelector';
 
-/**
- * PeriodSelector — exact original visual:
- * teal underline tabs, rounded-xl month pills, gradient active, shadow-sm wrappers
- */
+const TABS = [
+  { id: 'period',     label: 'Period Selector' },
+  { id: 'dateRange',  label: 'Date Range'      },
+  { id: 'monthRange', label: 'Month Range'     },
+];
+
 const PeriodSelector = ({ filters, onChange }) => {
-  const { periodType, year, month, _startRaw, _endRaw } = filters;
+  const { periodType, year, month, _startRaw, _endRaw, fromMonth, toMonth } = filters;
   const availableMonths = year !== 'All' ? getAvailableMonths(parseInt(year)) : [];
 
-  const handleYearChange = (y) => {
+  const handleYearChange = useCallback((y) => {
     if (y === 'All') {
       onChange({ year: 'All', month: '' });
     } else {
@@ -18,37 +24,42 @@ const PeriodSelector = ({ filters, onChange }) => {
       const defaultMonth = yr === getCurrentYear() ? getCurrentMonth() + 1 : 12;
       onChange({ year: yr, month: defaultMonth });
     }
-  };
+  }, [onChange]);
 
-  const handleDateChange = (key, val) => {
+  const handleDateChange = useCallback((key, val) => {
     if (key === 'startDate') onChange({ startDate: toStartOfDayISO(val), _startRaw: val });
     if (key === 'endDate')   onChange({ endDate:   toEndOfDayISO(val),   _endRaw:   val });
-  };
+  }, [onChange]);
+
+  const handleMonthRange = useCallback((partial) => {
+    onChange({ ...partial });
+  }, [onChange]);
 
   return (
     <div className="space-y-4">
-      {/* Tab bar — teal underline, exact original style */}
+      {/* Tab bar */}
       <div className="flex gap-2 border-b border-gray-200">
-        {[['period', 'Period Selector'], ['dateRange', 'Date Range']].map(([type, label]) => (
+        {TABS.map(({ id, label }) => (
           <button
-            key={type}
+            key={id}
             type="button"
-            onClick={() => onChange({ periodType: type })}
-            className={`px-5 py-2.5 font-semibold text-sm transition-all border-b-2 ${
-              periodType === type
+            onClick={() => onChange({ periodType: id })}
+            className={`
+              px-5 py-2.5 font-semibold text-sm transition-all border-b-2
+              ${periodType === id
                 ? 'border-teal-600 text-teal-600'
                 : 'border-transparent text-gray-600 hover:text-gray-900'
-            }`}
+              }
+            `}
           >
             {label}
           </button>
         ))}
       </div>
 
-      {/* Period Selector */}
+      {/* ── Period Selector ── */}
       {periodType === 'period' && (
         <div className="flex flex-wrap items-center gap-6">
-          {/* Year */}
           <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
             <label className="text-sm font-semibold text-gray-600">Year</label>
             <select
@@ -60,12 +71,10 @@ const PeriodSelector = ({ filters, onChange }) => {
             </select>
           </div>
 
-          {/* Month pills */}
           {year !== 'All' && (
             <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 shadow-sm flex-1 min-w-[420px]">
               <label className="text-sm font-semibold text-gray-600 whitespace-nowrap">Month</label>
               <div className="flex gap-2 flex-wrap justify-center">
-                {/* All */}
                 <button
                   type="button"
                   onClick={() => onChange({ month: '' })}
@@ -77,14 +86,13 @@ const PeriodSelector = ({ filters, onChange }) => {
                 >
                   All
                 </button>
-
-                {ALL_MONTHS.map((label, i) => {
+                {ALL_MONTHS.map((lbl, i) => {
                   const m       = i + 1;
-                  const enabled = availableMonths.includes(label);
+                  const enabled = availableMonths.includes(lbl);
                   const active  = month === m;
                   return (
                     <button
-                      key={label}
+                      key={lbl}
                       type="button"
                       disabled={!enabled}
                       onClick={() => enabled && onChange({ month: m })}
@@ -96,7 +104,7 @@ const PeriodSelector = ({ filters, onChange }) => {
                             : 'bg-gray-100 text-gray-300 border border-gray-200 cursor-not-allowed'
                       }`}
                     >
-                      {label}
+                      {lbl}
                     </button>
                   );
                 })}
@@ -106,7 +114,7 @@ const PeriodSelector = ({ filters, onChange }) => {
         </div>
       )}
 
-      {/* Date Range */}
+      {/* ── Date Range ── */}
       {periodType === 'dateRange' && (
         <div className="flex flex-wrap items-center gap-6">
           {[['From Date:', 'startDate', _startRaw || ''], ['To Date:', 'endDate', _endRaw || '']].map(([lbl, key, val]) => (
@@ -120,7 +128,6 @@ const PeriodSelector = ({ filters, onChange }) => {
               />
             </div>
           ))}
-
           {_startRaw && _endRaw && (
             <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
               <span className="text-sm font-semibold text-blue-700">
@@ -128,11 +135,19 @@ const PeriodSelector = ({ filters, onChange }) => {
               </span>
             </div>
           )}
-
         </div>
+      )}
+
+      {/* ── Month Range ── */}
+      {periodType === 'monthRange' && (
+        <MonthRangeSelector
+          fromMonth={fromMonth}
+          toMonth={toMonth}
+          onChange={handleMonthRange}
+        />
       )}
     </div>
   );
 };
 
-export default PeriodSelector;
+export default React.memo(PeriodSelector);

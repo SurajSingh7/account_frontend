@@ -7,7 +7,7 @@ import LedgerList from './component/LedgerList';
 const HIDDEN_COLUMNS_MAP = {
   bill:        ['runningOutstanding', 'outstandingAfterAdjustment', 'receiptAmount','actions','tdsConfirm','tdsProvision','received'],
   recipt:      ['runningOutstanding','miscBill', 'outstandingAfterAdjustment', ,'actions','netBilling','days','period','basicBill','cgst','sgst','igst','basicGst'],
-  outstanding: [,'receiptAmount',],
+  outstanding: [,'receiptAmount'],
 };
 
 const LedgerAllDetailsComp = () => {
@@ -16,9 +16,9 @@ const LedgerAllDetailsComp = () => {
   const orderId       = searchParams.get('orderId')       ?? '';
   const billingReadId = searchParams.get('billingReadId') ?? '';
   const circuitKey    = searchParams.get('circuitKey')    ?? '';
-  const ledgerName    = searchParams.get('ledgerName')    ?? '';   // ← new
+  const ledgerName    = searchParams.get('ledgerName')    ?? '';   
 
-  const hiddenColumns = HIDDEN_COLUMNS_MAP[ledgerName] ?? [];      // ← new
+  const hiddenColumns = HIDDEN_COLUMNS_MAP[ledgerName] ?? [];     
 
   const { data, pagination, loading, error, refetch, setPage } = useLedgerList({
     endpoint: '/billing/sale/monthly/order',
