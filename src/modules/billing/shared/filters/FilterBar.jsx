@@ -6,11 +6,6 @@ import OrderTypeSelect from './dropdowns/OrderTypeSelect';
 import ProductSelect from './dropdowns/ProductSelect';
 import EntitySelect from './dropdowns/EntitySelect';
 
-// ── Chip imports (commented — restore if switching back to chip UI) ──────────
-import OrderTypeChips from './chips/OrderTypeChips';
-import ProductChips from './chips/ProductChips';
-import EntityChips from './chips/EntityChips';
-
 import { useStates, useBsos, useCompanies } from '../helpers/hooks/useFilterOptions';
 
 const truncateLabel = (str, n) => (!str ? '' : str.length > n ? str.slice(0, n) + '…' : str);
@@ -108,7 +103,6 @@ const FilterBar = ({
         {/*
           ── DROPDOWN MODE (current) ───────────────────────────────────────────
           OrderType / Product / Entity as native <select> with count in options.
-          To switch to CHIP mode: comment these 3 out, uncomment chip rows below.
         */}
         <OrderTypeSelect
           summary={apiSummary.orderType ?? {}}
@@ -175,39 +169,6 @@ const FilterBar = ({
           </button>
         )}
       </div>
-
-      
-        ── CHIP MODE rows (Row 2–4) — currently disabled ─────────────────────
-        Uncomment all 3 blocks below + swap Row 1 dropdowns to re-enable chip UI.
-
-        Row 2 — Order Type Chips
-        <div className="border-t border-gray-100 pt-3">
-          <OrderTypeChips
-            summary={apiSummary.orderType ?? {}}
-            totalCount={totalCount}
-            selected={filters.orderType}
-            onChange={handleOrderType}
-          />
-        </div>
-
-        Row 3 — Product Chips
-        <div className="border-t border-gray-100 pt-3">
-          <ProductChips
-            summary={apiSummary.productCode ?? {}}
-            selected={filters.productId}
-            onChange={handleProductId}
-          />
-        </div>
-
-        Row 4 — Entity Chips
-        <div className="border-t border-gray-100 pt-3">
-          <EntityChips
-            summary={apiSummary.entity ?? {}}
-            selected={filters.entityId}
-            onChange={handleEntityId}
-          />
-        </div>
-      
 
 
       {/* ── Row 5 (currently Row 2): Period / Date Range / Month Range ──────── */}
