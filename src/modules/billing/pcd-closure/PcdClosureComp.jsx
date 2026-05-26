@@ -38,7 +38,7 @@ const PcdClosureComp = () => {
     router.push(`?${params.toString()}`, { scroll: false });
   };
 
-  const handlePageChange  = (page)  => { setFilter({ page });              syncUrl({ page }); };
+  const handlePageChange  = (page)  => { setFilter({ page });   syncUrl({ page }); };
   const handleLimitChange = (limit) => { saveLimit(limit); setFilter({ limit, page: 1 }); syncUrl({ limit, page: 1 }); };
 
   return (

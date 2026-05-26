@@ -30,7 +30,7 @@ const OrderTypeSelect = ({ summary = {}, totalCount = 0, selected = '', onChange
   }, []);
 
   const selectedMeta  = ORDER_TYPES.find(o => o.key === selected);
-  const triggerLabel  = selectedMeta ? selectedMeta.label : 'All Order Types';
+  const triggerLabel  = selectedMeta ? selectedMeta.label : 'All Order';
   const triggerColor  = selectedMeta ? selectedMeta.color : ALL_COLOR;
   const triggerCount  = selectedMeta ? getCount(summary[selected]) : allCount;
 
@@ -78,7 +78,7 @@ const OrderTypeSelect = ({ summary = {}, totalCount = 0, selected = '', onChange
               }
             `}
           >
-            All Order Types
+            All Order 
           </button>
 
           {ORDER_TYPES.map(({ key, label, color }) => (
