@@ -9,6 +9,7 @@ import FilterBar from '../shared/filters/FilterBar';
 import BillingList from './component/BillingList';
 import SummaryCard from './component/SummaryCard';
 import Pagination from '@/shared/ui/pagination/Pagination';
+import { BILLING_FIELDS } from '../shared/filters/filterFieldRegistry';
 
 const ENDPOINT = '/billing/sale/monthly/orders/report';
 
@@ -23,7 +24,41 @@ const BillingReportComp = () => {
     endpoint: ENDPOINT,
   });
 
-  const summary = data?.data?.summary || data?.summary || {};
+  const apiSummary = {
+  totalOrders:
+    data?.summary?.totalOrders || 0,
+
+  billing:
+    data?.summary?.billing || 0,
+
+  miscCharge:
+    data?.summary?.miscCharge || 0,
+
+  creditNote:
+    data?.summary?.creditNote || 0,
+
+  netBilling:
+    data?.summary?.netBilling || 0,
+
+  orderType:
+    data?.summary?.orderType ||
+    data?.summary?.orderTypeCounts ||
+    {},
+
+  productCode:
+    data?.summary?.productCode ||
+    data?.summary?.productCounts ||
+    {},
+
+  entity:
+    data?.summary?.entity ||
+    data?.summary?.entityCounts ||
+    {},
+};
+
+const totalCount =
+  pagination?.total ||
+  0;
 
 const syncUrl = (updates) => {
   const params = new URLSearchParams(searchParams.toString());
@@ -60,7 +95,7 @@ const syncUrl = (updates) => {
             Month-wise billing summary per order up to selected period
           </p>
         </div>
-        <SummaryCard summary={summary} />
+        <SummaryCard summary={apiSummary} />
       </header>
 
       <main className="mx-auto space-y-5">
@@ -70,6 +105,9 @@ const syncUrl = (updates) => {
           onChange={setFilter}
           onClear={resetFilters}
           hasActive={hasActiveFilters}
+          apiSummary={apiSummary}
+          totalCount={totalCount}
+          fields={BILLING_FIELDS}
         />
 
         <BillingList

@@ -11,8 +11,8 @@ import { formatDateDisplay, formatINR } from '../../shared/buildListParams/utils
 
 // ─── Design Tokens ─────────────────────────────────────────────────────────────
 const SECTION_ICON_CLS = 'w-4 h-4 text-blue-500';
-const LABEL_CLS        = 'text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5';
-const VALUE_CLS        = 'text-sm font-semibold text-gray-800';
+const LABEL_CLS = 'text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5';
+const VALUE_CLS = 'text-sm font-semibold text-gray-800';
 
 
 // ─── Atoms ─────────────────────────────────────────────────────────────────────
@@ -24,11 +24,10 @@ const Detail = ({ label, value }) => (
 );
 
 const Badge = ({ active }) => (
-  <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border ${
-    active
+  <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border ${active
       ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
       : 'bg-red-50 text-red-600 border-red-200'
-  }`}>
+    }`}>
     <span className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-emerald-500' : 'bg-red-400'}`} />
     {active ? 'Active' : 'Inactive'}
   </span>
@@ -96,11 +95,11 @@ const BillingItemCard = ({ item, index }) => (
     {/* Financials Grid */}
     <div className="px-5 py-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 border-b border-gray-100">
       {[
-        { label: 'Basic Total',  value: formatINR(item.basicTotal) },
-        { label: 'CGST',         value: item.cgst > 0 ? formatINR(item.cgst)  : '–' },
-        { label: 'SGST',         value: item.sgst > 0 ? formatINR(item.sgst)  : '–' },
-        { label: 'IGST',         value: item.igst > 0 ? formatINR(item.igst)  : '–' },
-        { label: 'Grand Total',  value: formatINR(item.grandTotal) },
+        { label: 'Basic Total', value: formatINR(item.basicTotal) },
+        { label: 'CGST', value: item.cgst > 0 ? formatINR(item.cgst) : '–' },
+        { label: 'SGST', value: item.sgst > 0 ? formatINR(item.sgst) : '–' },
+        { label: 'IGST', value: item.igst > 0 ? formatINR(item.igst) : '–' },
+        { label: 'Grand Total', value: formatINR(item.grandTotal) },
       ].map(({ label, value }) => (
         <div key={label} className={label === 'Grand Total' ? 'col-span-1' : ''}>
           <p className={LABEL_CLS}>{label}</p>
@@ -139,13 +138,13 @@ const BillingItemCard = ({ item, index }) => (
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 const ViewPcdModal = () => {
-  const router       = useRouter();
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const pcdId        = searchParams.get('pcdId');
+  const pcdId = searchParams.get('pcdId');
 
-  const [order,   setOrder]   = useState(null);
+  const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState(null);
+  const [error, setError] = useState(null);
 
   const fetchOrder = async () => {
     if (!pcdId) return;
@@ -202,8 +201,8 @@ const ViewPcdModal = () => {
 
   if (!order) return null;
 
-  const summary      = order.summary      || {};
-  const billingItems = order.billingItems  || [];
+  const summary = order.summary || {};
+  const billingItems = order.billingItems || [];
 
   return (
     <div className="min-h-screen bg-[#f5f6fa]">
@@ -225,9 +224,14 @@ const ViewPcdModal = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="hidden sm:block text-xs text-gray-400 font-medium">
-              PCD: <span className="text-gray-600 font-semibold">{formatDateDisplay(order.pcdDate)}</span>
+            <span className="hidden sm:block text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-3 py-1 rounded-lg">
+              PCD Effective: {formatDateDisplay(order.pcdDate)}
             </span>
+
+            <span className="hidden sm:block text-xs font-semibold text-orange-700 bg-orange-50 border border-orange-200 px-3 py-1 rounded-lg">
+              PCD Closing: {formatDateDisplay(order.operationalDate)}
+            </span>
+
             <Badge active={order.isActive} />
           </div>
         </div>
@@ -241,20 +245,21 @@ const ViewPcdModal = () => {
 
           <SectionCard icon={<Building2 className={SECTION_ICON_CLS} />} title="Basic Info">
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-              <Detail label="Order ID"    value={order.orderId} />
-              <Detail label="Order Type"  value={order.orderType} />
-              <Detail label="Company"     value={order.company?.name} />
-              <Detail label="PAN Number"  value={order.company?.panNumber} />
-              <Detail label="Entity"      value={`${order.entity?.name} (${order.entity?.alias})`} />
-              <Detail label="BSO"         value={order.bso?.name} />
-              <Detail label="PCD Date"    value={formatDateDisplay(order.pcdDate)} />
+              <Detail label="Order ID" value={order.orderId} />
+              <Detail label="Order Type" value={order.orderType} />
+              <Detail label="Company" value={order.company?.name} />
+              <Detail label="PAN Number" value={order.company?.panNumber} />
+              <Detail label="Entity" value={`${order.entity?.name} (${order.entity?.alias})`} />
+              <Detail label="BSO" value={order.bso?.name} />
+              <Detail label="PCD Effective" value={formatDateDisplay(order.pcdDate)} />
+              <Detail label="PCD Closing" value={formatDateDisplay(order.operationalDate)} />
             </div>
           </SectionCard>
 
           <SectionCard icon={<Cpu className={SECTION_ICON_CLS} />} title="Technical">
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-              <Detail label="Product"         value={`${order.product?.name} (${order.product?.code})`} />
-              <Detail label="Offered Rate"    value={order.offeredPrice?.rate ? `${formatINR(order.offeredPrice.rate)}/Mbps` : '–'} />
+              <Detail label="Product" value={`${order.product?.name} (${order.product?.code})`} />
+              <Detail label="Offered Rate" value={order.offeredPrice?.rate ? `${formatINR(order.offeredPrice.rate)}/Mbps` : '–'} />
               <Detail label="Capacity (Mbps)" value={order.capacity} />
               <Detail label="Capacity (Kbps)" value={(order.capacityKbps || order.capacity * 1024)?.toLocaleString()} />
             </div>
@@ -274,9 +279,9 @@ const ViewPcdModal = () => {
         <SectionCard icon={<ReceiptText className={SECTION_ICON_CLS} />} title="GST Summary">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
             <GstCell label="Total Basic" value={formatINR(summary.totalBasic)} />
-            <GstCell label="Total CGST"  value={summary.totalCgst > 0 ? formatINR(summary.totalCgst) : '–'} />
-            <GstCell label="Total SGST"  value={summary.totalSgst > 0 ? formatINR(summary.totalSgst) : '–'} />
-            <GstCell label="Total IGST"  value={summary.totalIgst > 0 ? formatINR(summary.totalIgst) : '–'} />
+            <GstCell label="Total CGST" value={summary.totalCgst > 0 ? formatINR(summary.totalCgst) : '–'} />
+            <GstCell label="Total SGST" value={summary.totalSgst > 0 ? formatINR(summary.totalSgst) : '–'} />
+            <GstCell label="Total IGST" value={summary.totalIgst > 0 ? formatINR(summary.totalIgst) : '–'} />
             <div className="flex flex-col items-center justify-center bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 text-center">
               <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Grand Total</p>
               <p className="text-sm font-bold text-emerald-700">{formatINR(summary.totalGrand)}</p>

@@ -62,7 +62,7 @@ const normalizeRow = (item) => {
 // To reorder any column: just change its `order` number. Lowest = leftmost.
 // ─────────────────────────────────────────────────────────────────────────────
 export const LEDGER_COLUMNS = [
-  { id: 'month', label: 'Month', align: 'left', order: 1 },
+  { id: 'month', label:  <> Billing <br /> Month  </>, align: 'right', align: 'left', order: 1 },
   { id: 'days', label: 'Days', align: 'center', order: 2 },
   { id: 'period', label: 'Period', align: 'left', order: 3 },
   { id: 'basicBill', label: 'Basic Bill', align: 'right', order: 4 },

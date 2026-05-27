@@ -9,6 +9,7 @@ import FilterBar from '../shared/filters/FilterBar';
 import OutstandingList from './component/OutstandingList';
 import SummaryCards from './component/SummaryCards';
 import Pagination from '@/shared/ui/pagination/Pagination';
+import { OUTSTANDING_FIELDS } from '../shared/filters/filterFieldRegistry';
 
 const ENDPOINT = '/billing/sale/monthly/orders/outstanding/';
 
@@ -23,16 +24,40 @@ const OutStandingReportComp = () => {
     endpoint: ENDPOINT,
   });
 
-  const summary = data?.data?.summary || data?.summary || {};
+  // API summary — comes back with every list response
+  const apiSummary = {
+    orderType:
+      data?.summary?.orderType ||
+      data?.summary?.orderTypeCounts ||
+      {},
+
+    productCode:
+      data?.summary?.productCode ||
+      data?.summary?.productCounts ||
+      {},
+
+    entity:
+      data?.summary?.entity ||
+      data?.summary?.entityCounts ||
+      {},
+
+    totalOrders:
+      data?.summary?.totalOrders || 0,
+
+    totalBalance:
+      data?.summary?.totalBalance || 0,
+  };
+
+  const totalCount =pagination?.total ||0;
 
   // ── Single URL sync helper ────────────────────────────────────────────────
-const syncUrl = (updates) => {
-  const params = new URLSearchParams(searchParams.toString());
-  params.set('page',  String(filters.page));
-  params.set('limit', String(filters.limit));
-  Object.entries(updates).forEach(([k, v]) => params.set(k, String(v)));
-  router.push(`?${params.toString()}`, { scroll: false });
-};
+  const syncUrl = (updates) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('page', String(filters.page));
+    params.set('limit', String(filters.limit));
+    Object.entries(updates).forEach(([k, v]) => params.set(k, String(v)));
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
 
   // Page change — filters + URL dono update
   const handlePageChange = (page) => {
@@ -64,7 +89,7 @@ const syncUrl = (updates) => {
           </p>
         </div>
         <SummaryCards
-          summary={summary}
+          summary={apiSummary}
           showLsi={showLsi}
           onToggleLsi={() => setShowLsi(v => !v)}
         />
@@ -77,6 +102,9 @@ const syncUrl = (updates) => {
           onChange={setFilter}
           onClear={resetFilters}
           hasActive={hasActiveFilters}
+          apiSummary={apiSummary}
+          totalCount={totalCount}
+          fields={OUTSTANDING_FIELDS}
         />
 
         <OutstandingList

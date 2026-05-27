@@ -9,6 +9,7 @@ import FilterBar from '../shared/filters/FilterBar';
 import ReceiptList from './component/ReceiptList';
 import SummaryCard from './component/SummaryCard';
 import Pagination from '@/shared/ui/pagination/Pagination';
+import { RECEIPT_FIELDS } from '../shared/filters/filterFieldRegistry';
 
 const ENDPOINT = '/billing/sale/monthly/orders/receipt/';
 
@@ -23,8 +24,45 @@ const ReceiptReportComp = () => {
     endpoint: ENDPOINT,
   });
 
-  const summary = data?.data?.summary || data?.summary || {};
+  const apiSummary = {
+    totalOrders:
+      data?.summary?.totalOrders || 0,
 
+    received:
+      data?.summary?.received || 0,
+
+    tdsConfirm:
+      data?.summary?.tdsConfirm || 0,
+
+    tdsProvision:
+      data?.summary?.tdsProvision || 0,
+
+    totalReceipts:
+      data?.summary?.totalReceipts || 0,
+
+    creditNote:
+      data?.summary?.creditNote || 0,
+
+    orderType:
+      data?.summary?.orderType ||
+      data?.summary?.orderTypeCounts ||
+      {},
+
+    productCode:
+      data?.summary?.productCode ||
+      data?.summary?.productCounts ||
+      {},
+
+    entity:
+      data?.summary?.entity ||
+      data?.summary?.entityCounts ||
+      {},
+  };
+
+  const totalCount =
+    pagination?.total ||
+    0;
+    
   // ── Single URL sync helper ──────────────────────────────────────────────────
   const syncUrl = (updates) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -61,7 +99,7 @@ const ReceiptReportComp = () => {
             Receipts, CN & TDS by Order
           </p>
         </div>
-        <SummaryCard summary={summary} />
+        <SummaryCard summary={apiSummary} />
       </header>
 
       <main className="mx-auto space-y-5">
@@ -71,6 +109,9 @@ const ReceiptReportComp = () => {
           onChange={setFilter}
           onClear={resetFilters}
           hasActive={hasActiveFilters}
+          apiSummary={apiSummary}
+          totalCount={totalCount}
+          fields={RECEIPT_FIELDS}
         />
 
         {/* ReceiptList — sirf table, pagination yahan nahi */}

@@ -133,11 +133,11 @@ const ReceiptRow = ({ item }) => {
         </td>
 
         {/* Credit Notes + GST */}
-        <td className="px-4 py-2.5 text-right bg-cyan-50/40">
+        {/* <td className="px-4 py-2.5 text-right bg-cyan-50/40">
           <span className="text-base font-extrabold text-cyan-700 tabular-nums">
             ₹{fmt(creditNoteAmt)}
           </span>
-        </td>
+        </td> */}
 
         {/* TDS Confirm */}
         <td className="px-4 py-2.5 text-right bg-indigo-50/40">
@@ -206,7 +206,7 @@ const ReceiptTable = ({ data }) => {
     { label: 'Company',          align: 'left'   },
     { label: 'State',            align: 'left'   },
     { label: 'Received',         align: 'right'  },
-    { label: 'Credit Notes+GST', align: 'right'  },
+    // { label: 'Credit Notes+GST', align: 'right'  },
     { label: 'TDS Confirm',      align: 'right'  },
     { label: 'TDS Provision',    align: 'right'  },
     { label: 'Total Receipts',   align: 'right'  },
