@@ -1,47 +1,24 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation'; // ← ye wapas add karo
-import { useFilters } from '../shared/helpers/hooks/useFilters';
-import { useFetchList } from '../shared/helpers/hooks/useFetchList';
-import { saveLimit } from '../shared/constants';
-import FilterBar from '../shared/filters/FilterBar';
+import { useFilters } from '../../shared/helpers/hooks/useFilters';
+import { useFetchList } from '../../shared/helpers/hooks/useFetchList';
+import { saveLimit } from '../../shared/constants';
+import FilterBar from '../../shared/filters/FilterBar';
 import OutstandingList from './component/OutstandingList';
 import SummaryCards from './component/SummaryCards';
 import Pagination from '@/shared/ui/pagination/Pagination';
-import { OUTSTANDING_FIELDS } from '../shared/filters/filterFieldRegistry';
 
-const ENDPOINT = '/billing/sale/monthly/orders/outstanding/';
 
-const OutStandingReportComp = () => {
+const ENDPOINT = '/billing/sale/monthly/company/outstanding';
+
+const OutStandingGroupReportComp = () => {
   const router = useRouter();             // ← wapas add karo
   const searchParams = useSearchParams(); // ← wapas add karo
   const [showLsi, setShowLsi] = useState(false);
 
   const { filters, setFilter, resetFilters, hasActiveFilters } = useFilters();
-
-  // ✅ For parent company group connect with its child
-  const companyGroupId = searchParams.get('companyGroupId');
-
-  useEffect(() => {
-    if (companyGroupId) {
-
-      setFilter({
-        companyGroupId,
-        page: 1,
-      });
-
-      const params = new URLSearchParams(searchParams.toString());
-
-      params.delete('companyGroupId');
-
-      router.replace(`?${params.toString()}`, {
-        scroll: false,
-      });
-    }
-  }, [companyGroupId, setFilter, router, searchParams]);
-
-
   const { data, pagination, loading, error, refetch } = useFetchList({
     filters,
     endpoint: ENDPOINT,
@@ -71,7 +48,7 @@ const OutStandingReportComp = () => {
       data?.summary?.totalBalance || 0,
   };
 
-  const totalCount = pagination?.total || 0;
+  const totalCount =pagination?.total ||0;
 
   // ── Single URL sync helper ────────────────────────────────────────────────
   const syncUrl = (updates) => {
@@ -105,7 +82,7 @@ const OutStandingReportComp = () => {
       <header className="mx-auto mb-8 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold text-gray-900">
-            Outstanding Report Overview
+            Outstanding Company Group Report
           </h1>
           <p className="text-gray-600 text-base font-semibold mt-2">
             Cumulative balances per order up to selected period
@@ -127,7 +104,7 @@ const OutStandingReportComp = () => {
           hasActive={hasActiveFilters}
           apiSummary={apiSummary}
           totalCount={totalCount}
-          fields={OUTSTANDING_FIELDS}
+          fields={['companyGroupId','period', ]}
         />
 
         <OutstandingList
@@ -154,4 +131,4 @@ const OutStandingReportComp = () => {
   );
 };
 
-export default OutStandingReportComp;
+export default OutStandingGroupReportComp;

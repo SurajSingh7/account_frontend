@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useFilters } from '../shared/helpers/hooks/useFilters';
 import { useFetchList } from '../shared/helpers/hooks/useFetchList';
@@ -17,7 +17,44 @@ const BillingReportComp = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+
+
+
+
   const { filters, setFilter, resetFilters, hasActiveFilters } = useFilters();
+
+  // // ✅ For parent company group connect with its child 
+  // const companyGroupId = searchParams.get('companyGroupId');
+  // useEffect(() => {
+  //   if (companyGroupId) {
+  //     setFilter({
+  //       companyGroupId,
+  //       page: 1,
+  //     });
+  //   }
+  // }, [companyGroupId,setFilter]);
+
+  // ✅ For parent company group connect with its child
+  const companyGroupId = searchParams.get('companyGroupId');
+
+  useEffect(() => {
+    if (companyGroupId) {
+
+      setFilter({
+        companyGroupId,
+        page: 1,
+      });
+
+      const params = new URLSearchParams(searchParams.toString());
+
+      params.delete('companyGroupId');
+
+      router.replace(`?${params.toString()}`, {
+        scroll: false,
+      });
+    }
+  }, [companyGroupId, setFilter, router, searchParams]);
+
 
   const { data, pagination, loading, error, refetch } = useFetchList({
     filters,
@@ -25,48 +62,48 @@ const BillingReportComp = () => {
   });
 
   const apiSummary = {
-  totalOrders:
-    data?.summary?.totalOrders || 0,
+    totalOrders:
+      data?.summary?.totalOrders || 0,
 
-  billing:
-    data?.summary?.billing || 0,
+    billing:
+      data?.summary?.billing || 0,
 
-  miscCharge:
-    data?.summary?.miscCharge || 0,
+    miscCharge:
+      data?.summary?.miscCharge || 0,
 
-  creditNote:
-    data?.summary?.creditNote || 0,
+    creditNote:
+      data?.summary?.creditNote || 0,
 
-  netBilling:
-    data?.summary?.netBilling || 0,
+    netBilling:
+      data?.summary?.netBilling || 0,
 
-  orderType:
-    data?.summary?.orderType ||
-    data?.summary?.orderTypeCounts ||
-    {},
+    orderType:
+      data?.summary?.orderType ||
+      data?.summary?.orderTypeCounts ||
+      {},
 
-  productCode:
-    data?.summary?.productCode ||
-    data?.summary?.productCounts ||
-    {},
+    productCode:
+      data?.summary?.productCode ||
+      data?.summary?.productCounts ||
+      {},
 
-  entity:
-    data?.summary?.entity ||
-    data?.summary?.entityCounts ||
-    {},
-};
+    entity:
+      data?.summary?.entity ||
+      data?.summary?.entityCounts ||
+      {},
+  };
 
-const totalCount =
-  pagination?.total ||
-  0;
+  const totalCount =
+    pagination?.total ||
+    0;
 
-const syncUrl = (updates) => {
-  const params = new URLSearchParams(searchParams.toString());
-  params.set('page',  String(filters.page));
-  params.set('limit', String(filters.limit));
-  Object.entries(updates).forEach(([k, v]) => params.set(k, String(v)));
-  router.push(`?${params.toString()}`, { scroll: false });
-};
+  const syncUrl = (updates) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('page', String(filters.page));
+    params.set('limit', String(filters.limit));
+    Object.entries(updates).forEach(([k, v]) => params.set(k, String(v)));
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
 
   const handlePageChange = (page) => {
     setFilter({ page });
