@@ -34,17 +34,17 @@ const SummaryCard = ({ summary }) => {
       textClr: 'text-emerald-600',
       lblClr:  'text-emerald-500',
     },
-    {
-      label:   'Credit Notes+ GST',
-      value:   summary?.creditNote ?? 0,            // was: totalCreditNotes
-      icon:    FileX,
-      border:  'border-cyan-100',
-      bg:      'from-cyan-50/80',
-      iconBg:  'bg-cyan-100',
-      iconClr: 'text-cyan-600',
-      textClr: 'text-cyan-700',
-      lblClr:  'text-cyan-500',
-    },
+    // {
+    //   label:   'Credit Notes+ GST',
+    //   value:   summary?.creditNote ?? 0,            // was: totalCreditNotes
+    //   icon:    FileX,
+    //   border:  'border-cyan-100',
+    //   bg:      'from-cyan-50/80',
+    //   iconBg:  'bg-cyan-100',
+    //   iconClr: 'text-cyan-600',
+    //   textClr: 'text-cyan-700',
+    //   lblClr:  'text-cyan-500',
+    // },
     {
       label:   'TDS Confirm',
       value:   summary?.tdsConfirm ?? 0,            // ⚠️ Not in API yet — shows ₹0.00 until backend adds it

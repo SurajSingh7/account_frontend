@@ -30,25 +30,25 @@ export const useStates = () => {
 };
 
 // ─── Entities (internal companies) ───────────────────────────────────────────
-export const useEntities = () => {
-  const [entities, setEntities] = useState([]);
-  const [loading,  setLoading]  = useState(false);
+// export const useEntities = () => {
+//   const [entities, setEntities] = useState([]);
+//   const [loading,  setLoading]  = useState(false);
 
-  useEffect(() => {
-    const fetch_ = async () => {
-      setLoading(true);
-      try {
-        const res  = await fetch(`${API_BACKEND_URL}/config/parent/internal-company/all`);
-        const json = await res.json();
-        if (json.success) setEntities(json.data);
-      } catch (err) { console.error('useEntities:', err); }
-      finally { setLoading(false); }
-    };
-    fetch_();
-  }, []);
+//   useEffect(() => {
+//     const fetch_ = async () => {
+//       setLoading(true);
+//       try {
+//         const res  = await fetch(`${API_BACKEND_URL}/config/parent/internal-company/all`);
+//         const json = await res.json();
+//         if (json.success) setEntities(json.data);
+//       } catch (err) { console.error('useEntities:', err); }
+//       finally { setLoading(false); }
+//     };
+//     fetch_();
+//   }, []);
 
-  return { entities, loading };
-};
+//   return { entities, loading };
+// };
 
 // ─── BSOs ─────────────────────────────────────────────────────────────────────
 export const useBsos = () => {

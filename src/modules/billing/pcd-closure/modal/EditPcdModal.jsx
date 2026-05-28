@@ -9,8 +9,7 @@ const EditPcdModal = ({ isOpen, onClose, order,onSuccess }) => {
   const billingItems = order?.billingItems || [];
   const hasTwoItems  = billingItems.length === 2;
   const router = useRouter();
- 
-  console.log("ghjk",order);
+
 
   // ── Split state — index 0 and index 1 ─────────────────────────────────────
   const [split0, setSplit0] = useState("");

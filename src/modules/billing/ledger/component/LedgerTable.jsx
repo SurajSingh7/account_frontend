@@ -1,8 +1,9 @@
 'use client'
-import React from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Eye, Pencil, FileText, ArrowLeft, CheckCheck } from 'lucide-react'
+import { Eye, Pencil, FileText, ArrowLeft, CheckCheck, Info } from 'lucide-react'
 import { enrichOutstandingLedger } from '../helpers/buildOutstandingLedger'
+import AggregatedMonthsModal from './AggregatedMonthsModal'   // ← import the new component
 
 
 const fmt = (n) =>
@@ -52,45 +53,75 @@ const normalizeRow = (item) => {
     remainingAdj: item.remainingAdjustment ?? item.remainingAdj ?? item.remaining ?? item.totalBalance ?? 0,
     billingDays: item.billingDays ?? item.days ?? '–',
     billIds: item.billIds ?? [],
+    aggregatedMonths: item.aggregatedMonths ?? [],
     runningOutstanding: item.runningOutstanding ?? 0,
     outstandingAfterAdjustment: item.outstandingAfterAdjustment ?? 0,
   }
 }
 
 
+// ─── DAYS CELL — opens centered modal ────────────────────────────────────────
+const DaysCell = ({ item }) => {
+  const [open, setOpen] = useState(false)
+  const hasAggregated = item.aggregatedMonths && item.aggregatedMonths.length > 0
+
+  return (
+    <td className="px-3 py-3 text-center font-bold text-slate-700">
+      <div className="inline-flex items-center justify-center gap-1">
+        <span>{item.billingDays}</span>
+        {hasAggregated && (
+          <>
+            <button
+              type="button"
+              title="View aggregated months breakdown"
+              onClick={() => setOpen(true)}
+              className="p-0.5 text-blue-400 hover:text-blue-600 transition-colors"
+            >
+              <Info className="w-3.5 h-3.5" />
+            </button>
+
+            {open && (
+              <AggregatedMonthsModal
+                aggregatedMonths={item.aggregatedMonths}
+                monthYear={item.monthYear}
+                totalDays={item.billingDays}
+                onClose={() => setOpen(false)}
+              />
+            )}
+          </>
+        )}
+      </div>
+    </td>
+  )
+}
+
+
 // ─── COLUMN DEFINITIONS ───────────────────────────────────────────────────────
-// To reorder any column: just change its `order` number. Lowest = leftmost.
-// ─────────────────────────────────────────────────────────────────────────────
 export const LEDGER_COLUMNS = [
-  { id: 'month', label: 'Month', align: 'left', order: 1 },
-  { id: 'days', label: 'Days', align: 'center', order: 2 },
-  { id: 'period', label: 'Period', align: 'left', order: 3 },
-  { id: 'basicBill', label: 'Basic Bill', align: 'right', order: 4 },
-  { id: 'cgst', label: 'CGST (9%)', align: 'right', order: 5 },
-  { id: 'sgst', label: 'SGST (9%)', align: 'right', order: 6 },
-  { id: 'igst', label: 'IGST (18%)', align: 'right', order: 7 },
-  { id: 'basicGst', label: 'Basic + GST', align: 'right', order: 8 },
-  { id: 'miscBill', label: 'Misc+GST Bill', align: 'right', order: 9 },
-  { id: 'netBilling', label: 'Net Billing', align: 'right', order: 18 },
-  { id: 'receiptAmount', label: 'Receipt Amount', align: 'right', order: 19 },
-  { id: 'received', label: 'Received', align: 'right', order: 10 },
-  { id: 'creditNotes', label: 'Credit Notes', align: 'right', order: 11 },
-  { id: 'tdsConfirm', label: 'TDS Conf', align: 'right', order: 12 },
-  { id: 'tdsProvision', label: 'TDS Prov', align: 'right', order: 13 },
-  // { id: 'totalBalance',               label: 'Total Balance',                            align: 'right',  order: 14 },
-  { id: 'runningOutstanding', label: <> Running <br /> Outstanding </>, align: 'right', order: 15 },
+  { id: 'month',                      label: <> Billing <br /> Month </>,          align: 'left',   order: 1  },
+  { id: 'days',                       label: 'Days',                               align: 'center', order: 2  },
+  { id: 'period',                     label: 'Period',                             align: 'left',   order: 3  },
+  { id: 'basicBill',                  label: 'Basic Bill',                         align: 'right',  order: 4  },
+  { id: 'cgst',                       label: 'CGST (9%)',                          align: 'right',  order: 5  },
+  { id: 'sgst',                       label: 'SGST (9%)',                          align: 'right',  order: 6  },
+  { id: 'igst',                       label: 'IGST (18%)',                         align: 'right',  order: 7  },
+  { id: 'basicGst',                   label: 'Basic + GST',                        align: 'right',  order: 8  },
+  { id: 'miscBill',                   label: 'Misc+GST Bill',                      align: 'right',  order: 9  },
+  { id: 'netBilling',                 label: 'Net Billing',                        align: 'right',  order: 18 },
+  { id: 'receiptAmount',              label: 'Receipt Amount',                     align: 'right',  order: 19 },
+  { id: 'received',                   label: 'Received',                           align: 'right',  order: 10 },
+  { id: 'creditNotes',                label: 'Credit Notes',                       align: 'right',  order: 11 },
+  { id: 'tdsConfirm',                 label: 'TDS Conf',                           align: 'right',  order: 12 },
+  { id: 'tdsProvision',               label: 'TDS Prov',                           align: 'right',  order: 13 },
+  { id: 'runningOutstanding',         label: <> Running <br /> Outstanding </>,    align: 'right',  order: 15 },
   { id: 'outstandingAfterAdjustment', label: <> Outstanding <br /> After Adjustment </>, align: 'right', order: 16 },
-  // { id: 'remaining',                  label: 'Remaining Adj',                            align: 'right',  order: 17 },
-  { id: 'actions', label: 'Actions', align: 'center', order: 20 },
+  { id: 'actions',                    label: 'Actions',                            align: 'center', order: 20 },
 ]
 
 
 // ─── ROW CELL RENDERER ────────────────────────────────────────────────────────
-// Returns one <td> per column id. Called inside a .map() over sorted visibleDefs.
-// ─────────────────────────────────────────────────────────────────────────────
 const renderRowCell = (id, item, router) => {
   switch (id) {
-
     case 'month':
       return (
         <td key={id} className="px-3 py-3 font-semibold text-slate-900 whitespace-nowrap">
@@ -99,11 +130,7 @@ const renderRowCell = (id, item, router) => {
       )
 
     case 'days':
-      return (
-        <td key={id} className="px-3 py-3 text-center font-bold text-slate-700">
-          {item.billingDays}
-        </td>
-      )
+      return null // handled separately by DaysCell
 
     case 'period':
       return (
@@ -255,7 +282,6 @@ const renderRowCell = (id, item, router) => {
               <Eye className="w-4 h-4" />
             </button>
 
-            {console.log("fgh", item)}
             <button
               type="button"
               title="Edit record"
@@ -268,6 +294,7 @@ const renderRowCell = (id, item, router) => {
             >
               <Pencil className="w-4 h-4" />
             </button>
+
           </div>
         </td>
       )
@@ -281,40 +308,42 @@ const renderRowCell = (id, item, router) => {
 // ─── FOOTER CELL RENDERER ─────────────────────────────────────────────────────
 const renderFooterCell = (id, t) => {
   switch (id) {
-    case 'month': return <td key={id} className="px-3 py-3 text-gray-900">TOTAL</td>
-    case 'days': return <td key={id} className="px-3 py-3" />
-    case 'period': return <td key={id} className="px-3 py-3" />
-    case 'basicBill': return <td key={id} className="px-3 py-3 text-right text-slate-900">₹{fmt(t.basicTotal ?? 0)}</td>
-    case 'cgst': return <td key={id} className="px-3 py-3 text-right text-slate-700">₹{fmt(t.cgst ?? 0)}</td>
-    case 'sgst': return <td key={id} className="px-3 py-3 text-right text-slate-700">₹{fmt(t.sgst ?? 0)}</td>
-    case 'igst': return <td key={id} className="px-3 py-3 text-right text-slate-700">₹{fmt(t.igst ?? 0)}</td>
-    case 'basicGst': return <td key={id} className="px-3 py-3 text-right text-indigo-700">₹{fmt(t.totalPlusGst ?? 0)}</td>
-    case 'miscBill': return <td key={id} className="px-3 py-3 text-right text-purple-700">₹{fmt(t.miscPlusGst ?? 0)}</td>
-    case 'netBilling': return <td key={id} className="px-3 py-3 text-right text-teal-700">₹{fmt(t.netBilling ?? 0)}</td>
-    case 'receiptAmount': return <td key={id} className="px-3 py-3 text-right text-emerald-700">₹{fmt(t.receiptAmount ?? 0)}</td>
-    case 'received': return <td key={id} className="px-3 py-3 text-right text-emerald-700">₹{fmt(t.received ?? 0)}</td>
-    case 'creditNotes': return <td key={id} className="px-3 py-3 text-right text-cyan-700">₹{fmt(t.creditNote ?? 0)}</td>
-    case 'tdsConfirm': return <td key={id} className="px-3 py-3 text-right text-indigo-600">₹{fmt(t.tdsConf ?? 0)}</td>
-    case 'tdsProvision': return <td key={id} className="px-3 py-3 text-right text-orange-600">₹{fmt(t.tdsProvision ?? 0)}</td>
-    case 'totalBalance': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-rose-50">₹{fmt(t.totalBalance ?? 0)}</td>
-    case 'runningOutstanding': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-rose-50">₹{fmt(t.runningOutstanding ?? 0)}</td>
+    case 'month':               return <td key={id} className="px-3 py-3 text-gray-900">TOTAL</td>
+    case 'days':                return <td key={id} className="px-3 py-3" />
+    case 'period':              return <td key={id} className="px-3 py-3" />
+    case 'basicBill':           return <td key={id} className="px-3 py-3 text-right text-slate-900">₹{fmt(t.basicTotal ?? 0)}</td>
+    case 'cgst':                return <td key={id} className="px-3 py-3 text-right text-slate-700">₹{fmt(t.cgst ?? 0)}</td>
+    case 'sgst':                return <td key={id} className="px-3 py-3 text-right text-slate-700">₹{fmt(t.sgst ?? 0)}</td>
+    case 'igst':                return <td key={id} className="px-3 py-3 text-right text-slate-700">₹{fmt(t.igst ?? 0)}</td>
+    case 'basicGst':            return <td key={id} className="px-3 py-3 text-right text-indigo-700">₹{fmt(t.totalPlusGst ?? 0)}</td>
+    case 'miscBill':            return <td key={id} className="px-3 py-3 text-right text-purple-700">₹{fmt(t.miscPlusGst ?? 0)}</td>
+    case 'netBilling':          return <td key={id} className="px-3 py-3 text-right text-teal-700">₹{fmt(t.netBilling ?? 0)}</td>
+    case 'receiptAmount':       return <td key={id} className="px-3 py-3 text-right text-emerald-700">₹{fmt(t.receiptAmount ?? 0)}</td>
+    case 'received':            return <td key={id} className="px-3 py-3 text-right text-emerald-700">₹{fmt(t.received ?? 0)}</td>
+    case 'creditNotes':         return <td key={id} className="px-3 py-3 text-right text-cyan-700">₹{fmt(t.creditNote ?? 0)}</td>
+    case 'tdsConfirm':          return <td key={id} className="px-3 py-3 text-right text-indigo-600">₹{fmt(t.tdsConf ?? 0)}</td>
+    case 'tdsProvision':        return <td key={id} className="px-3 py-3 text-right text-orange-600">₹{fmt(t.tdsProvision ?? 0)}</td>
+    case 'totalBalance':        return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-rose-50">₹{fmt(t.totalBalance ?? 0)}</td>
+    case 'runningOutstanding':  return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-rose-50">₹{fmt(t.runningOutstanding ?? 0)}</td>
     case 'outstandingAfterAdjustment': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-yellow-50">₹{fmt(t.outstandingAfterAdjustment ?? 0)}</td>
-    case 'remaining': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-yellow-50">₹{fmt(t.remainingAdjustment ?? 0)}</td>
-    case 'actions': return <td key={id} className="px-3 py-3" />
-    default: return <td key={id} className="px-3 py-3" />
+    case 'remaining':           return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-yellow-50">₹{fmt(t.remainingAdjustment ?? 0)}</td>
+    case 'actions':             return <td key={id} className="px-3 py-3" />
+    default:                    return <td key={id} className="px-3 py-3" />
   }
 }
 
 
 // ─── ROW COMPONENT ────────────────────────────────────────────────────────────
-// Receives visibleDefs (sorted by order) and maps over it → cells in exact order
 const LedgerRow = ({ item: rawItem, visibleDefs }) => {
   const router = useRouter()
   const item = normalizeRow(rawItem)
 
   return (
     <tr className="hover:bg-blue-50/20 transition-colors border-b border-slate-100">
-      {visibleDefs.map(({ id }) => renderRowCell(id, item, router))}
+      {visibleDefs.map(({ id }) => {
+        if (id === 'days') return <DaysCell key={id} item={item} />
+        return renderRowCell(id, item, router)
+      })}
     </tr>
   )
 }
@@ -323,7 +352,6 @@ const LedgerRow = ({ item: rawItem, visibleDefs }) => {
 // ─── FOOTER COMPONENT ─────────────────────────────────────────────────────────
 const LedgerFooter = ({ totals, visibleDefs }) => {
   const t = totals ?? {}
-
   return (
     <tfoot className="bg-gradient-to-r from-gray-100 to-blue-100 border-t-2 border-gray-300">
       <tr className="font-bold text-sm">
@@ -335,24 +363,17 @@ const LedgerFooter = ({ totals, visibleDefs }) => {
 
 
 // ─── HEADER BAR ───────────────────────────────────────────────────────────────
-const LedgerHeader = ({ title, meta, chips, onBack ,ledgerName}) => {
+const LedgerHeader = ({ title, meta, chips, onBack, ledgerName }) => {
   const router = useRouter()
-
-  const handleBack = () => {
-    if (onBack) { onBack() } else { router.back() }
-  }
+  const handleBack = () => { if (onBack) { onBack() } else { router.back() } }
 
   return (
-    <div className={`flex items-center gap-5 px-1 py-4 rounded-t-xl ${ledgerName?.toLowerCase() === 'receipt'
-        ? 'bg-green-600'
-        : ledgerName?.toLowerCase() === 'outstanding'
-          ? 'bg-blue-600'
-          : ledgerName?.toLowerCase() === 'bill'
-            ? 'bg-red-600'
-            : 'bg-gradient-to-r from-blue-600 to-blue-700'
-      }`}>
-
-
+    <div className={`flex items-center gap-5 px-1 py-4 rounded-t-xl ${
+      ledgerName?.toLowerCase() === 'receipt'     ? 'bg-green-600' :
+      ledgerName?.toLowerCase() === 'outstanding' ? 'bg-blue-600'  :
+      ledgerName?.toLowerCase() === 'bill'        ? 'bg-red-600'   :
+      'bg-gradient-to-r from-blue-600 to-blue-700'
+    }`}>
       <button
         type="button"
         onClick={handleBack}
@@ -398,28 +419,13 @@ const LedgerTable = ({
   chips,
   onBack,
   showHeader = true,
-  ledgerName
+  ledgerName,
 }) => {
-
-  const rawRows =
-    data?.data?.data ??
-    data?.data ??
-    data ??
-    []
-
-  const apiTotals =
-    data?.data?.totals ??
-    data?.totals ??
-    {}
-
+  const rawRows   = data?.data?.data ?? data?.data ?? data ?? []
+  const apiTotals = data?.data?.totals ?? data?.totals ?? {}
   const { rows, totals } = enrichOutstandingLedger(rawRows, apiTotals)
 
-  console.log("rows-->", rows)
-  console.log("data", data)
-  console.log("totals-->", totals)
 
-  // Single source of truth: sort by `order` once here.
-  // Header, every row cell, and footer all receive this same sorted array.
   const visibleDefs = LEDGER_COLUMNS
     .filter((col) => !hiddenColumns.includes(col.id))
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
@@ -427,7 +433,7 @@ const LedgerTable = ({
   if (!rows.length) {
     return (
       <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-        {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} LedgerName={ledgerName}/>}
+        {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} ledgerName={ledgerName} />}
         <div className="flex flex-col items-center justify-center py-16 text-slate-400">
           <FileText className="w-10 h-10 mb-3 text-slate-300" />
           <p className="text-sm font-medium">No ledger records found</p>
@@ -438,8 +444,7 @@ const LedgerTable = ({
 
   return (
     <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-      {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} LedgerName={ledgerName} />}
-
+      {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} ledgerName={ledgerName} />}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -454,7 +459,6 @@ const LedgerTable = ({
               ))}
             </tr>
           </thead>
-
           <tbody className="bg-white divide-y divide-slate-100">
             {rows.map((item, index) => (
               <LedgerRow
@@ -464,13 +468,11 @@ const LedgerTable = ({
               />
             ))}
           </tbody>
-
           <LedgerFooter totals={totals} visibleDefs={visibleDefs} />
         </table>
       </div>
     </div>
   )
 }
-
 
 export default LedgerTable

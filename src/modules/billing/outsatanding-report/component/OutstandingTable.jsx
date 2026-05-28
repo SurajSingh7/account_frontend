@@ -98,7 +98,7 @@ const OrderRow = ({ item, index, showLsi }) => {
             // entity: item.entity?.alias || '',
             // lsi: item.lsi || '',
             circuitKey: item.circuitKey || '',
-            ledgerName:"outstanding"
+            ledgerName: "outstanding"
             // endAState: item.endA?.state || '',
             // endBState: item.endB?.state || '',
         }).toString()
@@ -132,6 +132,21 @@ const OrderRow = ({ item, index, showLsi }) => {
             {/* Company */}
             <td className="px-4 py-3 max-w-[200px]">
                 {truncateWithMore(item.company, 18, '...more', (t) => setPopupText(t))}
+            </td>
+
+            {/* Order Type */}
+            <td className="px-4 py-3 text-sm font-semibold text-slate-700">
+                {item.orderType || '—'}
+            </td>
+
+            {/* Entity */}
+            <td className="px-4 py-3 text-sm font-semibold text-slate-700">
+                {item.entity?.alias || '—'}
+            </td>
+
+            {/* Product */}
+            <td className="px-4 py-3 text-sm font-semibold text-slate-700">
+                {item.product || '—'}
             </td>
 
             {/* State */}
@@ -220,6 +235,9 @@ const OutstandingTable = ({ data, onRefetch, showLsi }) => {
         { label: 'End A', align: 'left' },
         { label: 'End B', align: 'left' },
         { label: 'Company', align: 'left' },
+        { label: 'Order Type', align: 'left' },
+        { label: 'Entity', align: 'left' },
+        { label: 'Product', align: 'left' },
         { label: 'State', align: 'left' },
         { label: 'Balance', align: 'right' },
         { label: 'Amount Status', align: 'left' },

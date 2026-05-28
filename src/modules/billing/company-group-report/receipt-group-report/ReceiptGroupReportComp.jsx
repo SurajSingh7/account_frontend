@@ -1,88 +1,53 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useFilters } from '../shared/helpers/hooks/useFilters';
-import { useFetchList } from '../shared/helpers/hooks/useFetchList';
-import { saveLimit } from '../shared/constants';
-import FilterBar from '../shared/filters/FilterBar';
+import { useFilters } from '../../shared/helpers/hooks/useFilters';
+import { useFetchList } from '../../shared/helpers/hooks/useFetchList';
+import { saveLimit } from '../../shared/constants';
+import FilterBar from '../../shared/filters/FilterBar';
 import ReceiptList from './component/ReceiptList';
 import SummaryCard from './component/SummaryCard';
 import Pagination from '@/shared/ui/pagination/Pagination';
-import { RECEIPT_FIELDS } from '../shared/filters/filterFieldRegistry';
+import { RECEIPT_FIELDS } from '../../shared/filters/filterFieldRegistry';
 
-const ENDPOINT = '/billing/sale/monthly/orders/receipt/';
+const ENDPOINT = '/billing/sale/monthly/company/receipt-report';
 
-const ReceiptReportComp = () => {
+const ReceiptGroupReportComp = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const { filters, setFilter, resetFilters, hasActiveFilters } = useFilters();
-  // ✅ For parent company group connect with its child
-  const companyGroupId = searchParams.get('companyGroupId');
-
-  useEffect(() => {
-    if (companyGroupId) {
-
-      setFilter({
-        companyGroupId,
-        page: 1,
-      });
-
-      const params = new URLSearchParams(searchParams.toString());
-
-      params.delete('companyGroupId');
-
-      router.replace(`?${params.toString()}`, {
-        scroll: false,
-      });
-    }
-  }, [companyGroupId, setFilter, router, searchParams]);
 
   const { data, pagination, loading, error, refetch } = useFetchList({
     filters,
     endpoint: ENDPOINT,
   });
 
-  const apiSummary = {
-    totalOrders:
-      data?.summary?.totalOrders || 0,
+ const apiSummary = {
+  totalCompanies:
+    data?.summary?.totalCompanies || 0,
 
-    received:
-      data?.summary?.received || 0,
+  totalOrders:
+    data?.summary?.totalOrders || 0,
 
-    tdsConfirm:
-      data?.summary?.tdsConfirm || 0,
+  totalReceived:
+    data?.summary?.totalReceived || 0,
 
-    tdsProvision:
-      data?.summary?.tdsProvision || 0,
+  totalTdsConfirm:
+    data?.summary?.totalTdsConfirm || 0,
 
-    totalReceipts:
-      data?.summary?.totalReceipts || 0,
+  totalTdsProvision:
+    data?.summary?.totalTdsProvision || 0,
 
-    creditNote:
-      data?.summary?.creditNote || 0,
-
-    orderType:
-      data?.summary?.orderType ||
-      data?.summary?.orderTypeCounts ||
-      {},
-
-    productCode:
-      data?.summary?.productCode ||
-      data?.summary?.productCounts ||
-      {},
-
-    entity:
-      data?.summary?.entity ||
-      data?.summary?.entityCounts ||
-      {},
-  };
+  totalReceipts:
+    data?.summary?.totalReceipts || 0,
+};
 
   const totalCount =
     pagination?.total ||
     0;
-
+    
   // ── Single URL sync helper ──────────────────────────────────────────────────
   const syncUrl = (updates) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -113,7 +78,7 @@ const ReceiptReportComp = () => {
       <header className="mx-auto mb-8 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold text-gray-900">
-            Receipt Report Overview
+            Receipt Company Group Report 
           </h1>
           <p className="text-gray-600 text-base font-semibold mt-2">
             Receipts, CN & TDS by Order
@@ -131,7 +96,7 @@ const ReceiptReportComp = () => {
           hasActive={hasActiveFilters}
           apiSummary={apiSummary}
           totalCount={totalCount}
-          fields={RECEIPT_FIELDS}
+          fields={['companyGroupId','period', 'monthRange']}
         />
 
         {/* ReceiptList — sirf table, pagination yahan nahi */}
@@ -158,4 +123,4 @@ const ReceiptReportComp = () => {
   );
 };
 
-export default ReceiptReportComp;
+export default ReceiptGroupReportComp;

@@ -52,6 +52,7 @@ const OrderCard = ({ order, onRefetch }) => {
   const orderTypeLabel = order.orderType || '';
   const isActive = order.isActive !== undefined ? order.isActive : false;
   const pcdDate = order.pcdDate;
+  const operationalDate = order.operationalDate;
   const terminateDate = order.terminateDate;
 
   // ── Detect GST type per billing item ──────────────────────────────────────
@@ -115,7 +116,6 @@ const OrderCard = ({ order, onRefetch }) => {
     const sgstAmt = Number(item.sgst) || 0;
     const igstAmt = Number(item.igst) || 0;
     const cgstSgstAmt = cgstAmt + sgstAmt;
-    { console.log("product", item) }
 
     return (
       <tr key={item._id} className="border-t border-gray-200 text-base hover:bg-gray-50 transition-colors">
@@ -205,8 +205,12 @@ const OrderCard = ({ order, onRefetch }) => {
 
           <div className="flex flex-col items-end gap-2 text-right">
             <div className="flex gap-2 items-center flex-wrap justify-end">
-              <span className="text-sm text-gray-600 font-semibold bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200">
-                PCD: {pcdDate ? formatDateDisplay(pcdDate) : '-'}
+              <span className="text-sm text-green-700 font-semibold bg-green-50 px-3 py-1.5 rounded-lg border border-green-200">
+                PCD Effective: {pcdDate ? formatDateDisplay(pcdDate) : '-'}
+              </span>
+
+              <span className="text-sm text-orange-700 font-semibold bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-200">
+                PCD Closing: {operationalDate ? formatDateDisplay(operationalDate) : '-'}
               </span>
               {terminateDate && (
                 <span className="text-sm text-red-600 font-semibold bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">
@@ -332,7 +336,7 @@ const OrderCard = ({ order, onRefetch }) => {
       )}
 
       {/* ── Edit PCD Modal ── */}
-      <EditPcdModal                  
+      <EditPcdModal
         isOpen={editModalOpen}
         onClose={() => setEditModalOpen(false)}
         order={order}

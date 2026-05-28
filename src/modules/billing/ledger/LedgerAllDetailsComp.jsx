@@ -7,7 +7,7 @@ import LedgerList from './component/LedgerList';
 const HIDDEN_COLUMNS_MAP = {
   bill:        ['runningOutstanding', 'outstandingAfterAdjustment', 'receiptAmount','actions','tdsConfirm','tdsProvision','received'],
   recipt:      ['runningOutstanding','miscBill', 'outstandingAfterAdjustment', ,'actions','netBilling','days','period','basicBill','cgst','sgst','igst','basicGst'],
-  outstanding: [,'receiptAmount'],
+  outstanding: [,'receiptAmount','netBilling'],
 };
 
 const LedgerAllDetailsComp = () => {
