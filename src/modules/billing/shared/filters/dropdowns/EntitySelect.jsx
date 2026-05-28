@@ -1,11 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { useEntityAliases } from '../filterPermission/hook/useEntityAliases';
 
-const ENTITY_ALIASES = [
-  { alias: 'GTEL',  color: 'bg-amber-500'  },
-  { alias: 'WIBRO', color: 'bg-cyan-600'   },
-  // { alias: 'GISPL', color: 'bg-indigo-500' },
-];
 
 const DEFAULT_COLOR    = 'bg-slate-500';
 const UNSELECTED_STYLE = 'bg-white text-gray-700 border-gray-300 hover:border-gray-400';
@@ -17,6 +13,7 @@ const UNSELECTED_STYLE = 'bg-white text-gray-700 border-gray-300 hover:border-gr
  *   onChange — (entityId: string) => void
  */
 const EntitySelect = ({ summary = {}, selected = '', onChange }) => {
+  const ENTITY_ALIASES = useEntityAliases();
   const [open, setOpen] = useState(false);
   const ref             = useRef(null);
 
