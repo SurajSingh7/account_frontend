@@ -5,10 +5,10 @@ export const navCategories = [
   {
     category: "Account",
     items: [
-      { name: "Pcd Closure", path: "/billing/account/pcd-closure", moduleName: "PCD Ready order module", url: "/billing/sale/ready-order/all", action: ["READ"], exceptions: ["canViewAll"] },  
-      { name: "Outstanding Report", path: "/billing/account/outstanding-report", moduleName: "Sale outstanding", url: "/billing/sale/monthly/orders/outstanding", action: ["READ"], exceptions: ["canViewAll"] },
-      { name: "Billing sell Report", path: "/billing/account/billing-report", moduleName: "Billing Sale Access", url: "/billing/sale", action: ["READ"], exceptions: ["canViewAll"] },
-      { name: "Receipt Report", path: "/billing/account/receipt-report", moduleName: "Receipt report", url: "/billing/sale/monthly/orders/receipt", action: ["READ"], exceptions: ["canViewAll"] },
+      { name: "Pcd Closure", path: "/billing/account/pcd-closure", moduleName: "PCD Ready order module", url: "/billing/sale/ready-order/all", action: ["READ"],  },  
+      { name: "Outstanding Report", path: "/billing/account/outstanding-report", moduleName: "Sale outstanding", url: "/billing/sale/monthly/orders/outstanding", action: ["READ"],  },
+      { name: "Billing sell Report", path: "/billing/account/billing-report", moduleName: "Billing Sale Access", url: "/billing/sale", action: ["READ"],  },
+      { name: "Receipt Report", path: "/billing/account/receipt-report", moduleName: "Receipt report", url: "/billing/sale/monthly/orders/receipt", action: ["READ"],  },
     ]
      
   },

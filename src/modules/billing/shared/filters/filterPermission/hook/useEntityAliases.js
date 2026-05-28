@@ -40,7 +40,7 @@ export const useEntityAliases = () => {
 
 
         const res = await fetch(
-          'https://gist.githubusercontent.com/SurajSingh7/ee934466c4ac158ebb20dd8eee7604fc/raw/5014163f2461806c06ed01e7efaeffc9b512cba9/entity-alias.json'
+          'https://gist.githubusercontent.com/SurajSingh7/ee934466c4ac158ebb20dd8eee7604fc/raw/entity-alias.json'
         );
 
         const data = await res.json();
