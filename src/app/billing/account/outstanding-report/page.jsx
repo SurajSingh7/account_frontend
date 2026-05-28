@@ -1,12 +1,14 @@
 import OutStandingReportComp from '@/modules/billing/outsatanding-report/OutStandingReportComp';
-import React from 'react'
+import React, { Suspense } from 'react';
 
 const page = () => {
   return (
     <div>
-        <OutStandingReportComp/>
+      <Suspense fallback={<div>Loading...</div>}>
+        <OutStandingReportComp />
+      </Suspense>
     </div>
-  )
-}
+  );
+};
 
 export default page;

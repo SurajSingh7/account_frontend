@@ -1,12 +1,14 @@
 import ReceiptReportComp from '@/modules/billing/receipt-report/ReceiptReportComp';
-import React from 'react'
+import React, { Suspense } from 'react';
 
 const page = () => {
   return (
     <div>
-        <ReceiptReportComp/>
+      <Suspense fallback={<div>Loading...</div>}>
+        <ReceiptReportComp />
+      </Suspense>
     </div>
-  )
-}
+  );
+};
 
 export default page;

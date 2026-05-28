@@ -1,12 +1,14 @@
 import OutStandingGroupReportComp from '@/modules/billing/company-group-report/outsatanding-group-report/OutStandingGroupReportComp';
-import React from 'react'
+import React, { Suspense } from 'react';
 
 const page = () => {
   return (
     <div>
-        <OutStandingGroupReportComp/>
+      <Suspense fallback={<div>Loading...</div>}>
+        <OutStandingGroupReportComp />
+      </Suspense>
     </div>
-  )
-}
+  );
+};
 
 export default page;

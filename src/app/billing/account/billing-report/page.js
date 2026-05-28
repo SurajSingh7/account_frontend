@@ -1,13 +1,14 @@
-import BillingReportComp from '@/modules/billing/billing-report/BillingReportComp'
-import React from 'react'
-
+import BillingReportComp from '@/modules/billing/billing-report/BillingReportComp';
+import React, { Suspense } from 'react';
 
 const page = () => {
   return (
     <div>
-        <BillingReportComp/>
+      <Suspense fallback={<div>Loading...</div>}>
+        <BillingReportComp />
+      </Suspense>
     </div>
-  )
-}
+  );
+};
 
-export default page
+export default page;

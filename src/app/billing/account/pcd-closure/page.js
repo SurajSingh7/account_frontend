@@ -1,12 +1,14 @@
 import PcdClosureComp from '@/modules/billing/pcd-closure/PcdClosureComp';
-import React from 'react'
+import React, { Suspense } from 'react';
 
 const page = () => {
   return (
-    <div> 
-        <PcdClosureComp/>
+    <div>
+      <Suspense fallback={<div>Loading...</div>}>
+        <PcdClosureComp />
+      </Suspense>
     </div>
-  )
-}
+  );
+};
 
 export default page;
