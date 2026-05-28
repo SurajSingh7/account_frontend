@@ -3,6 +3,7 @@ import { Edit, Eye } from 'lucide-react';
 import { formatDateDisplay, truncateWithMore } from '../../shared/buildListParams/utils';
 import { useRouter } from 'next/navigation';
 import EditPcdModal from '../modal/EditPcdModal';
+import { usePermissions } from '@/context/PermissionContext';
 
 // ─── Badge ────────────────────────────────────────────────────────────────────
 const Badge = ({ children, color }) => {
@@ -24,6 +25,10 @@ const Badge = ({ children, color }) => {
 
 // ─── OrderCard ────────────────────────────────────────────────────────────────
 const OrderCard = ({ order, onRefetch }) => {
+
+    const { userData } = usePermissions();
+    const isAdmin = userData?.role === 'Admin';
+
   const router = useRouter();
   const [showEndPopup, setShowEndPopup] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false); // ← ADD THIS
@@ -82,7 +87,7 @@ const OrderCard = ({ order, onRefetch }) => {
 
     return (
       <tr>
-        {['Order ID', 'Circuit ID', 'Cap (Mb)', 'Cap (Kb)', 'Billing Address', 'State', 'Product', 'Rate', 'Total Basic'].map(h => (
+        {['Order ID', 'LSI ID', 'Cap (Mb)', 'Cap (Kb)', 'Billing Address', 'State', 'Product', 'Rate', 'Total Basic'].map(h => (
           <th key={h} className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">{h}</th>
         ))}
         {mixedGSTTypes ? (
@@ -110,6 +115,7 @@ const OrderCard = ({ order, onRefetch }) => {
 
   // ── Render a single billing row ────────────────────────────────────────────
   const renderBillingRow = (item, isSelf, showAllCols) => {
+ 
     if (!item) return null;
 
     const cgstAmt = Number(item.cgst) || 0;
@@ -223,19 +229,31 @@ const OrderCard = ({ order, onRefetch }) => {
                 <Eye className='text-blue-600' />
               </button>
 
-              {/* Edit button — opens EditPcdModal */}
-              <button
-                className="p-2 hover:bg-blue-50 rounded-lg"
-                title="Edit"
-                onClick={() => setEditModalOpen(true)} // ← CHANGED
-              >
-                <Edit className="w-5 h-5 text-red-600" />
-              </button>
 
-              {/* Generate bill remove in future */}
-              <button onClick={() => router.push(`/billing/account/pcd-closure/generate-bill?pcdId=${order._id}`)}>
-                <div className='bg-black text-amber-50 font-bold px-1.5 text-center rounded-full'> G </div>
-              </button>
+              {isAdmin && (
+                <>
+                  <button
+                    className="p-2 hover:bg-blue-50 rounded-lg"
+                    title="Edit"
+                    onClick={() => setEditModalOpen(true)}
+                  >
+                    <Edit className="w-5 h-5 text-red-600" />
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      router.push(`/billing/account/pcd-closure/generate-bill?pcdId=${order._id}`)
+                    }
+                  >
+                    <div className='bg-black text-amber-50 font-bold px-1.5 text-center rounded-full'>
+                      G
+                    </div>
+                  </button>
+                </>
+              )}
+
+
+
             </div>
 
             <div className="flex flex-wrap gap-2 justify-end">
