@@ -9,7 +9,13 @@ export const navCategories = [
       { name: "Outstanding Report", path: "/billing/account/outstanding-report", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
       { name: "Billing sell Report", path: "/billing/account/billing-report", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
       { name: "Receipt Report", path: "/billing/account/receipt-report", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
-
+    ]
+     
+  },
+   {
+    category: "Account Company Group",
+    items: [
+    
       { name: "Outstanding Group Report", path: "/billing/account/outstanding-group-report", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
       { name: "Billing Group Report", path: "/billing/account/billing-group-report", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },
       { name: "Receipt Group Report", path: "/billing/account/receipt-group-report", moduleName: "dsr", url: "/dsr", action: ["READ"], exceptions: ["canViewAll"] },

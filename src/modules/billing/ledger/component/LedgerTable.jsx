@@ -282,7 +282,6 @@ const renderRowCell = (id, item, router) => {
               <Eye className="w-4 h-4" />
             </button>
 
-            {console.log("fgh", item)}
             <button
               type="button"
               title="Edit record"
@@ -295,6 +294,7 @@ const renderRowCell = (id, item, router) => {
             >
               <Pencil className="w-4 h-4" />
             </button>
+
           </div>
         </td>
       )
@@ -425,9 +425,6 @@ const LedgerTable = ({
   const apiTotals = data?.data?.totals ?? data?.totals ?? {}
   const { rows, totals } = enrichOutstandingLedger(rawRows, apiTotals)
 
-  console.log("rows-->", rows)
-  console.log("data", data)
-  console.log("totals-->", totals)
 
   const visibleDefs = LEDGER_COLUMNS
     .filter((col) => !hiddenColumns.includes(col.id))

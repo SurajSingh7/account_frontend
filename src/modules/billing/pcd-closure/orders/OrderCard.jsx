@@ -116,7 +116,6 @@ const OrderCard = ({ order, onRefetch }) => {
     const sgstAmt = Number(item.sgst) || 0;
     const igstAmt = Number(item.igst) || 0;
     const cgstSgstAmt = cgstAmt + sgstAmt;
-    { console.log("product", item) }
 
     return (
       <tr key={item._id} className="border-t border-gray-200 text-base hover:bg-gray-50 transition-colors">
