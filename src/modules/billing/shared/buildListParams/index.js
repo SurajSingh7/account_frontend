@@ -11,7 +11,8 @@ export const buildListParams = (filters) => {
   if (filters.orderType)      params.set('orderType',      filters.orderType);
   if (filters.productId)      params.set('productId',      filters.productId);
 
-  params.set('isActive', filters.active);
+  if (typeof filters.active === 'boolean') params.set('isActive',    filters.active); // ← fixed
+  if (filters.isTerminate   === true)      params.set('isTerminate', true);           // ← added
 
   if (filters.periodType === 'period') {
     if (filters.year && filters.year !== 'All') params.set('year',  String(filters.year));
