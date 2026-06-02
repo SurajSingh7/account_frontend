@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Edit, Eye } from 'lucide-react';
 import { formatDateDisplay, truncateWithMore } from '../../shared/buildListParams/utils';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import EditPcdModal from '../modal/EditPcdModal';
 import { usePermissions } from '@/context/PermissionContext';
+
 
 // ─── Badge ────────────────────────────────────────────────────────────────────
 const Badge = ({ children, color }) => {
@@ -23,15 +24,17 @@ const Badge = ({ children, color }) => {
   );
 };
 
+
 // ─── OrderCard ────────────────────────────────────────────────────────────────
 const OrderCard = ({ order, onRefetch }) => {
+const pathname = usePathname();
 
-    const { userData } = usePermissions();
-    const isAdmin = userData?.role === 'Admin';
+  const { userData } = usePermissions();
+  const isAdmin = userData?.role === 'Admin';
 
   const router = useRouter();
   const [showEndPopup, setShowEndPopup] = useState(null);
-  const [editModalOpen, setEditModalOpen] = useState(false); // ← ADD THIS
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
   // ── Safely resolve fields from the NEW data shape ──────────────────────────
   const billingItems = order.billingItems || [];
@@ -60,6 +63,11 @@ const OrderCard = ({ order, onRefetch }) => {
   const operationalDate = order.operationalDate;
   const terminateDate = order.terminateDate;
 
+  // ── Terminated alert state: has terminateDate AND isActive is false ────────
+  const isTerminated = !!terminateDate && !isActive;
+
+  const showTerminateAlert = pathname.includes('/billing/account/terminate-orders') && isTerminated;
+
   // ── Detect GST type per billing item ──────────────────────────────────────
   const circuits = order.summary?.circuits || [];
   const getIsSelf = (item, index) => {
@@ -87,7 +95,7 @@ const OrderCard = ({ order, onRefetch }) => {
 
     return (
       <tr>
-        {['Order ID', 'LSI ID', 'Cap (Mb)', 'Cap (Kb)', 'Billing Address', 'State', 'Product', 'Rate', 'Total Basic'].map(h => (
+        {['Order ID', 'LSI ID', 'Cap (Mb)', 'Cap (Kb)', 'Billing Address', 'State', 'Product', 'Rate', 'Total Basic Mrc'].map(h => (
           <th key={h} className="px-4 py-4 font-semibold text-gray-700 whitespace-nowrap">{h}</th>
         ))}
         {mixedGSTTypes ? (
@@ -115,7 +123,7 @@ const OrderCard = ({ order, onRefetch }) => {
 
   // ── Render a single billing row ────────────────────────────────────────────
   const renderBillingRow = (item, isSelf, showAllCols) => {
- 
+
     if (!item) return null;
 
     const cgstAmt = Number(item.cgst) || 0;
@@ -173,17 +181,34 @@ const OrderCard = ({ order, onRefetch }) => {
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200 border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
+      <div className={`bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200 border-l-4 hover:shadow-md transition-shadow ${isTerminated ? 'border-l-red-500 border-red-300' : 'border-l-green-500 border-green-500'}`}>
 
-        {/* ── Card Header ── */}
-        <div className="bg-gray-50 px-6 py-5 border-b border-gray-200 flex flex-col md:flex-row justify-between md:items-center gap-4">
+        {/* For Terminate date alrte */}
+        {showTerminateAlert && (
+          <div className="flex items-center gap-2 rounded-md bg-red-500 px-3 py-2 text-sm text-white shadow-md">
+            <span className="h-2.5 w-2.5 rounded-full bg-white animate-pulse" />
+
+            <span className="font-semibold opacity-90 uppercase tracking-wide">
+              Terminated
+            </span>
+
+            <span className=" font-bold">
+              • {formatDateDisplay(terminateDate)}
+            </span>
+          </div>
+        )}
+
+        {/* ── Card Header — only bg changes when terminated ── */}
+        <div className={`px-6 py-5 border-b border-gray-200 flex flex-col md:flex-row justify-between md:items-center gap-4 ${isTerminated ? 'bg-gray-50' : 'bg-gray-50'}`}>
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
+
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2 flex-wrap">
                 <span className="text-gray-600 font-semibold text-base">Order Id:</span>
                 <span className="px-3 py-1 bg-purple-100 text-purple-900 rounded-lg text-base font-bold border border-purple-200">
                   {order.orderId}
                 </span>
+
 
                 {orderTypeLabel && <Badge color="blue">{orderTypeLabel}</Badge>}
                 {entityLabel && <Badge color="orange">{entityLabel}</Badge>}
@@ -218,17 +243,11 @@ const OrderCard = ({ order, onRefetch }) => {
               <span className="text-sm text-orange-700 font-semibold bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-200">
                 PCD Closing: {operationalDate ? formatDateDisplay(operationalDate) : '-'}
               </span>
-              {terminateDate && (
-                <span className="text-sm text-red-600 font-semibold bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">
-                  Terminate: {formatDateDisplay(terminateDate)}
-                </span>
-              )}
 
               {/* View button */}
               <button onClick={() => router.push(`/billing/account/pcd-closure/view?pcdId=${order._id}`)}>
                 <Eye className='text-blue-600' />
               </button>
-
 
               {isAdmin && (
                 <>
@@ -251,9 +270,6 @@ const OrderCard = ({ order, onRefetch }) => {
                   </button>
                 </>
               )}
-
-
-
             </div>
 
             <div className="flex flex-wrap gap-2 justify-end">
@@ -288,28 +304,6 @@ const OrderCard = ({ order, onRefetch }) => {
             </tbody>
           </table>
         </div>
-
-        {/* ── Summary Footer ── */}
-        {/* {order.summary && (
-          <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex flex-wrap gap-6 justify-end text-sm font-semibold">
-            <span className="text-gray-600">
-              Total Basic: <span className="text-blue-700">₹{Number(order.summary.totalBasic || 0).toLocaleString('en-IN')}</span>
-            </span>
-            {order.summary.totalIgst > 0 && (
-              <span className="text-gray-600">
-                IGST: <span className="text-green-700">₹{Number(order.summary.totalIgst).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
-              </span>
-            )}
-            {(order.summary.totalCgst > 0 || order.summary.totalSgst > 0) && (
-              <span className="text-gray-600">
-                CGST+SGST: <span className="text-green-700">₹{(Number(order.summary.totalCgst) + Number(order.summary.totalSgst)).toLocaleString('en-IN')}</span>
-              </span>
-            )}
-            <span className="text-gray-600">
-              Grand Total: <span className="text-green-800 font-bold">₹{Number(order.summary.totalGrand || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
-            </span>
-          </div>
-        )} */}
 
       </div>
 

@@ -8,7 +8,7 @@ import { saveLimit } from '../shared/constants';
 import FilterBar from '../shared/filters/FilterBar';
 import OrderList from './orders/OrderList';
 import Pagination from '@/shared/ui/pagination/Pagination';
-import { GENERAL_FIELDS, PCD_FIELDS } from '../shared/filters/filterFieldRegistry';
+import {PCD_FIELDS } from '../shared/filters/filterFieldRegistry';
 
 const ENDPOINT = '/billing/sale/ready-order/all';
 

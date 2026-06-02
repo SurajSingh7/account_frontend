@@ -23,6 +23,11 @@ export const useFetchList = ({ endpoint, filters }) => {
         { credentials: 'include' }
       );
 
+      //  const res = await fetch(
+      //   `${'http://localhost:3000/api/mock/orders'}?${qs}`,
+      //   { credentials: 'include' }
+      // );
+
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
       }
