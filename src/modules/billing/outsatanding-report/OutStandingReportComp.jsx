@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation'; // ← ye wapas add karo
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useFilters } from '../shared/helpers/hooks/useFilters';
 import { useFetchList } from '../shared/helpers/hooks/useFetchList';
 import { saveLimit } from '../shared/constants';
@@ -11,11 +11,11 @@ import SummaryCards from './component/SummaryCards';
 import Pagination from '@/shared/ui/pagination/Pagination';
 import { OUTSTANDING_FIELDS } from '../shared/filters/filterFieldRegistry';
 
-const ENDPOINT = '/billing/sale/monthly/orders/outstanding/';
+const ENDPOINT = '/billing/sale/report/outstanding/';
 
 const OutStandingReportComp = () => {
-  const router = useRouter();             // ← wapas add karo
-  const searchParams = useSearchParams(); // ← wapas add karo
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [showLsi, setShowLsi] = useState(false);
 
   const { filters, setFilter, resetFilters, hasActiveFilters } = useFilters();

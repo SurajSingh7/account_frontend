@@ -10,8 +10,7 @@ import OutstandingList from './component/OutstandingList';
 import SummaryCards from './component/SummaryCards';
 import Pagination from '@/shared/ui/pagination/Pagination';
 
-
-const ENDPOINT = '/billing/sale/monthly/company/outstanding';
+const ENDPOINT = '/billing/sale/report/company/outstanding';
 
 const OutStandingGroupReportComp = () => {
   const router = useRouter();             // ← wapas add karo
