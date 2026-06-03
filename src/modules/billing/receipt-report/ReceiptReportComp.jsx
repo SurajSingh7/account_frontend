@@ -11,7 +11,7 @@ import SummaryCard from './component/SummaryCard';
 import Pagination from '@/shared/ui/pagination/Pagination';
 import { RECEIPT_FIELDS } from '../shared/filters/filterFieldRegistry';
 
-const ENDPOINT = '/billing/sale/monthly/orders/receipt/';
+const ENDPOINT = '/billing/sale/report/receipt/';
 
 const ReceiptReportComp = () => {
   const router = useRouter();

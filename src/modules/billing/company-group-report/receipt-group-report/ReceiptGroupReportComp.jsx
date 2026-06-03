@@ -9,9 +9,8 @@ import FilterBar from '../../shared/filters/FilterBar';
 import ReceiptList from './component/ReceiptList';
 import SummaryCard from './component/SummaryCard';
 import Pagination from '@/shared/ui/pagination/Pagination';
-import { RECEIPT_FIELDS } from '../../shared/filters/filterFieldRegistry';
 
-const ENDPOINT = '/billing/sale/monthly/company/receipt-report';
+const ENDPOINT = '/billing/sale/report/company/receipt';
 
 const ReceiptGroupReportComp = () => {
   const router = useRouter();

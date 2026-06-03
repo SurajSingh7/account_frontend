@@ -11,15 +11,11 @@ import SummaryCard from './component/SummaryCard';
 import Pagination from '@/shared/ui/pagination/Pagination';
 import { BILLING_FIELDS } from '../shared/filters/filterFieldRegistry';
 
-const ENDPOINT = '/billing/sale/monthly/orders/report';
+const ENDPOINT = '/billing/sale/report/sell';
 
 const BillingReportComp = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-
-
-
-
 
   const { filters, setFilter, resetFilters, hasActiveFilters } = useFilters();
 

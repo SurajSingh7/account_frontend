@@ -9,9 +9,8 @@ import FilterBar from '../../shared/filters/FilterBar';
 import BillingList from './component/BillingList';
 import SummaryCard from './component/SummaryCard';
 import Pagination from '@/shared/ui/pagination/Pagination';
-import { BILLING_FIELDS } from '../../shared/filters/filterFieldRegistry';
 
-const ENDPOINT = '/billing/sale/monthly/company/sell-report';
+const ENDPOINT = '/billing/sale/report/company/sell';
 
 const BillingGroupReportComp = () => {
   const router = useRouter();
