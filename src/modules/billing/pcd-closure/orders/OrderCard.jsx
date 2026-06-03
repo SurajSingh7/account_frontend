@@ -61,7 +61,7 @@ const pathname = usePathname();
   const isActive = order.isActive !== undefined ? order.isActive : false;
   const pcdDate = order.pcdDate;
   const operationalDate = order.operationalDate;
-  const terminateDate = order.terminateDate;
+  const terminateDate = order.terminationDate;
 
   // ── Terminated alert state: has terminateDate AND isActive is false ────────
   const isTerminated = !!terminateDate && !isActive;
@@ -223,12 +223,12 @@ const pathname = usePathname();
               <p className="text-sm font-semibold text-gray-600 mt-3 flex items-center gap-2 flex-wrap">
                 <span className="font-semibold">End A:</span>
                 <span className="bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1">
-                  {truncateWithMore(endAText, 40, "...more", setShowEndPopup)}
+                  {truncateWithMore(endAText, 35, "...more", setShowEndPopup)}
                 </span>
                 <span className="text-gray-400">•</span>
                 <span className="font-semibold">End B:</span>
                 <span className="bg-green-100 border border-green-200 rounded-full px-2.5 py-1">
-                  {truncateWithMore(endBText, 40, "...more", setShowEndPopup)}
+                  {truncateWithMore(endBText, 35, "...more", setShowEndPopup)}
                 </span>
               </p>
             </div>
