@@ -12,7 +12,7 @@ import Pagination from '@/shared/ui/pagination/Pagination';
 import { RECEIPT_FIELDS } from '../shared/filters/filterFieldRegistry';
 import { RotateCw } from 'lucide-react';
 
-const ENDPOINT = '/billing/sale/monthly/orders/receipt/';
+const ENDPOINT = '/billing/sale/report/receipt/';
 
 const URL_FILTER_KEYS = [
   'search', 'stateCode', 'entityId', 'active', 'bsoId',

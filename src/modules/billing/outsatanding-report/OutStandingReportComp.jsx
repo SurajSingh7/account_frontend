@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation'; // ← ye wapas add karo
 import { useFilters } from '../shared/helpers/hooks/useFilters';
 import { useFetchList } from '../shared/helpers/hooks/useFetchList';
 import { saveLimit } from '../shared/constants';
@@ -13,14 +13,6 @@ import { OUTSTANDING_FIELDS } from '../shared/filters/filterFieldRegistry';
 import { RotateCw } from 'lucide-react';
 
 const ENDPOINT = '/billing/sale/monthly/orders/outstanding/';
-
-// All filter keys that should be persisted in the URL
-const URL_FILTER_KEYS = [
-  'search', 'stateCode', 'entityId', 'active', 'bsoId',
-  'companyGroupId', 'orderType', 'productId',
-  'periodType', 'year', 'month', 'startDate', 'endDate',
-  'fromMonth', 'toMonth', 'page', 'limit',
-];
 
 const OutStandingReportComp = () => {
   const router = useRouter();

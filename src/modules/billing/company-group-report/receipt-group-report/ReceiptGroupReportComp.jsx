@@ -12,7 +12,7 @@ import Pagination from '@/shared/ui/pagination/Pagination';
 import { RECEIPT_FIELDS } from '../../shared/filters/filterFieldRegistry';
 import { RotateCw } from 'lucide-react';
 
-const ENDPOINT = '/billing/sale/monthly/company/receipt-report';
+const ENDPOINT = '/billing/sale/report/company/receipt';
 
 // Trimmed to only keys this FilterBar uses (companyGroupId + period + monthRange) + pagination
 const URL_FILTER_KEYS = [

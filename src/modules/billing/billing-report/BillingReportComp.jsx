@@ -12,7 +12,7 @@ import Pagination from '@/shared/ui/pagination/Pagination';
 import { BILLING_FIELDS } from '../shared/filters/filterFieldRegistry';
 import { RotateCw } from 'lucide-react';
 
-const ENDPOINT = '/billing/sale/monthly/orders/report';
+const ENDPOINT = '/billing/sale/report/sell';
 
 // All filter keys that should be persisted in the URL
 const URL_FILTER_KEYS = [

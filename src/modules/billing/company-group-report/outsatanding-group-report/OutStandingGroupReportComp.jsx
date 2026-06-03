@@ -11,7 +11,7 @@ import SummaryCards from './component/SummaryCards';
 import Pagination from '@/shared/ui/pagination/Pagination';
 import { RotateCw } from 'lucide-react';
 
-const ENDPOINT = '/billing/sale/monthly/company/outstanding';
+const ENDPOINT = '/billing/sale/report/company/outstanding';
 
 // Trimmed to only keys this FilterBar uses (companyGroupId + period) + pagination
 const URL_FILTER_KEYS = [
