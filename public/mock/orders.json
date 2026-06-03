@@ -1,0 +1,1865 @@
+[
+  {
+    "_id": "6a10687a6b35fddaa4aaacdb",
+    "dsrId": "69cf78c09b2038df288aa1e5",
+    "orderId": "114608",
+    "capacity": 54,
+    "capacityKbps": 55296,
+    "company": {
+      "id": "69cf78f09b2038df288aa298",
+      "name": "Mock Enterprise Pvt Ltd",
+      "panNumber": "JZQXO8119H"
+    },
+    "bso": {
+      "id": "693192d765d18e4c201f0d44",
+      "name": "Airtel"
+    },
+    "offeredPrice": {
+      "id": "69cf78c79b2038df288aa23c",
+      "rate": 500
+    },
+    "pcdDate": "2025-12-16T00:00:00.000Z",
+    "entity": {
+      "id": "6936dd4f319864a732c9feea",
+      "name": "Gigantic Infotel Private Limited",
+      "alias": "GTEL",
+      "stateCode": 7,
+      "state": "New Delhi"
+    },
+    "orderType": "NEW-ORDER",
+    "product": {
+      "id": "6866518667b328cf0bf8165a",
+      "name": "Internet Lease Line",
+      "code": "ILL"
+    },
+    "summary": {
+      "totalBasic": 27000,
+      "totalCgst": 0,
+      "totalSgst": 0,
+      "totalIgst": 4860,
+      "totalGst": 4860,
+      "totalGrand": 31860,
+      "circuits": [
+        {
+          "label": "primary",
+          "taxType": "IGST"
+        }
+      ]
+    },
+    "dataHash": "def76df99a087c51fd1f78998bc36e33",
+    "installationAddress": [
+      {
+        "label": "END-A",
+        "address": "Building Name- SIFY, Plot No- B 7, Sec-132 Floor- Ground , NOIDA \u2013 201303 Uttar Pradesh",
+        "state": "Uttar Pradesh",
+        "stateCode": 9,
+        "_id": "6a10687a6b35fddaa4aaacdc"
+      },
+      {
+        "label": "END-B",
+        "address": "BTS- IND/IOB/901",
+        "city": "Andhra",
+        "pinCode": 110033,
+        "state": "Andhra Pradesh",
+        "stateCode": 28,
+        "_id": "6a10687a6b35fddaa4aaacdd"
+      }
+    ],
+    "billingItems": [
+      {
+        "label": "primary",
+        "circuitId": "0404261406",
+        "billingAddress": "508, USHA KIRAN BUILDING, NANI WALA BAGH COMMERCIAL COMPLEX, AZADPUR, North West Delhi, Delhi, 110033",
+        "state": "Andhra Pradesh",
+        "stateCode": 28,
+        "splitPrice": 500,
+        "splitPercent": 100,
+        "basicTotal": 27000,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 4860,
+        "gstTotal": 4860,
+        "grandTotal": 31860,
+        "arc": 324000,
+        "isSplitEdited": false,
+        "_id": "6a10687a6b35fddaa4aaacde"
+      }
+    ],
+    "companyGroupId": "69cf78f0338d7b18193cd65b",
+    "operationalDate": "2026-04-03T08:36:32.643Z",
+    "isActive": true,
+    "versionNumber": 0,
+    "createdAt": "2026-05-22T14:30:18.199Z",
+    "updatedAt": "2026-05-22T14:30:18.199Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a10687a6b35fddaa4aaacc2",
+    "dsrId": "69cd11afe6f5c243acf42e47",
+    "orderId": "600270",
+    "capacity": 54,
+    "capacityKbps": 55296,
+    "company": {
+      "id": "69cd1309e6f5c243acf42f50",
+      "name": "Mock Enterprise Pvt Ltd",
+      "panNumber": "UUACX0815O"
+    },
+    "bso": {
+      "id": "693192d765d18e4c201f0d44",
+      "name": "Airtel"
+    },
+    "offeredPrice": {
+      "id": "69cd11b6e6f5c243acf42e9e",
+      "rate": 600
+    },
+    "pcdDate": "2025-11-13T00:00:00.000Z",
+    "entity": {
+      "id": "6936dd4f319864a732c9feea",
+      "name": "Gigantic Infotel Private Limited",
+      "alias": "GTEL",
+      "stateCode": 7,
+      "state": "New Delhi"
+    },
+    "orderType": "NEW-ORDER",
+    "product": {
+      "id": "6866518667b328cf0bf8165a",
+      "name": "Internet Lease Line",
+      "code": "ILL"
+    },
+    "summary": {
+      "totalBasic": 32400,
+      "totalCgst": 0,
+      "totalSgst": 0,
+      "totalIgst": 5832,
+      "totalGst": 5832,
+      "totalGrand": 38232,
+      "circuits": [
+        {
+          "label": "primary",
+          "taxType": "IGST"
+        }
+      ]
+    },
+    "dataHash": "4025e6def3003970cad9782458774d24",
+    "installationAddress": [
+      {
+        "label": "END-A",
+        "address": "Building Name- SIFY, Plot No- B 7, Sec-132 Floor- Ground , NOIDA \u2013 201303 Uttar Pradesh",
+        "state": "Uttar Pradesh",
+        "stateCode": 9,
+        "_id": "6a10687a6b35fddaa4aaacc3"
+      },
+      {
+        "label": "END-B",
+        "address": "508, USHA KIRAN BUILDING, NANI WALA BAGH COMMERCIAL COMPLEX, AZADPUR, North West Delhi, Delhi, 110033",
+        "city": "Robertsganj P",
+        "pinCode": 231210,
+        "state": "Punjab",
+        "stateCode": 3,
+        "_id": "6a10687a6b35fddaa4aaacc4"
+      }
+    ],
+    "billingItems": [
+      {
+        "label": "primary",
+        "circuitId": "55555555",
+        "billingAddress": "508, USHA KIRAN BUILDING, NANI WALA BAGH COMMERCIAL COMPLEX, AZADPUR, North West Delhi, Delhi, 110033",
+        "state": "Punjab",
+        "stateCode": 3,
+        "splitPrice": 600,
+        "splitPercent": 100,
+        "basicTotal": 32400,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 5832,
+        "gstTotal": 5832,
+        "grandTotal": 38232,
+        "arc": 388800,
+        "isSplitEdited": false,
+        "_id": "6a10687a6b35fddaa4aaacc5"
+      }
+    ],
+    "companyGroupId": "69cd1309338d7b18193cd659",
+    "operationalDate": "2026-04-01T12:49:07.599Z",
+    "isActive": true,
+    "versionNumber": 0,
+    "createdAt": "2026-05-22T14:30:18.122Z",
+    "updatedAt": "2026-05-22T14:30:18.122Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a10687a6b35fddaa4aaad68",
+    "dsrId": "69cceb9012a0e05faaf20662",
+    "orderId": "508732",
+    "capacity": 54,
+    "capacityKbps": 55296,
+    "company": {
+      "id": "69ccec4212a0e05faaf2072a",
+      "name": "Mock Enterprise Pvt Ltd",
+      "panNumber": "QXJVF6157L"
+    },
+    "bso": {
+      "id": "693192d765d18e4c201f0d44",
+      "name": "Airtel"
+    },
+    "offeredPrice": {
+      "id": "69cceb9f12a0e05faaf206b9",
+      "rate": 500
+    },
+    "pcdDate": "2025-09-02T00:00:00.000Z",
+    "entity": {
+      "id": "6936dce6319864a732c9fee8",
+      "name": "WIBRO",
+      "alias": "WIBRO",
+      "stateCode": 7,
+      "state": "New Delhi"
+    },
+    "orderType": "NEW-ORDER",
+    "product": {
+      "id": "6866518667b328cf0bf8165a",
+      "name": "Internet Lease Line",
+      "code": "ILL"
+    },
+    "summary": {
+      "totalBasic": 27000,
+      "totalCgst": 0,
+      "totalSgst": 0,
+      "totalIgst": 4860,
+      "totalGst": 4860,
+      "totalGrand": 31860,
+      "circuits": [
+        {
+          "label": "primary",
+          "taxType": "IGST"
+        }
+      ]
+    },
+    "dataHash": "f66a42e6b62d353cfc7cf0e0141eb527",
+    "installationAddress": [
+      {
+        "label": "END-A",
+        "address": "Building Name- SIFY, Plot No- B 7, Sec-132 Floor- Ground , NOIDA \u2013 201303 Uttar Pradesh",
+        "state": "Uttar Pradesh",
+        "stateCode": 9,
+        "_id": "6a10687a6b35fddaa4aaad69"
+      },
+      {
+        "label": "END-B",
+        "address": "BTS- SSR/PPP/001  Bihar",
+        "city": "Gopalganj",
+        "pinCode": 231210,
+        "state": "Bihar",
+        "stateCode": 10,
+        "_id": "6a10687a6b35fddaa4aaad6a"
+      }
+    ],
+    "billingItems": [
+      {
+        "label": "primary",
+        "circuitId": "111111111111111",
+        "billingAddress": "508, USHA KIRAN BUILDING, NANI WALA BAGH COMMERCIAL COMPLEX, AZADPUR, North West Delhi, Delhi, 110033",
+        "state": "Bihar",
+        "stateCode": 10,
+        "splitPrice": 500,
+        "splitPercent": 100,
+        "basicTotal": 27000,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 4860,
+        "gstTotal": 4860,
+        "grandTotal": 31860,
+        "arc": 324000,
+        "isSplitEdited": false,
+        "_id": "6a10687a6b35fddaa4aaad6b"
+      }
+    ],
+    "companyGroupId": "69ccec42338d7b18193cd648",
+    "operationalDate": "2026-04-01T12:35:02.395Z",
+    "isActive": true,
+    "versionNumber": 0,
+    "createdAt": "2026-05-22T14:30:18.600Z",
+    "updatedAt": "2026-05-22T14:30:18.600Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a10687a6b35fddaa4aaad83",
+    "dsrId": "69ccf37412a0e05faaf20b75",
+    "orderId": "133477",
+    "capacity": 54,
+    "capacityKbps": 55296,
+    "company": {
+      "id": "69ccf3b612a0e05faaf20c2f",
+      "name": "Mock Enterprise Pvt Ltd",
+      "panNumber": "CUUUH6687F"
+    },
+    "bso": {
+      "id": "693192d765d18e4c201f0d44",
+      "name": "Airtel"
+    },
+    "offeredPrice": {
+      "id": "69ccf37a12a0e05faaf20bcc",
+      "rate": 600
+    },
+    "pcdDate": "2025-10-12T00:00:00.000Z",
+    "entity": {
+      "id": "6936dce6319864a732c9fee8",
+      "name": "WIBRO",
+      "alias": "WIBRO",
+      "stateCode": 7,
+      "state": "New Delhi"
+    },
+    "orderType": "NEW-ORDER",
+    "product": {
+      "id": "6866518667b328cf0bf8165a",
+      "name": "Internet Lease Line",
+      "code": "ILL"
+    },
+    "summary": {
+      "totalBasic": 32400,
+      "totalCgst": 0,
+      "totalSgst": 0,
+      "totalIgst": 5832,
+      "totalGst": 5832,
+      "totalGrand": 38232,
+      "circuits": [
+        {
+          "label": "primary",
+          "taxType": "IGST"
+        }
+      ]
+    },
+    "dataHash": "6fb17b6d59a8761a03d8effcb75d70ab",
+    "installationAddress": [
+      {
+        "label": "END-A",
+        "address": "Building Name- SIFY, Plot No- B 7, Sec-132 Floor- Ground , NOIDA \u2013 201303 Uttar Pradesh",
+        "state": "Uttar Pradesh",
+        "stateCode": 9,
+        "_id": "6a10687a6b35fddaa4aaad84"
+      },
+      {
+        "label": "END-B",
+        "address": "508, USHA KIRAN BUILDING, NANI WALA BAGH COMMERCIAL COMPLEX, AZADPUR, North West Delhi, Delhi, 110033",
+        "city": "Robertsganj b",
+        "pinCode": 231210,
+        "state": "Bihar",
+        "stateCode": 10,
+        "_id": "6a10687a6b35fddaa4aaad85"
+      }
+    ],
+    "billingItems": [
+      {
+        "label": "primary",
+        "circuitId": "444444444",
+        "billingAddress": "508, USHA KIRAN BUILDING, NANI WALA BAGH COMMERCIAL COMPLEX, AZADPUR, North West Delhi, Delhi, 110033",
+        "state": "Bihar",
+        "stateCode": 10,
+        "splitPrice": 600,
+        "splitPercent": 100,
+        "basicTotal": 32400,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 5832,
+        "gstTotal": 5832,
+        "grandTotal": 38232,
+        "arc": 388800,
+        "isSplitEdited": false,
+        "_id": "6a10687a6b35fddaa4aaad86"
+      }
+    ],
+    "companyGroupId": "69ccf3b6338d7b18193cd64c",
+    "operationalDate": "2026-04-01T12:31:48.998Z",
+    "isActive": true,
+    "versionNumber": 0,
+    "createdAt": "2026-05-22T14:30:18.672Z",
+    "updatedAt": "2026-05-22T14:30:18.672Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a1068796b35fddaa4aaaca7",
+    "dsrId": "69ccee3d12a0e05faaf20798",
+    "orderId": "902967",
+    "capacity": 56,
+    "capacityKbps": 57344,
+    "company": {
+      "id": "69ccf2a612a0e05faaf20b12",
+      "name": "Mock Enterprise Pvt Ltd",
+      "panNumber": "KZHTA9639C"
+    },
+    "bso": {
+      "id": "693192d765d18e4c201f0d44",
+      "name": "Airtel"
+    },
+    "offeredPrice": {
+      "id": "69ccee8c12a0e05faaf207f1",
+      "rate": 500
+    },
+    "pcdDate": "2025-12-26T00:00:00.000Z",
+    "entity": {
+      "id": "6936dd4f319864a732c9feea",
+      "name": "Gigantic Infotel Private Limited",
+      "alias": "GTEL",
+      "stateCode": 7,
+      "state": "New Delhi"
+    },
+    "orderType": "NEW-ORDER",
+    "product": {
+      "id": "6866518667b328cf0bf8165a",
+      "name": "Internet Lease Line",
+      "code": "ILL"
+    },
+    "summary": {
+      "totalBasic": 28000,
+      "totalCgst": 0,
+      "totalSgst": 0,
+      "totalIgst": 5040,
+      "totalGst": 5040,
+      "totalGrand": 33040,
+      "circuits": [
+        {
+          "label": "primary",
+          "taxType": "IGST"
+        }
+      ]
+    },
+    "dataHash": "0d2900150c6e2ca1b655ac32f1e8e92c",
+    "installationAddress": [
+      {
+        "label": "END-A",
+        "address": "Building Name- SIFY, Plot No- B 7, Sec-132 Floor- Ground , NOIDA \u2013 201303 Uttar Pradesh",
+        "state": "Uttar Pradesh",
+        "stateCode": 9,
+        "_id": "6a10687a6b35fddaa4aaaca8"
+      },
+      {
+        "label": "END-B",
+        "address": "BTS- SRR/MSN/005  Punjab",
+        "city": "Robertsganj p",
+        "pinCode": 231210,
+        "state": "Punjab",
+        "stateCode": 3,
+        "_id": "6a10687a6b35fddaa4aaaca9"
+      }
+    ],
+    "billingItems": [
+      {
+        "label": "primary",
+        "circuitId": "0104261751",
+        "billingAddress": "508, USHA KIRAN BUILDING, NANI WALA BAGH COMMERCIAL COMPLEX, AZADPUR, North West Delhi, Delhi, 110033",
+        "state": "Punjab",
+        "stateCode": 3,
+        "splitPrice": 500,
+        "splitPercent": 100,
+        "basicTotal": 28000,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 5040,
+        "gstTotal": 5040,
+        "grandTotal": 33040,
+        "arc": 336000,
+        "isSplitEdited": false,
+        "_id": "6a10687a6b35fddaa4aaacaa"
+      }
+    ],
+    "companyGroupId": "69ccf2a6338d7b18193cd64a",
+    "operationalDate": "2026-04-01T12:25:56.878Z",
+    "isActive": true,
+    "versionNumber": 0,
+    "createdAt": "2026-05-22T14:30:18.011Z",
+    "updatedAt": "2026-05-22T14:30:18.011Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a10687a6b35fddaa4aaacf3",
+    "dsrId": "69ccf53712a0e05faaf20c96",
+    "orderId": "793473",
+    "capacity": 50,
+    "capacityKbps": 51200,
+    "company": {
+      "id": "69ccf5d212a0e05faaf20d54",
+      "name": "Mock Enterprise Pvt Ltd",
+      "panNumber": "ASKOM0194H"
+    },
+    "bso": {
+      "id": "693192d765d18e4c201f0d44",
+      "name": "Airtel"
+    },
+    "offeredPrice": {
+      "id": "69ccf53e12a0e05faaf20ce9",
+      "rate": 600
+    },
+    "pcdDate": "2025-10-15T00:00:00.000Z",
+    "entity": {
+      "id": "6936dd4f319864a732c9feea",
+      "name": "Gigantic Infotel Private Limited",
+      "alias": "GTEL",
+      "stateCode": 7,
+      "state": "New Delhi"
+    },
+    "orderType": "NEW-ORDER",
+    "product": {
+      "id": "68665308a1012d98c72f0ec7",
+      "name": "Gigantic Lease Line",
+      "code": "GLL"
+    },
+    "summary": {
+      "totalBasic": 30000,
+      "totalCgst": 0,
+      "totalSgst": 0,
+      "totalIgst": 5400,
+      "totalGst": 5400,
+      "totalGrand": 35400,
+      "circuits": [
+        {
+          "label": "primary",
+          "taxType": "IGST"
+        },
+        {
+          "label": "secondary",
+          "taxType": "IGST"
+        }
+      ]
+    },
+    "dataHash": "bf45e506987c77eb9cb2a2264a10b572",
+    "installationAddress": [
+      {
+        "label": "END-A",
+        "address": "BTS- SRR/GVT/004",
+        "city": "Robertsganj",
+        "pinCode": 231210,
+        "state": "Punjab",
+        "stateCode": 3,
+        "_id": "6a10687a6b35fddaa4aaacf4"
+      },
+      {
+        "label": "END-B",
+        "address": "BTS- SRY/MKP/001",
+        "city": "Robertsganj",
+        "pinCode": 231210,
+        "state": "Bihar",
+        "stateCode": 10,
+        "_id": "6a10687a6b35fddaa4aaacf5"
+      }
+    ],
+    "billingItems": [
+      {
+        "label": "primary",
+        "circuitId": "22222222222222",
+        "billingAddress": "508, USHA KIRAN BUILDING, NANI WALA BAGH COMMERCIAL COMPLEX, AZADPUR, North West Delhi, Delhi, 110033",
+        "state": "Punjab",
+        "stateCode": 3,
+        "splitPrice": 300,
+        "splitPercent": 50,
+        "basicTotal": 15000,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 2700,
+        "gstTotal": 2700,
+        "grandTotal": 17700,
+        "arc": 180000,
+        "isSplitEdited": false,
+        "_id": "6a10687a6b35fddaa4aaacf6"
+      },
+      {
+        "label": "secondary",
+        "circuitId": "22222222222222",
+        "billingAddress": "BTS- SRY/MKP/001",
+        "state": "Bihar",
+        "stateCode": 10,
+        "splitPrice": 300,
+        "splitPercent": 50,
+        "basicTotal": 15000,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 2700,
+        "gstTotal": 2700,
+        "grandTotal": 17700,
+        "arc": 180000,
+        "isSplitEdited": false,
+        "_id": "6a10687a6b35fddaa4aaacf7"
+      }
+    ],
+    "companyGroupId": "69ccf5d2338d7b18193cd64f",
+    "operationalDate": "2026-04-01T12:17:56.697Z",
+    "isActive": true,
+    "versionNumber": 0,
+    "createdAt": "2026-05-22T14:30:18.270Z",
+    "updatedAt": "2026-05-22T14:30:18.270Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a10687a6b35fddaa4aaad9e",
+    "dsrId": "69ccf72612a0e05faaf20db9",
+    "orderId": "916444",
+    "capacity": 54,
+    "capacityKbps": 55296,
+    "company": {
+      "id": "69ccf7be12a0e05faaf20e74",
+      "name": "Mock Enterprise Pvt Ltd",
+      "panNumber": "YRERB6752Q"
+    },
+    "bso": {
+      "id": "693192d765d18e4c201f0d44",
+      "name": "Airtel"
+    },
+    "offeredPrice": {
+      "id": "69ccf72e12a0e05faaf20e0d",
+      "rate": 5003
+    },
+    "pcdDate": "2025-09-10T00:00:00.000Z",
+    "entity": {
+      "id": "6936dd4f319864a732c9feea",
+      "name": "Gigantic Infotel Private Limited",
+      "alias": "GTEL",
+      "stateCode": 7,
+      "state": "New Delhi"
+    },
+    "orderType": "NEW-ORDER",
+    "product": {
+      "id": "68665308a1012d98c72f0ec7",
+      "name": "Gigantic Lease Line",
+      "code": "GLL"
+    },
+    "summary": {
+      "totalBasic": 270162,
+      "totalCgst": 0,
+      "totalSgst": 0,
+      "totalIgst": 48629.16,
+      "totalGst": 48629.16,
+      "totalGrand": 318791.16,
+      "circuits": [
+        {
+          "label": "primary",
+          "taxType": "IGST"
+        },
+        {
+          "label": "secondary",
+          "taxType": "IGST"
+        }
+      ]
+    },
+    "dataHash": "906a165cd34af8d1c16c82a8a0febea0",
+    "installationAddress": [
+      {
+        "label": "END-A",
+        "address": "BTS- SRS/DSS/009",
+        "city": "Robertsganj HH",
+        "pinCode": 231210,
+        "state": "Haryana",
+        "stateCode": 6,
+        "_id": "6a10687a6b35fddaa4aaad9f"
+      },
+      {
+        "label": "END-B",
+        "address": "BTS- SRT/NAS/001",
+        "city": "Robertsganj",
+        "pinCode": 231210,
+        "state": "Jharkhand",
+        "stateCode": 20,
+        "_id": "6a10687a6b35fddaa4aaada0"
+      }
+    ],
+    "billingItems": [
+      {
+        "label": "primary",
+        "circuitId": "3333333333",
+        "billingAddress": "508, USHA KIRAN BUILDING, NANI WALA BAGH COMMERCIAL COMPLEX, AZADPUR, North West Delhi, Delhi, 110033",
+        "state": "Haryana",
+        "stateCode": 6,
+        "splitPrice": 2501.5,
+        "splitPercent": 50,
+        "basicTotal": 135081,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 24314.58,
+        "gstTotal": 24314.58,
+        "grandTotal": 159395.58,
+        "arc": 1620972,
+        "isSplitEdited": false,
+        "_id": "6a10687a6b35fddaa4aaada1"
+      },
+      {
+        "label": "secondary",
+        "circuitId": "3333333333",
+        "billingAddress": "BTS- SRT/NAS/001",
+        "state": "Jharkhand",
+        "stateCode": 20,
+        "splitPrice": 2501.5,
+        "splitPercent": 50,
+        "basicTotal": 135081,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 24314.58,
+        "gstTotal": 24314.58,
+        "grandTotal": 159395.58,
+        "arc": 1620972,
+        "isSplitEdited": false,
+        "_id": "6a10687a6b35fddaa4aaada2"
+      }
+    ],
+    "companyGroupId": "69ccf7be338d7b18193cd652",
+    "operationalDate": "2026-04-01T12:11:30.813Z",
+    "isActive": true,
+    "versionNumber": 0,
+    "createdAt": "2026-05-22T14:30:18.746Z",
+    "updatedAt": "2026-05-22T14:30:18.746Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a10687a6b35fddaa4aaad4c",
+    "dsrId": "69cbc83fceee8c60a180e8c2",
+    "orderId": "222353",
+    "capacity": 58,
+    "capacityKbps": 59392,
+    "company": {
+      "id": "69cbd63bceee8c60a180f140",
+      "name": "Mock Enterprise Pvt Ltd",
+      "panNumber": "FITUV5817Q"
+    },
+    "bso": {
+      "id": "693192d765d18e4c201f0d44",
+      "name": "Airtel"
+    },
+    "offeredPrice": {
+      "id": "69cbd63bceee8c60a180f14f",
+      "rate": 75
+    },
+    "pcdDate": "2026-03-12T00:00:00.000Z",
+    "entity": {
+      "id": "6936dd4f319864a732c9feea",
+      "name": "Gigantic Infotel Private Limited",
+      "alias": "GTEL",
+      "stateCode": 7,
+      "state": "New Delhi"
+    },
+    "orderType": "UPGRADE",
+    "product": {
+      "id": "68665308a1012d98c72f0ec7",
+      "name": "Gigantic Lease Line",
+      "code": "GLL"
+    },
+    "summary": {
+      "totalBasic": 4350,
+      "totalCgst": 0,
+      "totalSgst": 0,
+      "totalIgst": 783,
+      "totalGst": 783,
+      "totalGrand": 5133,
+      "circuits": [
+        {
+          "label": "primary",
+          "taxType": "IGST"
+        },
+        {
+          "label": "secondary",
+          "taxType": "IGST"
+        }
+      ]
+    },
+    "dataHash": "6f8a210e85dac22422fa7eaf6f76f654",
+    "installationAddress": [
+      {
+        "label": "END-A",
+        "address": "BTS- IND/IOB/901 hhh",
+        "city": "Robertsganj",
+        "pinCode": 231210,
+        "state": "Andhra Pradesh",
+        "stateCode": 28,
+        "_id": "6a10687a6b35fddaa4aaad4d"
+      },
+      {
+        "label": "END-B",
+        "address": "BTS- SRR/MSN/005",
+        "city": "Robertsganj",
+        "pinCode": 231210,
+        "state": "Punjab",
+        "stateCode": 3,
+        "_id": "6a10687a6b35fddaa4aaad4e"
+      }
+    ],
+    "billingItems": [
+      {
+        "label": "primary",
+        "circuitId": "787677",
+        "billingAddress": "508, USHA KIRAN BUILDING, NANI WALA BAGH COMMERCIAL COMPLEX, AZADPUR, North West Delhi, Delhi, 110033",
+        "state": "Andhra Pradesh",
+        "stateCode": 28,
+        "splitPrice": 37.5,
+        "splitPercent": 50,
+        "basicTotal": 2175,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 391.5,
+        "gstTotal": 391.5,
+        "grandTotal": 2566.5,
+        "arc": 26100,
+        "isSplitEdited": false,
+        "_id": "6a10687a6b35fddaa4aaad4f"
+      },
+      {
+        "label": "secondary",
+        "circuitId": "787677",
+        "billingAddress": "BTS- SRR/MSN/005",
+        "state": "Punjab",
+        "stateCode": 3,
+        "splitPrice": 37.5,
+        "splitPercent": 50,
+        "basicTotal": 2175,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 391.5,
+        "gstTotal": 391.5,
+        "grandTotal": 2566.5,
+        "arc": 26100,
+        "isSplitEdited": false,
+        "_id": "6a10687a6b35fddaa4aaad50"
+      }
+    ],
+    "companyGroupId": "69cbcf04338d7b18193cd645",
+    "operationalDate": "2026-03-31T13:58:12.037Z",
+    "isActive": true,
+    "versionNumber": 0,
+    "createdAt": "2026-05-22T14:30:18.525Z",
+    "updatedAt": "2026-05-22T14:30:18.525Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a10687a6b35fddaa4aaad30",
+    "dsrId": "69cba908949df1f0061a1ea1",
+    "orderId": "729352",
+    "capacity": 55,
+    "capacityKbps": 56320,
+    "company": {
+      "id": "69cba9af949df1f0061a1f79",
+      "name": "Mock Enterprise Pvt Ltd",
+      "panNumber": "CSQSU7426D"
+    },
+    "bso": {
+      "id": "693192d765d18e4c201f0d44",
+      "name": "Airtel"
+    },
+    "offeredPrice": {
+      "id": "69cba90f949df1f0061a1ef4",
+      "rate": 500
+    },
+    "pcdDate": "2026-03-20T00:00:00.000Z",
+    "entity": {
+      "id": "6936dd4f319864a732c9feea",
+      "name": "Gigantic Infotel Private Limited",
+      "alias": "GTEL",
+      "stateCode": 7,
+      "state": "New Delhi"
+    },
+    "orderType": "NEW-ORDER",
+    "product": {
+      "id": "68665308a1012d98c72f0ec7",
+      "name": "Gigantic Lease Line",
+      "code": "GLL"
+    },
+    "summary": {
+      "totalBasic": 27500,
+      "totalCgst": 0,
+      "totalSgst": 0,
+      "totalIgst": 4950,
+      "totalGst": 4950,
+      "totalGrand": 32450,
+      "circuits": [
+        {
+          "label": "primary",
+          "taxType": "IGST"
+        },
+        {
+          "label": "secondary",
+          "taxType": "IGST"
+        }
+      ]
+    },
+    "dataHash": "1224d6eeda453a78ada6a31d6661ad30",
+    "installationAddress": [
+      {
+        "label": "END-A",
+        "address": "BTS- IND/IOB/901,Robertsganj,231210",
+        "city": "Robertsganj",
+        "pinCode": 231210,
+        "state": "Andhra Pradesh",
+        "stateCode": 28,
+        "_id": "6a10687a6b35fddaa4aaad31"
+      },
+      {
+        "label": "END-B",
+        "address": "BTS- SRS/KPR/002",
+        "city": "Robertsganj",
+        "pinCode": 231210,
+        "state": "Haryana",
+        "stateCode": 6,
+        "_id": "6a10687a6b35fddaa4aaad32"
+      }
+    ],
+    "billingItems": [
+      {
+        "label": "primary",
+        "circuitId": "666666666",
+        "billingAddress": "508, USHA KIRAN BUILDING, NANI WALA BAGH COMMERCIAL COMPLEX, AZADPUR, North West Delhi, Delhi, 110033",
+        "state": "Andhra Pradesh",
+        "stateCode": 28,
+        "splitPrice": 250,
+        "splitPercent": 50,
+        "basicTotal": 13750,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 2475,
+        "gstTotal": 2475,
+        "grandTotal": 16225,
+        "arc": 165000,
+        "isSplitEdited": false,
+        "_id": "6a10687a6b35fddaa4aaad33"
+      },
+      {
+        "label": "secondary",
+        "circuitId": "666666666",
+        "billingAddress": "BTS- SRS/KPR/002",
+        "state": "Haryana",
+        "stateCode": 6,
+        "splitPrice": 250,
+        "splitPercent": 50,
+        "basicTotal": 13750,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 2475,
+        "gstTotal": 2475,
+        "grandTotal": 16225,
+        "arc": 165000,
+        "isSplitEdited": false,
+        "_id": "6a10687a6b35fddaa4aaad34"
+      }
+    ],
+    "companyGroupId": "69cba9af338d7b18193cd640",
+    "operationalDate": "2026-03-31T12:44:13.954Z",
+    "isActive": true,
+    "versionNumber": 0,
+    "createdAt": "2026-05-22T14:30:18.453Z",
+    "updatedAt": "2026-05-22T14:30:18.453Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a10687a6b35fddaa4aaadc4",
+    "dsrId": "69c3c0510f126f23e273e248",
+    "orderId": "725519",
+    "capacity": 150,
+    "capacityKbps": 153600,
+    "company": {
+      "id": "69c3c328f71a60058d1da17c",
+      "name": "Mock Enterprise Pvt Ltd",
+      "panNumber": "CUVAI6666W"
+    },
+    "bso": {
+      "id": "693192d765d18e4c201f0d44",
+      "name": "Airtel"
+    },
+    "offeredPrice": {
+      "id": "69c3c328f71a60058d1da189",
+      "rate": 100
+    },
+    "pcdDate": "2025-12-01T00:00:00.000Z",
+    "entity": {
+      "id": "6936dd4f319864a732c9feea",
+      "name": "Gigantic Infotel Private Limited",
+      "alias": "GTEL",
+      "stateCode": 7,
+      "state": "New Delhi"
+    },
+    "orderType": "UPGRADE",
+    "product": {
+      "id": "6866518667b328cf0bf8165a",
+      "name": "Internet Lease Line",
+      "code": "ILL"
+    },
+    "summary": {
+      "totalBasic": 15000,
+      "totalCgst": 0,
+      "totalSgst": 0,
+      "totalIgst": 2700,
+      "totalGst": 2700,
+      "totalGrand": 17700,
+      "circuits": [
+        {
+          "label": "primary",
+          "taxType": "IGST"
+        }
+      ]
+    },
+    "dataHash": "cc4f286c4b44f8af1d24631ffad4a7c5",
+    "installationAddress": [
+      {
+        "label": "END-A",
+        "address": "Building Name- SIFY, Plot No- B 7, Sec-132 Floor- Ground , NOIDA \u2013 201303 Uttar Pradesh",
+        "state": "Uttar Pradesh",
+        "stateCode": 9,
+        "_id": "6a10687a6b35fddaa4aaadc5"
+      },
+      {
+        "label": "END-B",
+        "address": "BTS- SSR/PPP/001, Darbangha, Bihar, 122022",
+        "city": "Darbangha",
+        "pinCode": 122022,
+        "state": "Bihar",
+        "stateCode": 10,
+        "_id": "6a10687a6b35fddaa4aaadc6"
+      }
+    ],
+    "billingItems": [
+      {
+        "label": "primary",
+        "circuitId": "2503261641",
+        "billingAddress": "508, USHA KIRAN BUILDING, NANI WALA BAGH COMMERCIAL COMPLEX, AZADPUR, North West Delhi, Delhi, 110033",
+        "state": "Bihar",
+        "stateCode": 10,
+        "splitPrice": 100,
+        "splitPercent": 100,
+        "basicTotal": 15000,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 2700,
+        "gstTotal": 2700,
+        "grandTotal": 17700,
+        "arc": 180000,
+        "isSplitEdited": false,
+        "_id": "6a10687a6b35fddaa4aaadc7"
+      }
+    ],
+    "companyGroupId": "69c3c0dc338d7b18193cd63a",
+    "operationalDate": "2026-03-25T11:11:34.443Z",
+    "isActive": true,
+    "versionNumber": 0,
+    "createdAt": "2026-05-22T14:30:18.863Z",
+    "updatedAt": "2026-05-22T14:30:18.863Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a10687a6b35fddaa4aaaddd",
+    "dsrId": "69be82205b2fc93ee98c8ac9",
+    "orderId": "212594",
+    "capacity": 56,
+    "capacityKbps": 57344,
+    "company": {
+      "id": "69be84755b2fc93ee98c92da",
+      "name": "Mock Enterprise Pvt Ltd",
+      "panNumber": "FXXDS7925O"
+    },
+    "bso": {
+      "id": "693192d765d18e4c201f0d44",
+      "name": "Airtel"
+    },
+    "offeredPrice": {
+      "id": "69be841e5b2fc93ee98c9213",
+      "rate": 45
+    },
+    "pcdDate": "2026-02-01T00:00:00.000Z",
+    "entity": {
+      "id": "6936dd4f319864a732c9feea",
+      "name": "Gigantic Infotel Private Limited",
+      "alias": "GTEL",
+      "stateCode": 7,
+      "state": "New Delhi"
+    },
+    "orderType": "TERMINATION",
+    "product": {
+      "id": "6866518667b328cf0bf8165a",
+      "name": "Internet Lease Line",
+      "code": "ILL"
+    },
+    "summary": {
+      "totalBasic": 2520,
+      "totalCgst": 0,
+      "totalSgst": 0,
+      "totalIgst": 453.6,
+      "totalGst": 453.6,
+      "totalGrand": 2973.6,
+      "circuits": [
+        {
+          "label": "primary",
+          "taxType": "IGST"
+        }
+      ]
+    },
+    "dataHash": "95c8d7219378e8287a95f6154b68c5fc",
+    "installationAddress": [
+      {
+        "label": "END-A",
+        "address": "GPX Technology, Boomerang, Building- A, Ground Floor, Main Chandivali Farm Road, Andheri East., Mumbai, 400069 Maharashtra",
+        "state": "Maharashtra",
+        "stateCode": 27,
+        "_id": "6a10687a6b35fddaa4aaadde"
+      },
+      {
+        "label": "END-B",
+        "address": "508, USHA KIRAN BUILDING, NANI WALA BAGH COMMERCIAL COMPLEX, AZADPUR, North West Delhi, Delhi, 110033",
+        "city": "DXGHJBN",
+        "pinCode": 456789,
+        "state": "Andhra Pradesh",
+        "stateCode": 28,
+        "_id": "6a10687a6b35fddaa4aaaddf"
+      }
+    ],
+    "billingItems": [
+      {
+        "label": "primary",
+        "circuitId": "66666",
+        "billingAddress": "508, USHA KIRAN BUILDING, NANI WALA BAGH COMMERCIAL COMPLEX, AZADPUR, North West Delhi, Delhi, 110033",
+        "state": "Andhra Pradesh",
+        "stateCode": 37,
+        "splitPrice": 45,
+        "splitPercent": 100,
+        "basicTotal": 2520,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 453.6,
+        "gstTotal": 453.6,
+        "grandTotal": 2973.6,
+        "arc": 30240,
+        "isSplitEdited": false,
+        "_id": "6a10687a6b35fddaa4aaade0"
+      }
+    ],
+    "companyGroupId": "69be8324338d7b18193cd638",
+    "operationalDate": "2026-03-21T12:24:07.798Z",
+    "isActive": true,
+    "versionNumber": 0,
+    "createdAt": "2026-05-22T14:30:18.928Z",
+    "updatedAt": "2026-05-22T14:30:18.928Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a10687a6b35fddaa4aaadf4",
+    "dsrId": "69be6e5632f18b2b61c9120a",
+    "orderId": "933086",
+    "capacity": 54,
+    "capacityKbps": 55296,
+    "company": {
+      "id": "69be6e8f32f18b2b61c912c6",
+      "name": "Mock Enterprise Pvt Ltd",
+      "panNumber": "YWNKF5707H"
+    },
+    "bso": {
+      "id": "693192d765d18e4c201f0d44",
+      "name": "Airtel"
+    },
+    "offeredPrice": {
+      "id": "69be6e5c32f18b2b61c91261",
+      "rate": 23456543
+    },
+    "pcdDate": "2026-03-12T00:00:00.000Z",
+    "entity": {
+      "id": "6936dd4f319864a732c9feea",
+      "name": "Gigantic Infotel Private Limited",
+      "alias": "GTEL",
+      "stateCode": 7,
+      "state": "New Delhi"
+    },
+    "orderType": "TERMINATION",
+    "product": {
+      "id": "6866518667b328cf0bf8165a",
+      "name": "Internet Lease Line",
+      "code": "ILL"
+    },
+    "summary": {
+      "totalBasic": 1266653322,
+      "totalCgst": 0,
+      "totalSgst": 0,
+      "totalIgst": 227997597.96,
+      "totalGst": 227997597.96,
+      "totalGrand": 1494650919.96,
+      "circuits": [
+        {
+          "label": "primary",
+          "taxType": "IGST"
+        }
+      ]
+    },
+    "dataHash": "f7fb8796ed6ec34b24e31d9de2ac696d",
+    "installationAddress": [
+      {
+        "label": "END-A",
+        "address": "GPX Technology, Boomerang, Building- A, Ground Floor, Main Chandivali Farm Road, Andheri East., Mumbai, 400069 Maharashtra",
+        "state": "Maharashtra",
+        "stateCode": 27,
+        "_id": "6a10687a6b35fddaa4aaadf5"
+      },
+      {
+        "label": "END-B",
+        "address": "508, USHA KIRAN BUILDING, NANI WALA BAGH COMMERCIAL COMPLEX, AZADPUR, North West Delhi, Delhi, 110033",
+        "city": "Robertsganj",
+        "pinCode": 231210,
+        "state": "Andhra Pradesh",
+        "stateCode": 28,
+        "_id": "6a10687a6b35fddaa4aaadf6"
+      }
+    ],
+    "billingItems": [
+      {
+        "label": "primary",
+        "circuitId": "456666666666",
+        "billingAddress": "508, USHA KIRAN BUILDING, NANI WALA BAGH COMMERCIAL COMPLEX, AZADPUR, North West Delhi, Delhi, 110033",
+        "state": "Andhra Pradesh",
+        "stateCode": 37,
+        "splitPrice": 23456543,
+        "splitPercent": 100,
+        "basicTotal": 1266653322,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 227997597.96,
+        "gstTotal": 227997597.96,
+        "grandTotal": 1494650919.96,
+        "arc": 15199839864,
+        "isSplitEdited": false,
+        "_id": "6a10687a6b35fddaa4aaadf7"
+      }
+    ],
+    "companyGroupId": "69be6e8f338d7b18193cd636",
+    "operationalDate": "2026-03-21T10:13:19.796Z",
+    "isActive": true,
+    "versionNumber": 0,
+    "createdAt": "2026-05-22T14:30:18.987Z",
+    "updatedAt": "2026-05-22T14:30:18.987Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a10687b6b35fddaa4aaae08",
+    "dsrId": "6968ffee2959d8bca0c8bfef",
+    "orderId": "144032",
+    "capacity": 53,
+    "capacityKbps": 54272,
+    "company": {
+      "id": "696900492959d8bca0c8c09a",
+      "name": "wiiihbhggv-12",
+      "panNumber": "EXLHT3726F"
+    },
+    "bso": {
+      "id": "693192d765d18e4c201f0d44",
+      "name": "Airtel"
+    },
+    "offeredPrice": {
+      "id": "6968fff42959d8bca0c8c046",
+      "rate": 345678
+    },
+    "pcdDate": "2026-01-08T00:00:00.000Z",
+    "entity": {
+      "id": "6936dd4f319864a732c9feea",
+      "name": "Gigantic Infotel Private Limited",
+      "alias": "GTEL",
+      "stateCode": 7,
+      "state": "New Delhi"
+    },
+    "orderType": "TERMINATION",
+    "product": {
+      "id": "6866518667b328cf0bf8165a",
+      "name": "Internet Lease Line",
+      "code": "ILL"
+    },
+    "summary": {
+      "totalBasic": 18320934,
+      "totalCgst": 0,
+      "totalSgst": 0,
+      "totalIgst": 3297768.12,
+      "totalGst": 3297768.12,
+      "totalGrand": 21618702.12,
+      "circuits": [
+        {
+          "label": "primary",
+          "taxType": "IGST"
+        }
+      ]
+    },
+    "dataHash": "55100eb213e535f44044c7acde6294a7",
+    "installationAddress": [
+      {
+        "label": "END-A",
+        "address": "GPX Technology, Boomerang, Building- A, Ground Floor, Main Chandivali Farm Road, Andheri East., Mumbai, 400069 Maharashtra",
+        "state": "Maharashtra",
+        "stateCode": 27,
+        "_id": "6a10687b6b35fddaa4aaae09"
+      },
+      {
+        "label": "END-B",
+        "address": "kewati,sonebhadra\nroberstanj",
+        "state": "Andhra Pradesh",
+        "stateCode": 37,
+        "_id": "6a10687b6b35fddaa4aaae0a"
+      }
+    ],
+    "billingItems": [
+      {
+        "label": "primary",
+        "circuitId": "123456",
+        "billingAddress": "kewati,sonebhadra\r\nroberstanj",
+        "state": "Andhra Pradesh",
+        "stateCode": 37,
+        "splitPrice": 345678,
+        "splitPercent": 100,
+        "basicTotal": 18320934,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 3297768.12,
+        "gstTotal": 3297768.12,
+        "grandTotal": 21618702.12,
+        "arc": 219851208,
+        "isSplitEdited": false,
+        "_id": "6a10687b6b35fddaa4aaae0b"
+      }
+    ],
+    "operationalDate": "2026-03-21T09:57:10.754Z",
+    "isActive": true,
+    "versionNumber": 0,
+    "createdAt": "2026-05-22T14:30:19.037Z",
+    "updatedAt": "2026-05-22T14:30:19.037Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a10687b6b35fddaa4aaae21",
+    "dsrId": "6969e56315d12924df15cd90",
+    "orderId": "896603",
+    "capacity": 52,
+    "capacityKbps": 53248,
+    "company": {
+      "id": "6969e5d515d12924df15cee8",
+      "name": "wibro-34567",
+      "panNumber": "AWSDE1234F"
+    },
+    "bso": {
+      "id": "693192d765d18e4c201f0d44",
+      "name": "Airtel"
+    },
+    "offeredPrice": {
+      "id": "6969e56815d12924df15cde5",
+      "rate": 234567
+    },
+    "pcdDate": "2026-01-15T00:00:00.000Z",
+    "entity": {
+      "id": "6936dd4f319864a732c9feea",
+      "name": "Gigantic Infotel Private Limited",
+      "alias": "GTEL",
+      "stateCode": 7,
+      "state": "New Delhi"
+    },
+    "orderType": "NEW-ORDER",
+    "product": {
+      "id": "6866518667b328cf0bf8165a",
+      "name": "Internet Lease Line",
+      "code": "ILL"
+    },
+    "summary": {
+      "totalBasic": 12197484,
+      "totalCgst": 0,
+      "totalSgst": 0,
+      "totalIgst": 2195547.12,
+      "totalGst": 2195547.12,
+      "totalGrand": 14393031.12,
+      "circuits": [
+        {
+          "label": "primary",
+          "taxType": "IGST"
+        }
+      ]
+    },
+    "dataHash": "d8c748a03862eab579540a01941724db",
+    "installationAddress": [
+      {
+        "label": "END-A",
+        "address": "GPX Technology, Boomerang, Building- A, Ground Floor, Main Chandivali Farm Road, Andheri East., Mumbai, 400069 Maharashtra",
+        "state": "Maharashtra",
+        "stateCode": 27,
+        "_id": "6a10687b6b35fddaa4aaae22"
+      },
+      {
+        "label": "END-B",
+        "address": "Vill-Jogini ,Post-Tilauli Kala",
+        "state": "Andhra Pradesh",
+        "stateCode": 37,
+        "_id": "6a10687b6b35fddaa4aaae23"
+      }
+    ],
+    "billingItems": [
+      {
+        "label": "primary",
+        "circuitId": "2345654322345",
+        "billingAddress": "Vill-Jogini ,Post-Tilauli Kala",
+        "state": "Andhra Pradesh",
+        "stateCode": 37,
+        "splitPrice": 234567,
+        "splitPercent": 100,
+        "basicTotal": 12197484,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 2195547.12,
+        "gstTotal": 2195547.12,
+        "grandTotal": 14393031.12,
+        "arc": 146369808,
+        "isSplitEdited": false,
+        "_id": "6a10687b6b35fddaa4aaae24"
+      }
+    ],
+    "operationalDate": "2026-03-21T09:51:18.135Z",
+    "isActive": true,
+    "versionNumber": 0,
+    "createdAt": "2026-05-22T14:30:19.100Z",
+    "updatedAt": "2026-05-22T14:30:19.100Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a10687b6b35fddaa4aaae3a",
+    "dsrId": "695fb3cbe8f2c27f74feb265",
+    "orderId": "552551",
+    "capacity": 53,
+    "capacityKbps": 54272,
+    "company": {
+      "id": "69676ac664d1a253314d909f",
+      "name": "wibro-7",
+      "panNumber": "EXLTA3726F"
+    },
+    "bso": {
+      "id": "693192d765d18e4c201f0d44",
+      "name": "Airtel"
+    },
+    "offeredPrice": {
+      "id": "69676a4529418520a6ce684d",
+      "rate": 12345
+    },
+    "pcdDate": "2026-01-14T10:03:09.586Z",
+    "entity": {
+      "id": "6936dd4f319864a732c9feea",
+      "name": "Gigantic Infotel Private Limited",
+      "alias": "GTEL",
+      "stateCode": 7,
+      "state": "New Delhi"
+    },
+    "orderType": "DOWNGRADE",
+    "product": {
+      "id": "6866518667b328cf0bf8165a",
+      "name": "Internet Lease Line",
+      "code": "ILL"
+    },
+    "summary": {
+      "totalBasic": 654285,
+      "totalCgst": 0,
+      "totalSgst": 0,
+      "totalIgst": 117771.3,
+      "totalGst": 117771.3,
+      "totalGrand": 772056.3,
+      "circuits": [
+        {
+          "label": "primary",
+          "taxType": "IGST"
+        }
+      ]
+    },
+    "dataHash": "0d5fc52331d1186f9ef2692484bd2975",
+    "installationAddress": [
+      {
+        "label": "END-A",
+        "address": "GPX Technology, Boomerang, Building- A, Ground Floor, Main Chandivali Farm Road, Andheri East., Mumbai, 400069 Maharashtra",
+        "state": "Maharashtra",
+        "stateCode": 27,
+        "_id": "6a10687b6b35fddaa4aaae3b"
+      },
+      {
+        "label": "END-B",
+        "address": "508, USHA KIRAN BUILDING, NANI WALA BAGH COMMERCIAL COMPLEX, AZADPUR, North West Delhi, Delhi, 110033",
+        "state": "Andhra Pradesh",
+        "stateCode": 37,
+        "_id": "6a10687b6b35fddaa4aaae3c"
+      }
+    ],
+    "billingItems": [
+      {
+        "label": "primary",
+        "circuitId": "lsi-1223",
+        "billingAddress": "508, USHA KIRAN BUILDING, NANI WALA BAGH COMMERCIAL COMPLEX, AZADPUR, North West Delhi, Delhi, 110033",
+        "state": "Andhra Pradesh",
+        "stateCode": 37,
+        "splitPrice": 12345,
+        "splitPercent": 100,
+        "basicTotal": 654285,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 117771.3,
+        "gstTotal": 117771.3,
+        "grandTotal": 772056.3,
+        "arc": 7851420,
+        "isSplitEdited": false,
+        "_id": "6a10687b6b35fddaa4aaae3d"
+      }
+    ],
+    "operationalDate": "2026-01-14T10:03:09.589Z",
+    "isActive": false,
+    "versionNumber": 0,
+    "createdAt": "2026-05-22T14:30:19.167Z",
+    "updatedAt": "2026-05-22T14:30:19.167Z",
+    "__v": 0,
+    "terminateDate": "2026-03-13T00:00:00.000Z"
+  },
+  {
+    "_id": "6a10687a6b35fddaa4aaad19",
+    "dsrId": "695e4f51ecda550f63b0fce1",
+    "orderId": "934502",
+    "capacity": 53,
+    "capacityKbps": 54272,
+    "company": {
+      "id": "69625a5506d4e723b271e813",
+      "name": "wibro-2",
+      "panNumber": "EXLHU3726F"
+    },
+    "bso": {
+      "id": "693192d765d18e4c201f0d44",
+      "name": "Airtel"
+    },
+    "offeredPrice": {
+      "id": "69625a5506d4e723b271e821",
+      "rate": 1000
+    },
+    "pcdDate": "2026-01-13T11:43:58.358Z",
+    "entity": {
+      "id": "6936dd4f319864a732c9feea",
+      "name": "Gigantic Infotel Private Limited",
+      "alias": "GTEL",
+      "stateCode": 7,
+      "state": "New Delhi"
+    },
+    "orderType": "UPGRADE",
+    "product": {
+      "id": "6866518667b328cf0bf8165a",
+      "name": "Internet Lease Line",
+      "code": "ILL"
+    },
+    "summary": {
+      "totalBasic": 53000,
+      "totalCgst": 0,
+      "totalSgst": 0,
+      "totalIgst": 9540,
+      "totalGst": 9540,
+      "totalGrand": 62540,
+      "circuits": [
+        {
+          "label": "primary",
+          "taxType": "IGST"
+        }
+      ]
+    },
+    "dataHash": "52eb3156c6f14908dd8587325f66b5c0",
+    "installationAddress": [
+      {
+        "label": "END-A",
+        "address": "GPX Technology, Boomerang, Building- A, Ground Floor, Main Chandivali Farm Road, Andheri East., Mumbai, 400069 Maharashtra",
+        "state": "Maharashtra",
+        "stateCode": 27,
+        "_id": "6a10687a6b35fddaa4aaad1a"
+      },
+      {
+        "label": "END-B",
+        "address": "kewati,sonebhadra\nroberstanj",
+        "state": "Andhra Pradesh",
+        "stateCode": 37,
+        "_id": "6a10687a6b35fddaa4aaad1b"
+      }
+    ],
+    "billingItems": [
+      {
+        "label": "primary",
+        "circuitId": "lsi-12288",
+        "billingAddress": "kewati,sonebhadra\r\nroberstanj",
+        "state": "Andhra Pradesh",
+        "stateCode": 37,
+        "splitPrice": 1000,
+        "splitPercent": 100,
+        "basicTotal": 53000,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 9540,
+        "gstTotal": 9540,
+        "grandTotal": 62540,
+        "arc": 636000,
+        "isSplitEdited": false,
+        "_id": "6a10687a6b35fddaa4aaad1c"
+      }
+    ],
+    "operationalDate": "2026-01-13T11:43:58.360Z",
+    "isActive": false,
+    "versionNumber": 0,
+    "createdAt": "2026-05-22T14:30:18.393Z",
+    "updatedAt": "2026-05-22T14:30:18.393Z",
+    "__v": 0,
+    "terminateDate": "2026-03-22T00:00:00.000Z"
+  },
+  {
+    "_id": "6a10687b6b35fddaa4aaae52",
+    "dsrId": "694e8dfc59d2a7908fca7d87",
+    "orderId": "493275",
+    "capacity": 55,
+    "capacityKbps": 56320,
+    "company": {
+      "id": "694e8ead59d2a7908fca7e47",
+      "name": "gigantic",
+      "panNumber": "EXLKU3726F"
+    },
+    "bso": {
+      "id": "693192d765d18e4c201f0d44",
+      "name": "Airtel"
+    },
+    "offeredPrice": {
+      "id": "696739e629418520a6ce554a",
+      "rate": 10
+    },
+    "pcdDate": "2026-01-13T08:51:36.567Z",
+    "entity": {
+      "id": "6936dd4f319864a732c9feea",
+      "name": "Gigantic Infotel Private Limited",
+      "alias": "GTEL",
+      "stateCode": 7,
+      "state": "New Delhi"
+    },
+    "orderType": "UPGRADE",
+    "product": {
+      "id": "6866518667b328cf0bf8165a",
+      "name": "Internet Lease Line",
+      "code": "ILL"
+    },
+    "summary": {
+      "totalBasic": 550,
+      "totalCgst": 0,
+      "totalSgst": 0,
+      "totalIgst": 99,
+      "totalGst": 99,
+      "totalGrand": 649,
+      "circuits": [
+        {
+          "label": "primary",
+          "taxType": "IGST"
+        }
+      ]
+    },
+    "dataHash": "1a7f968ddef73d6be88a12b71518b8c9",
+    "installationAddress": [
+      {
+        "label": "END-A",
+        "address": "Building Name- SIFY, Plot No- B 7, Sec-132 Floor- Ground , NOIDA \u2013 201303 Uttar Pradesh",
+        "state": "Uttar Pradesh",
+        "stateCode": 9,
+        "_id": "6a10687b6b35fddaa4aaae53"
+      },
+      {
+        "label": "END-B",
+        "address": "Vill-Jogini ,Post-Tilauli Kala",
+        "state": "Andhra Pradesh",
+        "stateCode": 37,
+        "_id": "6a10687b6b35fddaa4aaae54"
+      }
+    ],
+    "billingItems": [
+      {
+        "label": "primary",
+        "circuitId": "lsi-75",
+        "billingAddress": "Vill-Jogini ,Post-Tilauli Kala",
+        "state": "Andhra Pradesh",
+        "stateCode": 37,
+        "splitPrice": 10,
+        "splitPercent": 100,
+        "basicTotal": 550,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 99,
+        "gstTotal": 99,
+        "grandTotal": 649,
+        "arc": 6600,
+        "isSplitEdited": false,
+        "_id": "6a10687b6b35fddaa4aaae55"
+      }
+    ],
+    "operationalDate": "2026-01-13T08:51:36.589Z",
+    "isActive": true,
+    "versionNumber": 0,
+    "createdAt": "2026-05-22T14:30:19.231Z",
+    "updatedAt": "2026-05-22T14:30:19.231Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a10687b6b35fddaa4aaae82",
+    "dsrId": "69538fd45cfcc736ba4b987d",
+    "orderId": "293575",
+    "capacity": 53,
+    "capacityKbps": 54272,
+    "company": {
+      "id": "6953912d5cfcc736ba4b9a33",
+      "name": "Company Name PC-2",
+      "panNumber": "ETLHU3726F"
+    },
+    "bso": {
+      "id": "693192d765d18e4c201f0d44",
+      "name": "Airtel"
+    },
+    "offeredPrice": {
+      "id": "69538ff75cfcc736ba4b98d3",
+      "rate": 3
+    },
+    "pcdDate": "2026-01-10T10:52:38.718Z",
+    "entity": {
+      "id": "6936dd4f319864a732c9feea",
+      "name": "Gigantic Infotel Private Limited",
+      "alias": "GTEL",
+      "stateCode": 7,
+      "state": "New Delhi"
+    },
+    "orderType": "TERMINATION",
+    "product": {
+      "id": "6866518667b328cf0bf8165a",
+      "name": "Internet Lease Line",
+      "code": "ILL"
+    },
+    "summary": {
+      "totalBasic": 159,
+      "totalCgst": 0,
+      "totalSgst": 0,
+      "totalIgst": 28.62,
+      "totalGst": 28.62,
+      "totalGrand": 187.62,
+      "circuits": [
+        {
+          "label": "primary",
+          "taxType": "IGST"
+        }
+      ]
+    },
+    "dataHash": "97cc81cd68674ce45e35fce85dcc9111",
+    "installationAddress": [
+      {
+        "label": "END-A",
+        "address": "GPX Technology, Boomerang, Building- A, Ground Floor, Main Chandivali Farm Road, Andheri East., Mumbai, 400069 Maharashtra",
+        "state": "Maharashtra",
+        "stateCode": 27,
+        "_id": "6a10687b6b35fddaa4aaae83"
+      },
+      {
+        "label": "END-B",
+        "address": "kewati,sonebhadra\nroberstanj",
+        "state": "Andhra Pradesh",
+        "stateCode": 37,
+        "_id": "6a10687b6b35fddaa4aaae84"
+      }
+    ],
+    "billingItems": [
+      {
+        "label": "primary",
+        "circuitId": "lsi-575",
+        "billingAddress": "kewati,sonebhadra\r\nroberstanj",
+        "state": "Andhra Pradesh",
+        "stateCode": 37,
+        "splitPrice": 3,
+        "splitPercent": 100,
+        "basicTotal": 159,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 28.62,
+        "gstTotal": 28.62,
+        "grandTotal": 187.62,
+        "arc": 1908,
+        "isSplitEdited": false,
+        "_id": "6a10687b6b35fddaa4aaae85"
+      }
+    ],
+    "operationalDate": "2026-01-10T10:52:38.732Z",
+    "isActive": true,
+    "versionNumber": 0,
+    "createdAt": "2026-05-22T14:30:19.356Z",
+    "updatedAt": "2026-05-22T14:30:19.356Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a10687b6b35fddaa4aaae6a",
+    "dsrId": "695fa0380ff9049ecafafbc6",
+    "orderId": "905512",
+    "capacity": 54,
+    "capacityKbps": 55296,
+    "company": {
+      "id": "695fa0820ff9049ecafafc71",
+      "name": "wibro-34",
+      "panNumber": "EXPHU3726F"
+    },
+    "bso": {
+      "id": "693192d765d18e4c201f0d44",
+      "name": "Airtel"
+    },
+    "offeredPrice": {
+      "id": "695fa03f0ff9049ecafafc1e",
+      "rate": 12345678
+    },
+    "pcdDate": "2026-01-08T12:56:51.380Z",
+    "entity": {
+      "id": "6936dd4f319864a732c9feea",
+      "name": "Gigantic Infotel Private Limited",
+      "alias": "GTEL",
+      "stateCode": 7,
+      "state": "New Delhi"
+    },
+    "orderType": "TERMINATION",
+    "product": {
+      "id": "6866518667b328cf0bf8165a",
+      "name": "Internet Lease Line",
+      "code": "ILL"
+    },
+    "summary": {
+      "totalBasic": 666666612,
+      "totalCgst": 0,
+      "totalSgst": 0,
+      "totalIgst": 119999990.16,
+      "totalGst": 119999990.16,
+      "totalGrand": 786666602.16,
+      "circuits": [
+        {
+          "label": "primary",
+          "taxType": "IGST"
+        }
+      ]
+    },
+    "dataHash": "f2f7dc4468a351d29265d1cb8e99c6df",
+    "installationAddress": [
+      {
+        "label": "END-A",
+        "address": "GPX Technology, Boomerang, Building- A, Ground Floor, Main Chandivali Farm Road, Andheri East., Mumbai, 400069 Maharashtra",
+        "state": "Maharashtra",
+        "stateCode": 27,
+        "_id": "6a10687b6b35fddaa4aaae6b"
+      },
+      {
+        "label": "END-B",
+        "address": "Vill-Jogini ,Post-Tilauli Kala",
+        "state": "Andhra Pradesh",
+        "stateCode": 37,
+        "_id": "6a10687b6b35fddaa4aaae6c"
+      }
+    ],
+    "billingItems": [
+      {
+        "label": "primary",
+        "circuitId": "lsi-123G",
+        "billingAddress": "Vill-Jogini ,Post-Tilauli Kala",
+        "state": "Andhra Pradesh",
+        "stateCode": 37,
+        "splitPrice": 12345678,
+        "splitPercent": 100,
+        "basicTotal": 666666612,
+        "cgst": 0,
+        "sgst": 0,
+        "igst": 119999990.16,
+        "gstTotal": 119999990.16,
+        "grandTotal": 786666602.16,
+        "arc": 7999999344,
+        "isSplitEdited": false,
+        "_id": "6a10687b6b35fddaa4aaae6d"
+      }
+    ],
+    "operationalDate": "2026-01-08T12:56:51.383Z",
+    "isActive": true,
+    "versionNumber": 0,
+    "createdAt": "2026-05-22T14:30:19.290Z",
+    "updatedAt": "2026-05-22T14:30:19.290Z",
+    "__v": 0
+  }
+]

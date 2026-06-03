@@ -111,8 +111,9 @@ const FIELD_RENDERERS = {
         value={ctx.filters.active}
         onChange={e => ctx.onChange({ active: e.target.value, page: 1 })}
       >
-        <option value="true">Active (PCD)</option>
-        <option value="false">Inactive (Terminate)</option>
+        <option value="">ALL</option>
+        <option value="true">Active</option>
+        <option value="false">Inactive</option>
       </select>
     </div>
   ),

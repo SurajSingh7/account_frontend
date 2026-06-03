@@ -29,7 +29,7 @@ export const getDefaultFilters = () => ({
   search:         '',
   stateCode:      '',
   entityId:       '',
-  active:         'true',
+  active:         '',
   bsoId:          '',
   companyGroupId: '',
   orderType:      '',   // NEW — send NAME to API

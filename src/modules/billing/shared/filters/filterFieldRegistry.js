@@ -37,9 +37,18 @@ export const FILTER_REGISTRY = [
 /** PCD Closure — all 3 period modes */
 export const PCD_FIELDS = [
   'search', , 'orderType', 'productId',
-  'entityId', 'stateCode','companyGroupId','active',
+  'entityId', 'stateCode','companyGroupId',
   'period', 'dateRange',
 ];
+export const OrderLinks_FIELDS = [
+  ...PCD_FIELDS,
+   'active',
+];
+
+export const OrdersTerminate_FIELDS = [
+  ...PCD_FIELDS
+];
+
 
 /** Billing — period + dateRange only, no monthRange */
 export const BILLING_FIELDS = [
