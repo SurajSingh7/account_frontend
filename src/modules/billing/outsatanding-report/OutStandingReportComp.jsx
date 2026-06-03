@@ -12,7 +12,7 @@ import Pagination from '@/shared/ui/pagination/Pagination';
 import { OUTSTANDING_FIELDS } from '../shared/filters/filterFieldRegistry';
 import { RotateCw } from 'lucide-react';
 
-const ENDPOINT = '/billing/sale/monthly/orders/outstanding/';
+const ENDPOINT = '/billing/sale/report/outstanding/';
 
 const OutStandingReportComp = () => {
   const router = useRouter();

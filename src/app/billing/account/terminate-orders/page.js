@@ -1,11 +1,13 @@
 import TerminateOrderComp from '@/modules/billing/terminate-orders/TerminateOrderComp';
 import React from 'react'
-
+import { Suspense } from 'react';
 
 const page = () => {
   return (
     <div>
-       <TerminateOrderComp/>
+      <Suspense fallback={<div>Loading...</div>}>
+        <TerminateOrderComp />
+      </Suspense>
     </div>
   )
 }
