@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation'; // ← ye wapas add karo
 import { useFilters } from '../shared/helpers/hooks/useFilters';
 import { useFetchList } from '../shared/helpers/hooks/useFetchList';
@@ -13,6 +13,11 @@ import { OUTSTANDING_FIELDS } from '../shared/filters/filterFieldRegistry';
 import { RotateCw } from 'lucide-react';
 
 const ENDPOINT = '/billing/sale/report/outstanding/';
+const URL_FILTER_KEYS = [
+  'companyGroupId',
+  'periodType', 'year', 'month', 'startDate', 'endDate',
+  'fromMonth', 'toMonth', 'page', 'limit',
+];
 
 const OutStandingReportComp = () => {
   const router = useRouter();
