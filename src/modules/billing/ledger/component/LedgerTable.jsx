@@ -1,9 +1,11 @@
 'use client'
 import React, { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Eye, Pencil, FileText, ArrowLeft, CheckCheck, Info } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Eye, Pencil, FileText, ArrowLeft, CheckCheck, Info, SlidersHorizontal } from 'lucide-react'
 import { enrichOutstandingLedger } from '../helpers/buildOutstandingLedger'
-import AggregatedMonthsModal from './AggregatedMonthsModal'   // ← import the new component
+import AggregatedMonthsModal from './AggregatedMonthsModal'
+import AdjustmentAmountModal from './OpeningAdjustmentModal'
+
 
 
 const fmt = (n) =>
@@ -98,24 +100,24 @@ const DaysCell = ({ item }) => {
 
 // ─── COLUMN DEFINITIONS ───────────────────────────────────────────────────────
 export const LEDGER_COLUMNS = [
-  { id: 'month',                      label: <> Billing <br /> Month </>,          align: 'left',   order: 1  },
-  { id: 'days',                       label: 'Days',                               align: 'center', order: 2  },
-  { id: 'period',                     label: 'Period',                             align: 'left',   order: 3  },
-  { id: 'basicBill',                  label: 'Basic Bill',                         align: 'right',  order: 4  },
-  { id: 'cgst',                       label: 'CGST (9%)',                          align: 'right',  order: 5  },
-  { id: 'sgst',                       label: 'SGST (9%)',                          align: 'right',  order: 6  },
-  { id: 'igst',                       label: 'IGST (18%)',                         align: 'right',  order: 7  },
-  { id: 'basicGst',                   label: 'Basic + GST',                        align: 'right',  order: 8  },
-  { id: 'miscBill',                   label: 'Misc+GST Bill',                      align: 'right',  order: 9  },
-  { id: 'netBilling',                 label: 'Net Billing',                        align: 'right',  order: 18 },
-  { id: 'receiptAmount',              label: 'Receipt Amount',                     align: 'right',  order: 19 },
-  { id: 'received',                   label: 'Received',                           align: 'right',  order: 10 },
-  { id: 'creditNotes',                label: 'Credit Notes',                       align: 'right',  order: 11 },
-  { id: 'tdsConfirm',                 label: 'TDS Conf',                           align: 'right',  order: 12 },
-  { id: 'tdsProvision',               label: 'TDS Prov',                           align: 'right',  order: 13 },
-  { id: 'runningOutstanding',         label: <> Running <br /> Outstanding </>,    align: 'right',  order: 15 },
+  { id: 'month', label: <> Billing <br /> Month </>, align: 'left', order: 1 },
+  { id: 'days', label: 'Days', align: 'center', order: 2 },
+  { id: 'period', label: 'Period', align: 'left', order: 3 },
+  { id: 'basicBill', label: 'Basic Bill', align: 'right', order: 4 },
+  { id: 'cgst', label: 'CGST (9%)', align: 'right', order: 5 },
+  { id: 'sgst', label: 'SGST (9%)', align: 'right', order: 6 },
+  { id: 'igst', label: 'IGST (18%)', align: 'right', order: 7 },
+  { id: 'basicGst', label: 'Basic + GST', align: 'right', order: 8 },
+  { id: 'miscBill', label: 'Misc+GST Bill', align: 'right', order: 9 },
+  { id: 'netBilling', label: 'Net Billing', align: 'right', order: 18 },
+  { id: 'receiptAmount', label: 'Receipt Amount', align: 'right', order: 19 },
+  { id: 'received', label: 'Received', align: 'right', order: 10 },
+  { id: 'creditNotes', label: 'Credit Notes', align: 'right', order: 11 },
+  { id: 'tdsConfirm', label: 'TDS Conf', align: 'right', order: 12 },
+  { id: 'tdsProvision', label: 'TDS Prov', align: 'right', order: 13 },
+  { id: 'runningOutstanding', label: <> Running <br /> Outstanding </>, align: 'right', order: 15 },
   { id: 'outstandingAfterAdjustment', label: <> Outstanding <br /> After Adjustment </>, align: 'right', order: 16 },
-  { id: 'actions',                    label: 'Actions',                            align: 'center', order: 20 },
+  { id: 'actions', label: 'Actions', align: 'center', order: 20 },
 ]
 
 
@@ -234,14 +236,16 @@ const renderRowCell = (id, item, router) => {
     case 'runningOutstanding':
       return (
         <td key={id} className="px-3 py-3 text-right font-extrabold text-rose-600 bg-rose-50/40">
-          ₹{fmt(item.runningOutstanding)}
+          {/* ₹{fmt(item.runningOutstanding)} */}
+          ₹{fmt(item.totalBalance)}
         </td>
       )
 
     case 'outstandingAfterAdjustment':
       return (
         <td key={id} className="px-3 py-3 text-right bg-yellow-50/40">
-          {item.outstandingAfterAdjustment <= 0 ? (
+          {/* {item.outstandingAfterAdjustment <= 0 ? ( */}
+          {item.remainingAdj <= 0 ? (
             <span className="inline-flex items-center gap-1 font-extrabold text-emerald-600">
               <CheckCheck className="w-4 h-4 stroke-[3]" />
               ₹0.00
@@ -249,7 +253,8 @@ const renderRowCell = (id, item, router) => {
           ) : (
             <span className="inline-flex items-center gap-1 font-extrabold text-rose-600">
               <span className="text-rose-400 font-bold">×</span>
-              ₹{fmt(item.outstandingAfterAdjustment)}
+              {/* ₹{fmt(item.outstandingAfterAdjustment)} */}
+              ₹{fmt(item.remainingAdj)}
             </span>
           )}
         </td>
@@ -308,27 +313,27 @@ const renderRowCell = (id, item, router) => {
 // ─── FOOTER CELL RENDERER ─────────────────────────────────────────────────────
 const renderFooterCell = (id, t) => {
   switch (id) {
-    case 'month':               return <td key={id} className="px-3 py-3 text-gray-900">TOTAL</td>
-    case 'days':                return <td key={id} className="px-3 py-3" />
-    case 'period':              return <td key={id} className="px-3 py-3" />
-    case 'basicBill':           return <td key={id} className="px-3 py-3 text-right text-slate-900">₹{fmt(t.basicTotal ?? 0)}</td>
-    case 'cgst':                return <td key={id} className="px-3 py-3 text-right text-slate-700">₹{fmt(t.cgst ?? 0)}</td>
-    case 'sgst':                return <td key={id} className="px-3 py-3 text-right text-slate-700">₹{fmt(t.sgst ?? 0)}</td>
-    case 'igst':                return <td key={id} className="px-3 py-3 text-right text-slate-700">₹{fmt(t.igst ?? 0)}</td>
-    case 'basicGst':            return <td key={id} className="px-3 py-3 text-right text-indigo-700">₹{fmt(t.totalPlusGst ?? 0)}</td>
-    case 'miscBill':            return <td key={id} className="px-3 py-3 text-right text-purple-700">₹{fmt(t.miscPlusGst ?? 0)}</td>
-    case 'netBilling':          return <td key={id} className="px-3 py-3 text-right text-teal-700">₹{fmt(t.netBilling ?? 0)}</td>
-    case 'receiptAmount':       return <td key={id} className="px-3 py-3 text-right text-emerald-700">₹{fmt(t.receiptAmount ?? 0)}</td>
-    case 'received':            return <td key={id} className="px-3 py-3 text-right text-emerald-700">₹{fmt(t.received ?? 0)}</td>
-    case 'creditNotes':         return <td key={id} className="px-3 py-3 text-right text-cyan-700">₹{fmt(t.creditNote ?? 0)}</td>
-    case 'tdsConfirm':          return <td key={id} className="px-3 py-3 text-right text-indigo-600">₹{fmt(t.tdsConf ?? 0)}</td>
-    case 'tdsProvision':        return <td key={id} className="px-3 py-3 text-right text-orange-600">₹{fmt(t.tdsProvision ?? 0)}</td>
-    case 'totalBalance':        return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-rose-50">₹{fmt(t.totalBalance ?? 0)}</td>
-    case 'runningOutstanding':  return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-rose-50">₹{fmt(t.runningOutstanding ?? 0)}</td>
+    case 'month': return <td key={id} className="px-3 py-3 text-gray-900">TOTAL</td>
+    case 'days': return <td key={id} className="px-3 py-3" />
+    case 'period': return <td key={id} className="px-3 py-3" />
+    case 'basicBill': return <td key={id} className="px-3 py-3 text-right text-slate-900">₹{fmt(t.basicTotal ?? 0)}</td>
+    case 'cgst': return <td key={id} className="px-3 py-3 text-right text-slate-700">₹{fmt(t.cgst ?? 0)}</td>
+    case 'sgst': return <td key={id} className="px-3 py-3 text-right text-slate-700">₹{fmt(t.sgst ?? 0)}</td>
+    case 'igst': return <td key={id} className="px-3 py-3 text-right text-slate-700">₹{fmt(t.igst ?? 0)}</td>
+    case 'basicGst': return <td key={id} className="px-3 py-3 text-right text-indigo-700">₹{fmt(t.totalPlusGst ?? 0)}</td>
+    case 'miscBill': return <td key={id} className="px-3 py-3 text-right text-purple-700">₹{fmt(t.miscPlusGst ?? 0)}</td>
+    case 'netBilling': return <td key={id} className="px-3 py-3 text-right text-teal-700">₹{fmt(t.netBilling ?? 0)}</td>
+    case 'receiptAmount': return <td key={id} className="px-3 py-3 text-right text-emerald-700">₹{fmt(t.receiptAmount ?? 0)}</td>
+    case 'received': return <td key={id} className="px-3 py-3 text-right text-emerald-700">₹{fmt(t.received ?? 0)}</td>
+    case 'creditNotes': return <td key={id} className="px-3 py-3 text-right text-cyan-700">₹{fmt(t.creditNote ?? 0)}</td>
+    case 'tdsConfirm': return <td key={id} className="px-3 py-3 text-right text-indigo-600">₹{fmt(t.tdsConf ?? 0)}</td>
+    case 'tdsProvision': return <td key={id} className="px-3 py-3 text-right text-orange-600">₹{fmt(t.tdsProvision ?? 0)}</td>
+    case 'totalBalance': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-rose-50">₹{fmt(t.totalBalance ?? 0)}</td>
+    case 'runningOutstanding': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-rose-50">₹{fmt(t.runningOutstanding ?? 0)}</td>
     case 'outstandingAfterAdjustment': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-yellow-50">₹{fmt(t.outstandingAfterAdjustment ?? 0)}</td>
-    case 'remaining':           return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-yellow-50">₹{fmt(t.remainingAdjustment ?? 0)}</td>
-    case 'actions':             return <td key={id} className="px-3 py-3" />
-    default:                    return <td key={id} className="px-3 py-3" />
+    case 'remaining': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-yellow-50">₹{fmt(t.remainingAdjustment ?? 0)}</td>
+    case 'actions': return <td key={id} className="px-3 py-3" />
+    default: return <td key={id} className="px-3 py-3" />
   }
 }
 
@@ -363,17 +368,20 @@ const LedgerFooter = ({ totals, visibleDefs }) => {
 
 
 // ─── HEADER BAR ───────────────────────────────────────────────────────────────
-const LedgerHeader = ({ title, meta, chips, onBack, ledgerName }) => {
+const LedgerHeader = ({ title, meta, chips, onBack, ledgerName, orderId, stateCode, openingAdjustment,circuitKey }) => {
   const router = useRouter()
+  const [adjModalOpen, setAdjModalOpen] = useState(false)   // ← new state
+
   const handleBack = () => { if (onBack) { onBack() } else { router.back() } }
 
   return (
-    <div className={`flex items-center gap-5 px-1 py-4 rounded-t-xl ${
-      ledgerName?.toLowerCase() === 'receipt'     ? 'bg-green-600' :
-      ledgerName?.toLowerCase() === 'outstanding' ? 'bg-blue-600'  :
-      ledgerName?.toLowerCase() === 'bill'        ? 'bg-red-600'   :
-      'bg-gradient-to-r from-blue-600 to-blue-700'
-    }`}>
+    <div className={`flex items-center gap-5 px-1 py-4 rounded-t-xl ${ledgerName?.toLowerCase() === 'receipt' ? 'bg-green-600' :
+      ledgerName?.toLowerCase() === 'outstanding' ? 'bg-blue-600' :
+        ledgerName?.toLowerCase() === 'bill' ? 'bg-red-600' :
+          'bg-gradient-to-r from-blue-600 to-blue-700'
+      }`}>
+
+      {/* ── Left: Back button ── */}
       <button
         type="button"
         onClick={handleBack}
@@ -383,13 +391,17 @@ const LedgerHeader = ({ title, meta, chips, onBack, ledgerName }) => {
         Back
       </button>
 
-      <div className="flex items-center gap-4 flex-wrap">
-        <div>
+      {/* ── Centre: title + orderId + chips ── */}
+      <div className="flex items-center gap-4 flex-wrap flex-1">
+        <div className='flex justify-between items-center gap-4'>
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
             <FileText className="w-5 h-5 shrink-0" />
             {title ?? 'Monthly Billing Breakdown'}
           </h2>
-          {meta && <p className="text-blue-100 text-sm mt-0.5">{meta}</p>}
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            order Id: {" "}
+            {orderId}
+          </h2>
         </div>
 
         {chips && chips.length > 0 && (
@@ -405,6 +417,53 @@ const LedgerHeader = ({ title, meta, chips, onBack, ledgerName }) => {
           </div>
         )}
       </div>
+
+      {/* ── Right: Adjustment Amount button ── */}
+      <div
+        className=" flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 backdrop-blur-md border border-white/20 shadow-md mr-4 "
+      >
+        {/* Amount */}
+        <div className="px-2 py-1 rounded-md bg-white text-slate-900 text-xs font-bold">
+          ₹{openingAdjustment}
+        </div>
+
+        {/* Text */}
+        <span className="text-sm font-bold text-white whitespace-nowrap">
+          Opening Adjustment
+        </span>
+
+        {/* Only arrow clickable */}
+        <button
+          type="button"
+          onClick={() => setAdjModalOpen(true)}
+          className=" flex items-center justify-center w-7 h-7 rounded-full bg-white/15 hover:bg-white/25 text-white transition-all hover:scale-110"
+        >
+          <svg
+            className="w-3.5 h-3.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2.5}
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </button>
+      </div>
+
+      {/* ── Modal ── */}
+      {adjModalOpen && (
+        <AdjustmentAmountModal
+          orderId={orderId}
+          stateCode={stateCode}
+          openingAdjustment={openingAdjustment}
+          circuitKey={circuitKey}
+          onClose={() => setAdjModalOpen(false)}
+        />
+      )}
     </div>
   )
 }
@@ -421,9 +480,15 @@ const LedgerTable = ({
   showHeader = true,
   ledgerName,
 }) => {
-  const rawRows   = data?.data?.data ?? data?.data ?? data ?? []
+  const rawRows = data?.data?.data ?? data?.data ?? data ?? []
   const apiTotals = data?.data?.totals ?? data?.totals ?? {}
   const { rows, totals } = enrichOutstandingLedger(rawRows, apiTotals)
+
+  const searchParams = useSearchParams();
+  const orderId = searchParams.get('orderId');
+  const stateCode = searchParams.get('stateCode');
+  const circuitKey=searchParams.get('circuitKey');
+  const openingAdjustment = totals?.openingAdjustment
 
 
   const visibleDefs = LEDGER_COLUMNS
@@ -433,7 +498,7 @@ const LedgerTable = ({
   if (!rows.length) {
     return (
       <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-        {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} ledgerName={ledgerName} />}
+        {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} ledgerName={ledgerName} orderId={orderId} stateCode={stateCode} openingAdjustment={openingAdjustment} circuitKey={circuitKey} />}
         <div className="flex flex-col items-center justify-center py-16 text-slate-400">
           <FileText className="w-10 h-10 mb-3 text-slate-300" />
           <p className="text-sm font-medium">No ledger records found</p>
@@ -444,7 +509,7 @@ const LedgerTable = ({
 
   return (
     <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-      {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} ledgerName={ledgerName} />}
+      {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} ledgerName={ledgerName} orderId={orderId} stateCode={stateCode} openingAdjustment={openingAdjustment} circuitKey={circuitKey}  />}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
