@@ -2,10 +2,10 @@
 import React, { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import { FileText, X, Info, FileSpreadsheet, Eye, EyeOff } from 'lucide-react'
+import { FileText, X, Info, FileSpreadsheet } from 'lucide-react'
 import { truncateWithMore } from '@/modules/billing/shared/buildListParams/utils'
 
-// ── helpers ──────────────────────────────────────────────────
+// ── helpers ───────────────────────────────────────────────────
 const fmt = (n) =>
     (n || 0).toLocaleString('en-IN', {
         minimumFractionDigits: 2,
@@ -43,6 +43,7 @@ const getStateBadgeStyle = (state) => {
         'Bihar': 'bg-amber-50 text-amber-700 border-amber-200',
         'Kerala': 'bg-emerald-50 text-emerald-700 border-emerald-200',
         'Andhra Pradesh': 'bg-lime-50 text-lime-700 border-lime-200',
+        'Jharkhand': 'bg-green-50 text-green-700 border-green-200',
         'Goa': 'bg-sky-50 text-sky-700 border-sky-200',
     }
     return map[state] || 'bg-slate-100 text-slate-700 border-slate-200'
@@ -83,24 +84,19 @@ const OrderRow = ({ item, index, showLsi }) => {
     const router = useRouter()
     const [popupText, setPopupText] = useState(null)
     const s = statusStyle(item.status)
-    const stateValue = item.endB?.state || item.endA?.state || '–'
+
+    // ✅ Use currentState / currentStateCode from API (not endB state)
+    const stateValue = item.currentState || item.endB?.state || item.endA?.state || '–'
     const stateBadge = getStateBadgeStyle(stateValue)
 
+    // ✅ Fixed: was item.stateCode (undefined) → item.currentStateCode
     const buildQuery = () =>
         new URLSearchParams({
             orderId: item.orderId,
             billingReadId: item.billingReadId,
-            // dsrId: item.dsrId,
-            // stateCode: item.stateCode,
-            // splitPercent: item.splitPercent,
-            // company: item.company,
-            // product: item.product,
-            // entity: item.entity?.alias || '',
-            // lsi: item.lsi || '',
+            stateCode: item.currentStateCode,
             circuitKey: item.circuitKey || '',
-            ledgerName: "outstanding"
-            // endAState: item.endA?.state || '',
-            // endBState: item.endB?.state || '',
+            ledgerName: 'outstanding',
         }).toString()
 
     const handleViewBreakdown = () => router.push(`/billing/account/ledger?${buildQuery()}`)
@@ -113,9 +109,10 @@ const OrderRow = ({ item, index, showLsi }) => {
                 <span className="text-sm font-bold text-blue-600">{item.orderId}</span>
             </td>
 
+            {/* ✅ Circuit ID column (was incorrectly reading item.lsi which doesn't exist) */}
             {showLsi && (
                 <td className="px-4 py-2.5 text-sm text-orange-600 font-semibold">
-                    {truncateWithMore(item.lsi || item.circuitId, 18, '...more', (t) => setPopupText(t))}
+                    {truncateWithMore(item.circuitId, 18, '...more', (t) => setPopupText(t))}
                 </td>
             )}
 
@@ -149,7 +146,7 @@ const OrderRow = ({ item, index, showLsi }) => {
                 {item.product || '—'}
             </td>
 
-            {/* State */}
+            {/* State — now correctly uses currentState */}
             <td className="px-4 py-3">
                 <span className={`inline-flex px-3 py-1 text-xs font-bold rounded border ${stateBadge}`}>
                     {stateValue}
@@ -159,6 +156,7 @@ const OrderRow = ({ item, index, showLsi }) => {
             {/* Balance */}
             <td className="px-4 py-3 text-right bg-yellow-50/60">
                 <div className="flex items-center justify-end gap-2">
+                    {/* ✅ balance is always a positive outstanding amount; rose is correct default */}
                     <span className={`text-base font-extrabold ${item.balance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                         ₹{fmt(item.balance)}
                     </span>
@@ -215,8 +213,6 @@ const OrderRow = ({ item, index, showLsi }) => {
 
 // ── Main Table Component ──────────────────────────────────────
 const OutstandingTable = ({ data, onRefetch, showLsi }) => {
-
-
     const rows = data?.data || []
 
     if (!rows.length) {
@@ -228,10 +224,10 @@ const OutstandingTable = ({ data, onRefetch, showLsi }) => {
         )
     }
 
-    // Column headers — LSI conditionally included
+    // ✅ Column header label corrected: "LSI ID" → "Circuit ID"
     const columns = [
         { label: 'Order ID', align: 'left' },
-        ...(showLsi ? [{ label: 'LSI ID', align: 'left' }] : []),
+        ...(showLsi ? [{ label: 'Circuit ID', align: 'left' }] : []),
         { label: 'End A', align: 'left' },
         { label: 'End B', align: 'left' },
         { label: 'Company', align: 'left' },
@@ -247,8 +243,6 @@ const OutstandingTable = ({ data, onRefetch, showLsi }) => {
 
     return (
         <div className="flex flex-col gap-3">
-
-            {/* Table */}
             <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
@@ -267,7 +261,8 @@ const OutstandingTable = ({ data, onRefetch, showLsi }) => {
                         <tbody className="bg-white divide-y divide-slate-100">
                             {rows.map((item, index) => (
                                 <OrderRow
-                                    key={`${item.orderId}-${item.stateCode}-${index}`}
+                                    // ✅ Fixed key: was item.stateCode (undefined) → item.currentStateCode
+                                    key={`${item.orderId}-${item.currentStateCode}-${index}`}
                                     item={item}
                                     index={index}
                                     showLsi={showLsi}

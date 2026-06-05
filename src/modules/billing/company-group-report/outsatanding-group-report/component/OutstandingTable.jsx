@@ -88,7 +88,7 @@ const OutstandingTable = ({ data }) => {
     )
   }
 
-  const columns = [
+  const columns =[
     { label: 'Sr', align: 'left' },
     { label: 'Company', align: 'left' },
     { label: 'Orders', align: 'center' },
