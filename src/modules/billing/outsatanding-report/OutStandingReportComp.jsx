@@ -14,7 +14,8 @@ import { RotateCw } from 'lucide-react';
 
 const ENDPOINT = '/billing/sale/report/outstanding/';
 const URL_FILTER_KEYS = [
-  'companyGroupId',
+  'search', 'stateCode', 'entityId', 'active', 'bsoId',        
+  'companyGroupId', 'orderType', 'productId',                  
   'periodType', 'year', 'month', 'startDate', 'endDate',
   'fromMonth', 'toMonth', 'page', 'limit',
 ];

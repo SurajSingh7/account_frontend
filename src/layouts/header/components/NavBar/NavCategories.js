@@ -15,6 +15,7 @@ export const navCategories = [
       { name: "Outstanding Report", path: "/billing/account/outstanding-report", moduleName: "Sale outstanding", url: "/billing/sale/report/outstanding", action: ["READ"] },
       { name: "Billing sell Report", path: "/billing/account/billing-report", moduleName: "Billing Sell report", url: "/billing/sale/report/sell", action: ["READ"] },
       { name: "Receipt Report", path: "/billing/account/receipt-report", moduleName: "Receipt report", url: "/billing/sale/report/receipt", action: ["READ"] },
+      { name: "upload Excel", path: "/billing/account/upload-excel", moduleName: "Receipt report", url: "/billing/sale/report/receipt", action: ["READ"] },
     ],
   },
 

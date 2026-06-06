@@ -20,6 +20,7 @@ export const getSavedLimit = () => {
     return PAGE_SIZE_OPTIONS.includes(v) ? v : 10;
   } catch { return 10; }
 };
+export const roundUp = (val) => Math.round(val ?? 0);
 
 export const saveLimit = (limit) => {
   try { localStorage.setItem(LIMIT_STORAGE_KEY, String(limit)); } catch { /* noop */ }
