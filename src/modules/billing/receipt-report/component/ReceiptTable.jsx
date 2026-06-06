@@ -13,21 +13,22 @@ const fmt = (n) =>
 
 const getStateBadgeStyle = (state) => {
   const map = {
-    'Delhi': 'bg-blue-50 text-blue-700 border-blue-200',
-    'Maharashtra': 'bg-orange-50 text-orange-700 border-orange-200',
-    'Karnataka': 'bg-purple-50 text-purple-700 border-purple-200',
-    'Tamil Nadu': 'bg-pink-50 text-pink-700 border-pink-200',
-    'Uttar Pradesh': 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    'Uttar pradesh': 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    'Haryana': 'bg-teal-50 text-teal-700 border-teal-200',
-    'Punjab': 'bg-cyan-50 text-cyan-700 border-cyan-200',
-    'Gujarat': 'bg-yellow-50 text-yellow-700 border-yellow-200',
-    'West Bengal': 'bg-green-50 text-green-700 border-green-200',
-    'Rajasthan': 'bg-rose-50 text-rose-700 border-rose-200',
-    'Bihar': 'bg-amber-50 text-amber-700 border-amber-200',
-    'Kerala': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    'Delhi':          'bg-blue-50 text-blue-700 border-blue-200',
+    'Maharashtra':    'bg-orange-50 text-orange-700 border-orange-200',
+    'Karnataka':      'bg-purple-50 text-purple-700 border-purple-200',
+    'Tamil Nadu':     'bg-pink-50 text-pink-700 border-pink-200',
+    'Uttar Pradesh':  'bg-indigo-50 text-indigo-700 border-indigo-200',
+    'Uttar pradesh':  'bg-indigo-50 text-indigo-700 border-indigo-200',
+    'Haryana':        'bg-teal-50 text-teal-700 border-teal-200',
+    'Punjab':         'bg-cyan-50 text-cyan-700 border-cyan-200',
+    'Gujarat':        'bg-yellow-50 text-yellow-700 border-yellow-200',
+    'West Bengal':    'bg-green-50 text-green-700 border-green-200',
+    'Rajasthan':      'bg-rose-50 text-rose-700 border-rose-200',
+    'Bihar':          'bg-amber-50 text-amber-700 border-amber-200',
+    'Kerala':         'bg-emerald-50 text-emerald-700 border-emerald-200',
     'Andhra Pradesh': 'bg-lime-50 text-lime-700 border-lime-200',
-    'Goa': 'bg-sky-50 text-sky-700 border-sky-200',
+    'Goa':            'bg-sky-50 text-sky-700 border-sky-200',
+    'Jharkhand':      'bg-orange-50 text-orange-700 border-orange-200',
   }
   return map[state] || 'bg-slate-100 text-slate-700 border-slate-200'
 }
@@ -67,31 +68,24 @@ const ReceiptRow = ({ item }) => {
   const router = useRouter()
   const [popupText, setPopupText] = useState(null)
 
-  const getStateByCode = (code) => {
-    if (item.endA?.stateCode === code) return item.endA.state
-    if (item.endB?.stateCode === code) return item.endB.state
-    return item.endB?.state || item.endA?.state || '–'
-  }
-
-  const stateValue = getStateByCode(item.stateCode)
+  // ✅ Use currentState directly — always correct per split row
+  const stateValue = item.currentState || item.endB?.state || item.endA?.state || '–'
   const stateBadge = getStateBadgeStyle(stateValue)
 
   const buildQuery = () =>
     new URLSearchParams({
-      orderId: item.orderId,
+      orderId:      item.orderId,
       billingReadId: item.billingReadId,
-      dsrId: item.dsrId,
-      circuitKey: item.circuitKey || '',
-      ledgerName: "recipt"
+      dsrId:        item.dsrId,
+      circuitKey:   item.circuitKey || '',
+      ledgerName:   'recipt',
     }).toString()
 
   const handleViewBreakdown = () => router.push(`/billing/account/ledger?${buildQuery()}`)
 
-  // ✅ Normalized field access for new API shape
-  const receivedAmt = item.received ?? 0
-  const creditNoteAmt = item.creditNote ?? 0   // was: creditNotes / totalCreditNotes
-  const tdsConfirmAmt = item.tdsConfirm ?? 0   // ⚠️ Not in API yet — shows ₹0.00
-  const tdsProvisionAmt = item.tdsProvision ?? 0
+  const receivedAmt      = item.received      ?? 0
+  const tdsConfirmAmt    = item.tdsConfirm    ?? 0
+  const tdsProvisionAmt  = item.tdsProvision  ?? 0
   const totalReceiptsAmt = item.totalReceipts ?? 0
 
   return (
@@ -101,6 +95,11 @@ const ReceiptRow = ({ item }) => {
         {/* Order ID */}
         <td className="px-4 py-2.5">
           <span className="text-sm font-bold text-blue-600">{item.orderId}</span>
+        </td>
+
+        {/* Circuit ID */}
+        <td className="px-4 py-2.5">
+          <span className="text-sm font-mono text-slate-600">{item.circuitId || '—'}</span>
         </td>
 
         {/* End A */}
@@ -133,10 +132,17 @@ const ReceiptRow = ({ item }) => {
           {item.product || '—'}
         </td>
 
-        {/* State */}
+        {/* State — uses currentState for correct split-row state */}
         <td className="px-4 py-2.5">
           <span className={`inline-flex px-3 py-1 text-xs font-bold rounded border ${stateBadge}`}>
             {stateValue}
+          </span>
+        </td>
+
+        {/* Split % */}
+        <td className="px-4 py-2.5 text-center">
+          <span className="inline-flex px-3 py-1 bg-purple-50 text-purple-700 text-sm font-bold rounded">
+            {item.splitPercent}%
           </span>
         </td>
 
@@ -146,13 +152,6 @@ const ReceiptRow = ({ item }) => {
             ₹{fmt(receivedAmt)}
           </span>
         </td>
-
-        {/* Credit Notes + GST */}
-        {/* <td className="px-4 py-2.5 text-right bg-cyan-50/40">
-          <span className="text-base font-extrabold text-cyan-700 tabular-nums">
-            ₹{fmt(creditNoteAmt)}
-          </span>
-        </td> */}
 
         {/* TDS Confirm */}
         <td className="px-4 py-2.5 text-right bg-indigo-50/40">
@@ -184,13 +183,6 @@ const ReceiptRow = ({ item }) => {
           </div>
         </td>
 
-        {/* Split % */}
-        <td className="px-4 py-2.5 text-center">
-          <span className="inline-flex px-3 py-1 bg-purple-50 text-purple-700 text-sm font-bold rounded">
-            {item.splitPercent}%
-          </span>
-        </td>
-
       </tr>
 
       {popupText && (
@@ -202,7 +194,6 @@ const ReceiptRow = ({ item }) => {
 
 // ── Main Table ────────────────────────────────────────────────
 const ReceiptTable = ({ data }) => {
-  // ✅ API shape: data.data.data is the rows array
   const rows = data?.data?.data || data?.data || []
 
   if (!rows.length) {
@@ -215,20 +206,20 @@ const ReceiptTable = ({ data }) => {
   }
 
   const columns = [
-    { label: 'Order ID', align: 'left' },
-    { label: 'End A', align: 'left' },
-    { label: 'End B', align: 'left' },
-    { label: 'Company', align: 'left' },
-    { label: 'Order Type', align: 'left' },
-    { label: 'Entity', align: 'left' },
-    { label: 'Product', align: 'left' },
-    { label: 'State', align: 'left' },
-    { label: 'Received', align: 'right' },
-    // { label: 'Credit Notes+GST', align: 'right'  },
-    { label: 'TDS Confirm', align: 'right' },
-    { label: 'TDS Provision', align: 'right' },
+    { label: 'Order ID',      align: 'left'   },
+    { label: 'Circuit ID',    align: 'left'   },
+    { label: 'End A',         align: 'left'   },
+    { label: 'End B',         align: 'left'   },
+    { label: 'Company',       align: 'left'   },
+    { label: 'Order Type',    align: 'left'   },
+    { label: 'Entity',        align: 'left'   },
+    { label: 'Product',       align: 'left'   },
+    { label: 'State',         align: 'left'   },
+    { label: 'Split',         align: 'center' },
+    { label: 'Received',      align: 'right'  },
+    { label: 'TDS Confirm',   align: 'right'  },
+    { label: 'TDS Provision', align: 'right'  },
     { label: 'Total Receipts', align: 'right' },
-    { label: 'Split', align: 'center' },
   ]
 
   return (
@@ -250,7 +241,7 @@ const ReceiptTable = ({ data }) => {
           <tbody className="bg-white divide-y divide-slate-100">
             {rows.map((item, index) => (
               <ReceiptRow
-                key={`${item.orderId}-${item.stateCode}-${index}`}
+                key={`${item.circuitKey}-${index}`}
                 item={item}
               />
             ))}

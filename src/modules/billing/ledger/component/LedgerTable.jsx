@@ -5,6 +5,7 @@ import { Eye, Pencil, FileText, ArrowLeft, CheckCheck, Info, SlidersHorizontal }
 import { enrichOutstandingLedger } from '../helpers/buildOutstandingLedger'
 import AggregatedMonthsModal from './AggregatedMonthsModal'
 import AdjustmentAmountModal from './OpeningAdjustmentModal'
+import { roundUp } from '../../shared/constants'
 
 
 
@@ -65,7 +66,7 @@ const normalizeRow = (item) => {
 // ─── DAYS CELL — opens centered modal ────────────────────────────────────────
 const DaysCell = ({ item }) => {
   const [open, setOpen] = useState(false)
-  const hasAggregated = item.aggregatedMonths && item.aggregatedMonths.length > 0
+  const hasAggregated = item.aggregatedMonths && item.aggregatedMonths.length > 1
 
   return (
     <td className="px-3 py-3 text-center font-bold text-slate-700">
@@ -77,12 +78,13 @@ const DaysCell = ({ item }) => {
               type="button"
               title="View aggregated months breakdown"
               onClick={() => setOpen(true)}
-              className="p-0.5 text-blue-400 hover:text-blue-600 transition-colors"
+              className="p-0.5 text-orange-400 hover:text-orange-600 transition-colors"
             >
               <Info className="w-3.5 h-3.5" />
             </button>
 
-            {open && (
+            
+            {open &&  (
               <AggregatedMonthsModal
                 aggregatedMonths={item.aggregatedMonths}
                 monthYear={item.monthYear}
@@ -237,7 +239,7 @@ const renderRowCell = (id, item, router) => {
       return (
         <td key={id} className="px-3 py-3 text-right font-extrabold text-rose-600 bg-rose-50/40">
           {/* ₹{fmt(item.runningOutstanding)} */}
-          ₹{fmt(item.totalBalance)}
+           ₹{fmt(roundUp(item.totalBalance))}
         </td>
       )
 
@@ -254,7 +256,7 @@ const renderRowCell = (id, item, router) => {
             <span className="inline-flex items-center gap-1 font-extrabold text-rose-600">
               <span className="text-rose-400 font-bold">×</span>
               {/* ₹{fmt(item.outstandingAfterAdjustment)} */}
-              ₹{fmt(item.remainingAdj)}
+              ₹{fmt(roundUp(item.remainingAdjustment))}
             </span>
           )}
         </td>
@@ -328,10 +330,10 @@ const renderFooterCell = (id, t) => {
     case 'creditNotes': return <td key={id} className="px-3 py-3 text-right text-cyan-700">₹{fmt(t.creditNote ?? 0)}</td>
     case 'tdsConfirm': return <td key={id} className="px-3 py-3 text-right text-indigo-600">₹{fmt(t.tdsConf ?? 0)}</td>
     case 'tdsProvision': return <td key={id} className="px-3 py-3 text-right text-orange-600">₹{fmt(t.tdsProvision ?? 0)}</td>
-    case 'totalBalance': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-rose-50">₹{fmt(t.totalBalance ?? 0)}</td>
-    case 'runningOutstanding': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-rose-50">₹{fmt(t.runningOutstanding ?? 0)}</td>
-    case 'outstandingAfterAdjustment': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-yellow-50">₹{fmt(t.outstandingAfterAdjustment ?? 0)}</td>
-    case 'remaining': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-yellow-50">₹{fmt(t.remainingAdjustment ?? 0)}</td>
+    // case 'totalBalance': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-rose-50">₹{fmt(t.totalBalance ?? 0)}</td>
+    case 'runningOutstanding': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-rose-50">₹{fmt(roundUp(t.totalBalance))}</td>
+    case 'outstandingAfterAdjustment': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-yellow-50"> ₹{fmt(roundUp(t.remainingAdjustment))}</td>
+    // case 'remaining': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-yellow-50">₹{fmt(t.remainingAdjustment ?? 0)}</td>
     case 'actions': return <td key={id} className="px-3 py-3" />
     default: return <td key={id} className="px-3 py-3" />
   }
@@ -399,7 +401,7 @@ const LedgerHeader = ({ title, meta, chips, onBack, ledgerName, orderId, stateCo
             {title ?? 'Monthly Billing Breakdown'}
           </h2>
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            order Id: {" "}
+            order ID: {" "}
             {orderId}
           </h2>
         </div>

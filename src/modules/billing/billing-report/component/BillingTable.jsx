@@ -1,15 +1,16 @@
-'use client'
-import React, { useState } from 'react'
-import { createPortal } from 'react-dom'
-import { useRouter } from 'next/navigation'
-import { FileText, X, Info } from 'lucide-react'
-import { truncateWithMore } from '@/modules/billing/shared/buildListParams/utils'
+'use client';
+
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useRouter } from 'next/navigation';
+import { FileText, X, Info } from 'lucide-react';
+import { truncateWithMore } from '@/modules/billing/shared/buildListParams/utils';
 
 const fmt = (n) =>
   (n || 0).toLocaleString('en-IN', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })
+  });
 
 const getStateBadgeStyle = (state) => {
   const map = {
@@ -28,17 +29,18 @@ const getStateBadgeStyle = (state) => {
     'Kerala': 'bg-emerald-50 text-emerald-700 border-emerald-200',
     'Andhra Pradesh': 'bg-lime-50 text-lime-700 border-lime-200',
     'Goa': 'bg-sky-50 text-sky-700 border-sky-200',
-  }
-  return map[state] || 'bg-slate-100 text-slate-700 border-slate-200'
-}
+    'Jharkhand': 'bg-orange-50 text-orange-700 border-orange-200',
+  };
+  return map[state] || 'bg-slate-100 text-slate-700 border-slate-200';
+};
 
 // ── Text Popup ────────────────────────────────────────────────
 const TextPopup = ({ text, onClose }) => {
   React.useEffect(() => {
-    const h = (e) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [onClose])
+    const h = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', h);
+    return () => document.removeEventListener('keydown', h);
+  }, [onClose]);
 
   return createPortal(
     <div
@@ -59,22 +61,23 @@ const TextPopup = ({ text, onClose }) => {
       </div>
     </div>,
     document.body
-  )
-}
+  );
+};
 
 // ── Row ───────────────────────────────────────────────────────
 const BillingRow = ({ item }) => {
-  const router = useRouter()
-  const [popupText, setPopupText] = useState(null)
+  const router = useRouter();
+  const [popupText, setPopupText] = useState(null);
 
   const getStateByCode = (code) => {
-    if (item.endA?.stateCode === code) return item.endA.state
-    if (item.endB?.stateCode === code) return item.endB.state
-    return item.endB?.state || item.endA?.state || '–'
-  }
+    if (item.endA?.stateCode === code) return item.endA.state;
+    if (item.endB?.stateCode === code) return item.endB.state;
+    return item.currentState || item.endB?.state || item.endA?.state || '–';
+  };
 
-  const stateValue = getStateByCode(item.stateCode)
-  const stateBadge = getStateBadgeStyle(stateValue)
+  // ✅ Use currentStateCode which is always set correctly per row
+  const stateValue = getStateByCode(item.currentStateCode);
+  const stateBadge = getStateBadgeStyle(stateValue);
 
   const buildQuery = () =>
     new URLSearchParams({
@@ -82,16 +85,15 @@ const BillingRow = ({ item }) => {
       billingReadId: item.billingReadId,
       dsrId: item.dsrId,
       circuitKey: item.circuitKey || '',
-      ledgerName: "bill"
-    }).toString()
+      ledgerName: 'bill',
+    }).toString();
 
-  const handleViewBreakdown = () => router.push(`/billing/account/ledger?${buildQuery()}`)
+  const handleViewBreakdown = () => router.push(`/billing/account/ledger?${buildQuery()}`);
 
-  // ✅ Normalized field access for new API shape
-  const billingAmt = item.billing ?? 0
-  const miscAmt = item.miscCharge ?? 0   // was: item.misc
-  const creditNoteAmt = item.creditNote ?? 0   // was: item.creditNotes
-  const netBillingAmt = item.netBilling ?? 0
+  const billingAmt    = item.billing     ?? 0;
+  const miscAmt       = item.miscCharge  ?? 0;
+  const creditNoteAmt = item.creditNote  ?? 0;
+  const netBillingAmt = item.netBilling  ?? 0;
 
   return (
     <>
@@ -100,6 +102,11 @@ const BillingRow = ({ item }) => {
         {/* Order ID */}
         <td className="px-4 py-2.5">
           <span className="text-sm font-bold text-blue-600">{item.orderId}</span>
+        </td>
+
+        {/* Circuit ID */}
+        <td className="px-4 py-2.5">
+          <span className="text-sm font-mono text-slate-600">{item.circuitId || '—'}</span>
         </td>
 
         {/* End A */}
@@ -132,10 +139,17 @@ const BillingRow = ({ item }) => {
           {item.product || '—'}
         </td>
 
-        {/* State */}
+        {/* State — uses currentState for correct split-row state */}
         <td className="px-4 py-2.5">
           <span className={`inline-flex px-3 py-1 text-xs font-bold rounded border ${stateBadge}`}>
             {stateValue}
+          </span>
+        </td>
+
+        {/* Split % */}
+        <td className="px-4 py-2.5 text-center">
+          <span className="inline-flex px-3 py-1 bg-purple-50 text-purple-700 text-sm font-bold rounded">
+            {item.splitPercent}%
           </span>
         </td>
 
@@ -153,14 +167,14 @@ const BillingRow = ({ item }) => {
           </span>
         </td>
 
-        {/* Credit Notes incl. GST */}
+        {/* Credit Notes */}
         <td className="px-4 py-2.5 text-right bg-cyan-50/40">
           <span className="text-base font-extrabold text-cyan-700 tabular-nums">
             ₹{fmt(creditNoteAmt)}
           </span>
         </td>
 
-        {/* Net Billing + Info button */}
+        {/* Net Billing */}
         <td className="px-4 py-2.5 text-right bg-rose-50/40">
           <div className="flex items-center justify-end gap-2">
             <span className="text-base font-extrabold text-rose-600 tabular-nums">
@@ -176,26 +190,19 @@ const BillingRow = ({ item }) => {
           </div>
         </td>
 
-        {/* Split % */}
-        <td className="px-4 py-2.5 text-center">
-          <span className="inline-flex px-3 py-1 bg-purple-50 text-purple-700 text-sm font-bold rounded">
-            {item.splitPercent}%
-          </span>
-        </td>
-
       </tr>
 
       {popupText && (
         <TextPopup text={popupText} onClose={() => setPopupText(null)} />
       )}
     </>
-  )
-}
+  );
+};
 
 // ── Main Table ────────────────────────────────────────────────
 const BillingTable = ({ data }) => {
   // ✅ API shape: data.data.data is the rows array
-  const rows = data?.data?.data || data?.data || []
+  const rows = data?.data?.data || data?.data || [];
 
   if (!rows.length) {
     return (
@@ -203,24 +210,25 @@ const BillingTable = ({ data }) => {
         <FileText className="w-10 h-10 mb-3 text-slate-300" />
         <p className="text-sm font-medium">No billing records found</p>
       </div>
-    )
+    );
   }
 
   const columns = [
-    { label: 'Order ID', align: 'left' },
-    { label: 'End A', align: 'left' },
-    { label: 'End B', align: 'left' },
-    { label: 'Company', align: 'left' },
-    { label: 'Order Type', align: 'left' },
-    { label: 'Entity', align: 'left' },
-    { label: 'Product', align: 'left' },
-    { label: 'State', align: 'left' },
-    { label: 'Billing', align: 'right' },
-    { label: 'Misc', align: 'right' },
+    { label: 'Order ID',               align: 'left'   },
+    { label: 'Circuit ID',             align: 'left'   },
+    { label: 'End A',                  align: 'left'   },
+    { label: 'End B',                  align: 'left'   },
+    { label: 'Company',                align: 'left'   },
+    { label: 'Order Type',             align: 'left'   },
+    { label: 'Entity',                 align: 'left'   },
+    { label: 'Product',                align: 'left'   },
+    { label: 'State',                  align: 'left'   },
+    { label: 'Split',                  align: 'center' },
+    { label: 'Billing',                align: 'right'  },
+    { label: 'Misc',                   align: 'right'  },
     { label: 'Credit Notes (incl. GST)', align: 'right' },
-    { label: 'Net Billing', align: 'right' },
-    { label: 'Split', align: 'center' },
-  ]
+    { label: 'Net Billing',            align: 'right'  },
+  ];
 
   return (
     <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
@@ -241,7 +249,7 @@ const BillingTable = ({ data }) => {
           <tbody className="bg-white divide-y divide-slate-100">
             {rows.map((item, index) => (
               <BillingRow
-                key={`${item.orderId}-${item.stateCode}-${index}`}
+                key={`${item.circuitKey}-${index}`}
                 item={item}
               />
             ))}
@@ -249,7 +257,7 @@ const BillingTable = ({ data }) => {
         </table>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default BillingTable
+export default BillingTable;
