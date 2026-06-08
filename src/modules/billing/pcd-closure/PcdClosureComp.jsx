@@ -1,7 +1,6 @@
 'use client';
-
 import React, { useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter} from 'next/navigation';
 import { useFilters } from '../shared/helpers/hooks/useFilters';
 import { useFetchList } from '../shared/helpers/hooks/useFetchList';
 import { saveLimit } from '../shared/constants';
@@ -21,8 +20,7 @@ const URL_FILTER_KEYS = [
 ];
 
 const PcdClosureComp = () => {
-  const router       = useRouter();
-  const searchParams = useSearchParams();
+  const router = useRouter();
 
   const { filters, setFilter, resetFilters, hasActiveFilters } = useFilters();
 
