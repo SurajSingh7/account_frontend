@@ -398,13 +398,11 @@ const OrderRow = ({ group, manualAmounts, onManualChange, mode }) => {
   const pct      = totalDue > 0 ? Math.min(100, (totalAllocated / totalDue) * 100) : 0;
   const pctColor = pct >= 100 ? 'bg-emerald-400' : pct > 50 ? 'bg-violet-400' : 'bg-amber-400';
 
-  const totalMonthlyBill = group.allocations.reduce((s, a) => s + (a.currentMonthBill || 0), 0);
-
   return (
     <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       <div
         className="flex items-center gap-3 px-5 py-4 cursor-pointer hover:bg-gray-50/60 transition-colors"
-        onClick={() => setExpanded((e) => !e)}
+       
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2.5 flex-wrap">
@@ -440,7 +438,9 @@ const OrderRow = ({ group, manualAmounts, onManualChange, mode }) => {
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Entries</p>
             <p className="text-sm font-bold text-gray-600">{group.totalEntries}</p>
           </div>
-          <div className={`flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200 ${expanded ? 'bg-violet-50 rotate-180' : 'bg-gray-50'}`}>
+          <div className={`flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200 ${expanded ? 'bg-violet-50 rotate-180' : 'bg-gray-50'}`}
+              onClick={() => setExpanded((e) => !e)} 
+           >
             <ChevronDown className="h-4 w-4 text-gray-500" />
           </div>
         </div>
@@ -450,23 +450,79 @@ const OrderRow = ({ group, manualAmounts, onManualChange, mode }) => {
         <div className="border-t border-gray-100 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50">
-                <th className="px-5 py-3 text-left   text-[10px] font-bold text-gray-500 uppercase tracking-widest">Month</th>
-                <th className="px-5 py-3 text-right  text-[10px] font-bold text-gray-500 uppercase tracking-widest">Monthly Bill</th>
-                <th className="px-5 py-3 text-right  text-[10px] font-bold text-gray-500 uppercase tracking-widest">Outstanding</th>
-                <th className="px-5 py-3 text-right  text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+              {/* Row 1: Section group labels */}
+              <tr>
+                <th
+                  rowSpan={2}
+                  className="px-5 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50 border-b border-gray-100 align-middle"
+                >
+                  Month
+                </th>
+                <th
+                  rowSpan={2}
+                  className="px-5 py-3 text-right text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50 border-b border-gray-100 align-middle"
+                >
+                  Remaining<br />Monthly Amount
+                </th>
+                {/* CURRENT group label */}
+                <th
+                  colSpan={2}
+                  className="px-5 py-2 text-center text-[10px] font-bold uppercase tracking-widest border-b"
+                  style={{ background: '#FEF2F2', color: '#DC2626', borderColor: '#FECACA' }}
+                >
+                  Current
+                </th>
+                {/* Allocated standalone */}
+                <th
+                  rowSpan={2}
+                  className="px-5 py-3 text-right text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50 border-b border-gray-100 align-middle"
+                >
                   {mode === 'MANUAL' ? 'Allocated (edit)' : 'Allocated'}
                 </th>
-                <th className="px-5 py-3 text-right  text-[10px] font-bold text-gray-500 uppercase tracking-widest">Remaining</th>
-                <th className="px-5 py-3 text-center text-[10px] font-bold text-gray-500 uppercase tracking-widest">Status</th>
+                {/* FUTURE group label */}
+                <th
+                  colSpan={2}
+                  className="px-5 py-2 text-center text-[10px] font-bold uppercase tracking-widest border-b"
+                  style={{ background: '#F0FDF4', color: '#15803D', borderColor: '#BBF7D0' }}
+                >
+                  Future
+                </th>
+              </tr>
+              {/* Row 2: Sub-column labels */}
+              <tr>
+                {/* Current sub-columns */}
+                <th
+                  className="px-5 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest border-b"
+                  style={{ background: '#FEF2F2', color: '#DC2626', borderColor: '#FECACA' }}
+                >
+                  Outstanding Adjustment
+                </th>
+                <th
+                  className="px-5 py-2.5 text-center text-[10px] font-bold uppercase tracking-widest border-b"
+                  style={{ background: '#FEF2F2', color: '#DC2626', borderColor: '#FECACA' }}
+                >
+                  Status
+                </th>
+                {/* Future sub-columns */}
+                <th
+                  className="px-5 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest border-b"
+                  style={{ background: '#F0FDF4', color: '#15803D', borderColor: '#BBF7D0' }}
+                >
+                  Outstanding Adjustment
+                </th>
+                <th
+                  className="px-5 py-2.5 text-center text-[10px] font-bold uppercase tracking-widest border-b"
+                  style={{ background: '#F0FDF4', color: '#15803D', borderColor: '#BBF7D0' }}
+                >
+                  Status
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {group.allocations.map((alloc) => {
-                const monthlyBill = alloc.currentMonthBill   || 0;
-                const outstanding = alloc.currentOutStanding  || 0;
-                const allocated   = alloc.allocatedAmount     || 0;
-                const remaining   = alloc.remainingAfter      ?? 0;
+                const outstanding = alloc.currentOutStanding || 0;
+                const allocated   = alloc.allocatedAmount    || 0;
+                const remaining   = alloc.remainingAfter     ?? 0;
 
                 const manualVal        = manualAmounts[alloc.projectionId];
                 const displayAllocated = mode === 'MANUAL' ? (Number(manualVal) || 0) : allocated;
@@ -474,6 +530,7 @@ const OrderRow = ({ group, manualAmounts, onManualChange, mode }) => {
                   ? Math.max(0, outstanding - (Number(manualVal) || 0))
                   : remaining;
 
+                // Current Status: same logic as before (based on existing status field or manual calc)
                 const displayStatus = mode === 'MANUAL'
                   ? (() => {
                       const v = Number(manualVal) || 0;
@@ -483,13 +540,41 @@ const OrderRow = ({ group, manualAmounts, onManualChange, mode }) => {
                     })()
                   : alloc.status;
 
+                // Future Status: based on Future Outstanding Adjustment (displayRemaining)
+                const futureStatus = displayRemaining === 0 ? 'PAID' : 'PARTIAL';
+
+                // Remaining Monthly Amount = Allocated + Future Outstanding Adjustment
+                const remainingMonthlyAmount = displayAllocated + displayRemaining;
+
                 return (
                   <tr key={alloc.projectionId} className="hover:bg-violet-50/30 transition-colors">
+                    {/* Month */}
                     <td className="px-5 py-3.5 font-semibold text-gray-700">
                       {MONTH_NAMES[(alloc.billingMonth || 1) - 1]} {alloc.billingYear}
                     </td>
-                    <td className="px-5 py-3.5 text-right text-gray-500 font-medium">₹{fmt(monthlyBill)}</td>
-                    <td className="px-5 py-3.5 text-right font-bold text-red-500">₹{fmt(outstanding)}</td>
+
+                    {/* Remaining Monthly Amount */}
+                    <td className="px-5 py-3.5 text-right text-gray-600 font-medium">
+                      ₹{fmt(remainingMonthlyAmount)}
+                    </td>
+
+                    {/* Current Outstanding Adjustment — light red background */}
+                    <td
+                      className="px-5 py-3.5 text-right font-bold"
+                      style={{ background: '#FEF2F2', color: '#DC2626' }}
+                    >
+                      ₹{fmt(outstanding)}
+                    </td>
+
+                    {/* Current Status — light red background */}
+                    <td
+                      className="px-5 py-3.5 text-center"
+                      style={{ background: '#FEF2F2' }}
+                    >
+                      <StatusBadge status={displayStatus} />
+                    </td>
+
+                    {/* Allocated */}
                     <td className="px-5 py-3.5 text-right">
                       {mode === 'MANUAL' ? (
                         <input
@@ -503,9 +588,29 @@ const OrderRow = ({ group, manualAmounts, onManualChange, mode }) => {
                         <span className="font-bold text-emerald-600">₹{fmt(displayAllocated)}</span>
                       )}
                     </td>
-                    <td className="px-5 py-3.5 text-right text-gray-400 font-medium">₹{fmt(displayRemaining)}</td>
-                    <td className="px-5 py-3.5 text-center">
-                      <StatusBadge status={displayStatus} />
+
+                    {/* Future Outstanding Adjustment — light green background */}
+                    <td
+                      className="px-5 py-3.5 text-right font-medium"
+                      style={{ background: '#F0FDF4', color: '#15803D' }}
+                    >
+                      ₹{fmt(displayRemaining)}
+                    </td>
+
+                    {/* Future Status — light green background */}
+                    <td
+                      className="px-5 py-3.5 text-center"
+                      style={{ background: '#F0FDF4' }}
+                    >
+                      {futureStatus === 'PAID' ? (
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-300 px-3 py-1 rounded-full">
+                          <CheckCircle2 className="h-3 w-3" /> Paid
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-orange-700 bg-orange-100 border border-orange-300 px-3 py-1 rounded-full">
+                          <AlertCircle className="h-3 w-3" /> Partial
+                        </span>
+                      )}
                     </td>
                   </tr>
                 );
@@ -514,19 +619,34 @@ const OrderRow = ({ group, manualAmounts, onManualChange, mode }) => {
             <tfoot>
               <tr className="bg-gray-50 border-t-2 border-gray-200">
                 <td className="px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Total</td>
+                {/* Remaining Monthly Amount total */}
                 <td className="px-5 py-3 text-right text-sm font-bold text-gray-600">
-                  ₹{fmt(totalMonthlyBill)}
+                  ₹{fmt(
+                    group.allocations.reduce((s, a) => {
+                      const alloc2   = mode === 'MANUAL' ? (Number(manualAmounts[a.projectionId]) || 0) : (a.allocatedAmount || 0);
+                      const rem2     = mode === 'MANUAL'
+                        ? Math.max(0, (a.currentOutStanding || 0) - (Number(manualAmounts[a.projectionId]) || 0))
+                        : (a.remainingAfter ?? 0);
+                      return s + alloc2 + rem2;
+                    }, 0)
+                  )}
                 </td>
-                <td className="px-5 py-3 text-right text-sm font-bold text-red-500">
+                {/* Current Outstanding Adjustment total */}
+                <td className="px-5 py-3 text-right text-sm font-bold" style={{ background: '#FEF2F2', color: '#DC2626' }}>
                   ₹{fmt(totalDue)}
                 </td>
+                {/* Current Status total — empty */}
+                <td style={{ background: '#FEF2F2' }} />
+                {/* Allocated total */}
                 <td className="px-5 py-3 text-right text-sm font-bold text-emerald-600">
                   ₹{fmt(totalAllocated)}
                 </td>
-                <td className="px-5 py-3 text-right text-sm font-bold text-gray-400">
+                {/* Future Outstanding Adjustment total */}
+                <td className="px-5 py-3 text-right text-sm font-bold" style={{ background: '#F0FDF4', color: '#15803D' }}>
                   ₹{fmt(Math.max(0, totalDue - totalAllocated))}
                 </td>
-                <td />
+                {/* Future Status total — empty */}
+                <td style={{ background: '#F0FDF4' }} />
               </tr>
             </tfoot>
           </table>
@@ -535,6 +655,7 @@ const OrderRow = ({ group, manualAmounts, onManualChange, mode }) => {
     </div>
   );
 };
+
 
 // ─── DistributionPanel ────────────────────────────────────────────────────────
 
