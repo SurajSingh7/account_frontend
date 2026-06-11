@@ -15,7 +15,7 @@ export const buildListParams = (filters) => {
   if (filters.active !== '' && filters.active !== undefined) {
     params.set('isActive', filters.active);
   }
-  if (filters.isTerminate === true) params.set('isTerminate', true);           // ← added
+  if (filters.isTerminate === true) params.set('isTerminate', true);          
 
   if (filters.periodType === 'period') {
     if (filters.year && filters.year !== 'All') params.set('year', String(filters.year));

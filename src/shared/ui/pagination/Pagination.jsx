@@ -9,9 +9,9 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 const Pagination = ({
   currentPage,
   totalItems,
-  itemsPerPage,            // ye filters.limit se aata hai — parent ka state
+  itemsPerPage,            
   onPageChange,
-  onItemsPerPageChange,    // ye handleLimitChange hai parent mein
+  onItemsPerPageChange,   
   className = '',
 }) => {
 

@@ -17,6 +17,7 @@ const OpeningBalanceBulkExcel = () => {
     const [fileName, setFileName] = useState('');
     const [loading, setLoading] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
+    const [showDownloadModal, setShowDownloadModal] = useState(false);
     const fileInputRef = useRef(null);
 
     const parseExcel = (file) => {
@@ -35,7 +36,14 @@ const OpeningBalanceBulkExcel = () => {
             try {
                 const workbook = XLSX.read(e.target.result, { type: 'binary' });
                 const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                const data = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+                const data = XLSX.utils
+                    .sheet_to_json(sheet, { defval: '' })
+                    .filter(
+                        (row) =>
+                            String(row.orderId || '').trim() ||
+                            String(row.openingAdjustmentAmount || '').trim() ||
+                            String(row.notes || '').trim()
+                    );
                 if (!data.length) {
                     toast.error('Excel file is empty or has no valid data');
                     return;
@@ -97,7 +105,7 @@ const OpeningBalanceBulkExcel = () => {
                 {
                     method: 'POST',
                     body: formData,
-                    credentials: 'include',  
+                    credentials: 'include',
                 }
             );
 
@@ -129,17 +137,37 @@ const OpeningBalanceBulkExcel = () => {
                             Upload an Excel file to preview and submit opening adjustments in bulk.
                         </p>
                     </div>
-                    {rows.length > 0 && (
+
+                    <div className="flex items-center gap-3">
                         <button
-                            onClick={handleClearAll}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-all"
+                            onClick={() => setShowDownloadModal(true)}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 transition-all"
                         >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                            Clear All
+                            Download Template
                         </button>
-                    )}
+
+                        {rows.length > 0 && (
+                            <button
+                                onClick={handleClearAll}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-all"
+                            >
+                                <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth={2}
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
+                                </svg>
+                                Clear All
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Upload Zone */}
@@ -331,6 +359,54 @@ const OpeningBalanceBulkExcel = () => {
                 )}
 
             </div>
+
+            {showDownloadModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+                                📥
+                            </div>
+
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-900">
+                                    Download Template
+                                </h2>
+                                <p className="text-sm text-gray-500">
+                                    Are you sure you want to download the template?
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowDownloadModal(false)}
+                                className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    setShowDownloadModal(false);
+
+                                    const link = document.createElement('a');
+                                    link.href =
+                                        '/templates/opening-adjustment-template.xlsx';
+                                    link.download =
+                                        'opening-adjustment-template.xlsx';
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                }}
+                                className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
+                            >
+                                Yes, Download
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
