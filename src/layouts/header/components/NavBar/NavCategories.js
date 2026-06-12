@@ -126,7 +126,7 @@ export const navCategories = [
   },
 
   // DEV ONLY MENUS
-  ...(SHOW_DEV
+  ...( (SHOW_DEV)
     ? [
       {
         category: "AccountD",

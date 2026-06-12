@@ -61,10 +61,12 @@ const pathname = usePathname();
   const isActive = order.isActive !== undefined ? order.isActive : false;
   const pcdDate = order.pcdDate;
   const operationalDate = order.operationalDate;
-  const terminateDate = order.terminationDate;
+  const terminateDate = order.terminationDate ;
 
   // ── Terminated alert state: has terminateDate AND isActive is false ────────
-  const isTerminated = !!terminateDate && !isActive;
+  // const isTerminated = !!terminateDate && !isActive;
+
+    const isTerminated = !!terminateDate ;
 
   const showTerminateAlert = pathname.includes('/billing/account/terminate-orders') && isTerminated;
 
