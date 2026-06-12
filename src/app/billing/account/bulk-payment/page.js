@@ -1,12 +1,10 @@
-import BulkPaymentComp from '@/modules/billing/bulkPayment/BulkPaymentComp';
-import React from 'react'
+import BulkPaymentComp from "@/modules/billing/bulkPayment/BulkPaymentComp";
+import { Suspense } from "react";
 
-const page = () => {
+export default function Page() {
   return (
-    <div>
-        <BulkPaymentComp/>
-    </div>
-  )
-}
-
-export default page;
+    <Suspense fallback={<div>Loading...</div>}>
+      <BulkPaymentComp />
+    </Suspense>
+  );
+};
