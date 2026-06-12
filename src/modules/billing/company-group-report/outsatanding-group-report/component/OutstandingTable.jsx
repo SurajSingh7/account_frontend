@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   FileText,
   Eye,
+  ReceiptIndianRupee,
 } from 'lucide-react'
 
 const fmt = (n) =>
@@ -20,6 +21,11 @@ const OutstandingRow = ({ item, index }) => {
   const handleView = () => {
     router.push(
       `/billing/account/outstanding-report?companyGroupId=${item.companyGroupId}`
+    )
+  }
+  const handleBulkPayment = () => {
+    router.push(
+      `/billing/account/bulk-payment?companyGroupId=${item.companyGroupId}`
     )
   }
 
@@ -57,14 +63,50 @@ const OutstandingRow = ({ item, index }) => {
       </td>
 
       {/* Action */}
-      <td className="px-4 py-3 text-center">
-        <button
-          onClick={handleView}
-          className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-lg shadow-sm transition-all"
-        >
-          <Eye className="w-4 h-4" />
-          View
-        </button>
+      <td className="px-4 py-3">
+        <div className="flex items-center justify-center gap-3">
+          {/* View */}
+          <button
+            onClick={handleView}
+            className="
+                  group flex items-center gap-2
+                  px-4 py-2.5
+                  rounded-xl
+                  bg-white
+                  border border-slate-200
+                  text-slate-700
+                  text-xs font-semibold
+                  shadow-sm
+                  hover:shadow-lg
+                  hover:border-violet-300
+                  hover:bg-violet-50
+                  hover:text-violet-700
+                  transition-all duration-300
+                   "
+          >
+            <Eye className="w-4 h-4 transition-transform duration-300 group-hover:scale-110" />
+            View
+          </button>
+
+          {/* Bulk Payment */}
+          <button
+            onClick={handleBulkPayment}
+            className="
+            group flex items-center gap-2
+            px-4 py-2.5
+            rounded-xl
+            bg-gradient-to-r from-emerald-500 to-green-600
+            text-white
+            text-xs font-semibold
+            shadow-md shadow-emerald-100
+            hover:shadow-xl hover:shadow-emerald-200
+            hover:-translate-y-0.5
+            transition-all duration-300"
+          >
+            <ReceiptIndianRupee className="w-4 h-4 transition-transform duration-300 group-hover:rotate-12" />
+            Bulk Pay
+          </button>
+        </div>
       </td>
 
     </tr>
@@ -88,7 +130,7 @@ const OutstandingTable = ({ data }) => {
     )
   }
 
-  const columns =[
+  const columns = [
     { label: 'Sr', align: 'left' },
     { label: 'Company', align: 'left' },
     { label: 'Orders', align: 'center' },
