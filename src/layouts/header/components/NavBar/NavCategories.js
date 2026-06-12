@@ -73,13 +73,13 @@ export const navCategories = [
         url: "/billing/account/bulk-payment",
         action: ["READ"],
       },
-      // {
-      //   name: "Bulk Transactions",
-      //   path: "/billing/account/bulk-transactions",
-      //   moduleName: "Bulk Transactions",
-      //   url: "/billing/account/bulk-transactions",
-      //   action: ["READ"],
-      // },
+      {
+        name: "Bulk Transactions",
+        path: "/billing/account/bulk-transactions",
+        moduleName: "Bulk Transactions",
+        url: "/billing/account/bulk-transactions",
+        action: ["READ"],
+      },
     ],
   },
 

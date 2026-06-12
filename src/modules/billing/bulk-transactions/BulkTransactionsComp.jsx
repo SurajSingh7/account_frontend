@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import  { API_BACKEND_URL, API_BASE_URL } from "@/config/getEnvVariables";
+import  { API_BACKEND_URL, } from "@/config/getEnvVariables";
 import toast from "react-hot-toast";
 import {
   ArrowUpRight,
@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Clock3,
   CreditCard,
+  Eye,
   FileText,
   IndianRupee,
   Landmark,
@@ -23,6 +24,7 @@ import {
   Smartphone,
   User2,
   Wallet,
+  X,
   XCircle,
 } from "lucide-react";
 
@@ -185,94 +187,6 @@ const SummaryCard = ({ icon: Icon, label, value, tone = "violet" }) => {
   );
 };
 
-const TransactionRow = ({ item, active, onClick }) => {
-  const method = getMethodConfig(item.method);
-  const status = getStatusConfig(item.remaining);
-  const MethodIcon = method.icon;
-  const StatusIcon = status.icon;
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`group w-full rounded-3xl border p-5 text-left transition-all duration-200 ${
-        active
-          ? "border-violet-300 bg-violet-50/70 shadow-lg shadow-violet-100"
-          : "border-gray-200 bg-white shadow-sm hover:border-violet-200 hover:bg-violet-50/40 hover:shadow-md"
-      }`}
-    >
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-bold tracking-wide text-gray-600">
-              #{item._id?.slice(-8)}
-            </span>
-            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold ${method.chip}`}>
-              <MethodIcon className="h-3.5 w-3.5" />
-              {method.label}
-            </span>
-            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold ${status.className}`}>
-              <StatusIcon className="h-3.5 w-3.5" />
-              {status.label}
-            </span>
-          </div>
-
-          <div className="mt-3 flex items-start gap-3">
-            <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gray-100 text-gray-600">
-              <Building2 className="h-5 w-5" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="truncate text-base font-bold text-gray-900">
-                {item.companyGroupId?.companyName || "Company"}
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {MONTH_NAMES[(item.month || 1) - 1]} {item.year} • {item.transactionType || "PAYMENT"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:min-w-[520px]">
-          <div className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-400">Amount</p>
-            <p className="mt-1 text-sm font-bold text-gray-900">₹ {fmtCurrency(item.amount)}</p>
-          </div>
-          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-500">Allocated</p>
-            <p className="mt-1 text-sm font-bold text-emerald-700">₹ {fmtCurrency(item.allocated)}</p>
-          </div>
-          <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-500">Remaining</p>
-            <p className="mt-1 text-sm font-bold text-amber-700">₹ {fmtCurrency(item.remaining)}</p>
-          </div>
-          <div className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-400">Created</p>
-            <p className="mt-1 text-sm font-bold text-gray-700">{formatDate(item.createdAt)}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
-        <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-gray-500">
-          <span className="inline-flex items-center gap-1.5">
-            <User2 className="h-3.5 w-3.5" />
-            {item.createdBy?.name || "-"}
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <CalendarDays className="h-3.5 w-3.5" />
-            {formatDateTime(item.transactionDate)}
-          </span>
-        </div>
-
-        <span className="inline-flex items-center gap-1.5 text-sm font-bold text-violet-600">
-          View receipt
-          <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-        </span>
-      </div>
-    </button>
-  );
-};
-
 const BillingStatusBadge = ({ status }) => {
   if (status === "PAID") {
     return (
@@ -321,7 +235,6 @@ const DistributionCard = ({ group }) => {
               </span>
             )}
           </div>
-          <p className="mt-1 text-sm text-gray-500 break-all">{group.circuitKey}</p>
         </div>
 
         <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
@@ -384,140 +297,139 @@ const DistributionCard = ({ group }) => {
   );
 };
 
-const DetailDrawer = ({ open, onClose, loading, details }) => {
+const ReceiptModal = ({ open, onClose, loading, details }) => {
   const meta = details?.meta;
+  const paymentMeta = meta?.meta || {}; // nested method-specific meta
   const method = getMethodConfig(meta?.paymentMode);
   const status = getStatusConfig(meta?.remainingAdvance);
   const MethodIcon = method.icon;
   const StatusIcon = status.icon;
 
+  // Build list of payment meta pills - only include if value exists
+  const paymentMetaPills = [
+    { icon: Receipt, label: "Reference No.", value: meta?.referenceNumber || paymentMeta?.referenceNumber },
+    { icon: Landmark, label: "Bank Name", value: meta?.bankName || paymentMeta?.bankName },
+    { icon: FileText, label: "Remarks", value: meta?.remarks },
+    { icon: Receipt, label: "Orders", value: meta?.totalOrders != null ? fmtCompact(meta?.totalOrders) : null },
+  ].filter((pill) => pill.value !== null && pill.value !== undefined && pill.value !== "");
+
+  if (!open) return null;
+
   return (
-    <div
-      className={`fixed inset-0 z-50 transition-all duration-300 ${
-        open ? "pointer-events-auto" : "pointer-events-none"
-      }`}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6">
       <div
         onClick={onClose}
-        className={`absolute inset-0 bg-slate-950/35 backdrop-blur-[2px] transition-opacity duration-300 ${
-          open ? "opacity-100" : "opacity-0"
-        }`}
+        className="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px] transition-opacity duration-200"
       />
-      <aside
-        className={`absolute right-0 top-0 h-full w-full max-w-[920px] transform overflow-hidden border-l border-gray-200 bg-[#fcfcfd] shadow-2xl transition-transform duration-300 ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
-        <div className="flex h-full flex-col">
-          <div className="border-b border-gray-200 bg-white/90 px-6 py-5 backdrop-blur">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-[11px] font-bold text-violet-700">
-                    <Receipt className="h-3.5 w-3.5" />
-                    Bulk Receipt
-                  </span>
-                  {meta?.paymentMode && (
-                    <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold ${method.chip}`}>
-                      <MethodIcon className="h-3.5 w-3.5" />
-                      {method.label}
-                    </span>
-                  )}
-                  <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold ${status.className}`}>
-                    <StatusIcon className="h-3.5 w-3.5" />
-                    {status.label}
-                  </span>
-                </div>
 
-                <h2 className="text-2xl font-bold tracking-tight text-gray-900">
-                  {meta?.companyGroupId?.companyName || "Transaction Details"}
-                </h2>
-                <p className="mt-1 text-sm text-gray-500">
-                  Receipt ID: {meta?.bulkTransactionId || "-"}
-                </p>
+      <div className="relative flex h-[92vh] w-full max-w-[1100px] flex-col overflow-hidden rounded-[28px] border border-gray-200 bg-[#fcfcfd] shadow-2xl">
+        <div className="border-b border-gray-200 bg-white/90 px-6 py-5 backdrop-blur">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-[11px] font-bold text-violet-700">
+                  <Receipt className="h-3.5 w-3.5" />
+                  Bulk Receipt
+                </span>
+                {meta?.paymentMode && (
+                  <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold ${method.chip}`}>
+                    <MethodIcon className="h-3.5 w-3.5" />
+                    {method.label}
+                  </span>
+                )}
+                <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold ${status.className}`}>
+                  <StatusIcon className="h-3.5 w-3.5" />
+                  {status.label}
+                </span>
               </div>
 
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 shadow-sm transition-all hover:border-gray-300 hover:bg-gray-50"
-              >
-                Close
-              </button>
+              <h2 className="text-2xl font-bold tracking-tight text-gray-900">
+                {meta?.companyGroupId?.companyName || "Transaction Details"}
+              </h2>
             </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-gray-200 bg-white text-gray-500 shadow-sm transition-all hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
+        </div>
 
-          <div className="flex-1 overflow-y-auto px-6 py-6">
-            {loading ? (
-              <div className="flex min-h-[60vh] items-center justify-center">
-                <div className="text-center">
-                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-3xl bg-violet-100">
-                    <Loader2 className="h-6 w-6 animate-spin text-violet-600" />
-                  </div>
-                  <p className="text-sm font-semibold text-gray-600">Loading transaction receipt...</p>
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          {loading ? (
+            <div className="flex min-h-[60vh] items-center justify-center">
+              <div className="text-center">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-3xl bg-violet-100">
+                  <Loader2 className="h-6 w-6 animate-spin text-violet-600" />
                 </div>
+                <p className="text-sm font-semibold text-gray-600">Loading transaction receipt...</p>
               </div>
-            ) : !details ? (
-              <div className="flex min-h-[60vh] items-center justify-center rounded-3xl border border-dashed border-gray-200 bg-white">
-                <div className="text-center">
-                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-3xl bg-gray-100">
-                    <FileText className="h-6 w-6 text-gray-400" />
-                  </div>
-                  <p className="text-sm font-semibold text-gray-500">No receipt data available.</p>
+            </div>
+          ) : !details ? (
+            <div className="flex min-h-[60vh] items-center justify-center rounded-3xl border border-dashed border-gray-200 bg-white">
+              <div className="text-center">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-3xl bg-gray-100">
+                  <FileText className="h-6 w-6 text-gray-400" />
                 </div>
+                <p className="text-sm font-semibold text-gray-500">No receipt data available.</p>
               </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                  <SummaryCard
-                    icon={IndianRupee}
-                    label="Total Amount"
-                    value={`₹ ${fmtCurrency(meta?.totalAmount)}`}
-                    tone="violet"
-                  />
-                  <SummaryCard
-                    icon={ShieldCheck}
-                    label="Allocated"
-                    value={`₹ ${fmtCurrency(meta?.totalAllocated)}`}
-                    tone="emerald"
-                  />
-                  <SummaryCard
-                    icon={ArrowUpRight}
-                    label="Advance"
-                    value={`₹ ${fmtCurrency(meta?.remainingAdvance)}`}
-                    tone="amber"
-                  />
-                  <SummaryCard
-                    icon={Receipt}
-                    label="Entries"
-                    value={fmtCompact(meta?.totalEntries)}
-                    tone="sky"
-                  />
-                </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <SummaryCard
+                  icon={IndianRupee}
+                  label="Total Amount"
+                  value={`₹ ${fmtCurrency(meta?.totalAmount)}`}
+                  tone="violet"
+                />
+                <SummaryCard
+                  icon={ShieldCheck}
+                  label="Allocated"
+                  value={`₹ ${fmtCurrency(meta?.totalAllocated)}`}
+                  tone="emerald"
+                />
+                <SummaryCard
+                  icon={ArrowUpRight}
+                  label="Advance"
+                  value={`₹ ${fmtCurrency(meta?.remainingAdvance)}`}
+                  tone="amber"
+                />
+                <SummaryCard
+                  icon={Receipt}
+                  label="Entries"
+                  value={fmtCompact(meta?.totalEntries)}
+                  tone="sky"
+                />
+              </div>
 
-                <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-                  <div className="xl:col-span-2 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-                    <div className="mb-4">
-                      <h3 className="text-lg font-bold text-gray-900">Transaction Information</h3>
-                      <p className="mt-1 text-sm text-gray-500">
-                        Core receipt and allocation metadata
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                      <MetaPill icon={CalendarDays} label="Payment Date" value={formatDate(meta?.paymentDate)} />
-                      <MetaPill icon={MethodIcon} label="Payment Mode" value={meta?.paymentMode} />
-                      <MetaPill icon={Receipt} label="Allocation Type" value={meta?.allocationType} />
-                      <MetaPill
-                        icon={Clock3}
-                        label="Billing Cycle"
-                        value={`${MONTH_NAMES[(meta?.month || 1) - 1]} ${meta?.year || ""}`}
-                      />
-                      <MetaPill icon={Building2} label="Company" value={meta?.companyGroupId?.companyName} />
-                      <MetaPill icon={User2} label="Created By" value={meta?.createdBy?.name} />
-                    </div>
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+                <div className="xl:col-span-2 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-bold text-gray-900">Transaction Information</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Core receipt and allocation metadata
+                    </p>
                   </div>
 
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <MetaPill icon={CalendarDays} label="Payment Date" value={formatDate(meta?.paymentDate)} />
+                    <MetaPill icon={MethodIcon} label="Payment Mode" value={meta?.paymentMode} />
+                    <MetaPill icon={Receipt} label="Allocation Type" value={meta?.allocationType} />
+                    <MetaPill
+                      icon={Clock3}
+                      label="Billing Cycle"
+                      value={`${MONTH_NAMES[(meta?.month || 1) - 1]} ${meta?.year || ""}`}
+                    />
+                    <MetaPill icon={Building2} label="Company" value={meta?.companyGroupId?.companyName} />
+                    <MetaPill icon={User2} label="Created By" value={meta?.createdBy?.name} />
+                  </div>
+                </div>
+
+                {paymentMetaPills.length > 0 && (
                   <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
                     <div className="mb-4">
                       <h3 className="text-lg font-bold text-gray-900">Payment Meta</h3>
@@ -527,46 +439,45 @@ const DetailDrawer = ({ open, onClose, loading, details }) => {
                     </div>
 
                     <div className="space-y-3">
-                      <MetaPill icon={Receipt} label="Reference No." value={details?.meta?.referenceNumber || details?.meta?.meta?.referenceNumber} />
-                      <MetaPill icon={Landmark} label="Bank Name" value={details?.meta?.bankName || details?.meta?.meta?.bankName} />
-                      <MetaPill icon={FileText} label="Remarks" value={meta?.remarks || "-"} />
-                      <MetaPill icon={Receipt} label="Orders" value={fmtCompact(meta?.totalOrders)} />
+                      {paymentMetaPills.map((pill, idx) => (
+                        <MetaPill key={idx} icon={pill.icon} label={pill.label} value={pill.value} />
+                      ))}
                     </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Distribution Breakdown</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Order-wise billing allocation mapped from the receipt
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-2.5 text-sm font-semibold text-gray-600">
+                    Groups: {details?.distribution?.length || 0}
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-                  <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900">Distribution Breakdown</h3>
-                      <p className="mt-1 text-sm text-gray-500">
-                        Order-wise billing allocation mapped from the receipt
+                <div className="space-y-4">
+                  {details?.distribution?.length ? (
+                    details.distribution.map((group, idx) => (
+                      <DistributionCard key={`${group.circuitKey}-${idx}`} group={group} />
+                    ))
+                  ) : (
+                    <div className="rounded-3xl border border-dashed border-gray-200 bg-gray-50 px-6 py-10 text-center">
+                      <p className="text-sm font-semibold text-gray-500">
+                        No distribution records found.
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-2.5 text-sm font-semibold text-gray-600">
-                      Groups: {details?.distribution?.length || 0}
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    {details?.distribution?.length ? (
-                      details.distribution.map((group, idx) => (
-                        <DistributionCard key={`${group.circuitKey}-${idx}`} group={group} />
-                      ))
-                    ) : (
-                      <div className="rounded-3xl border border-dashed border-gray-200 bg-gray-50 px-6 py-10 text-center">
-                        <p className="text-sm font-semibold text-gray-500">
-                          No distribution records found.
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
-      </aside>
+      </div>
     </div>
   );
 };
@@ -578,7 +489,7 @@ const BulkTransactionsComp = () => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [selectedId, setSelectedId] = useState("");
   const [detailData, setDetailData] = useState(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [search, setSearch] = useState("");
 
   const fetchTransactions = useCallback(async () => {
@@ -607,12 +518,12 @@ const BulkTransactionsComp = () => {
   const fetchDetails = useCallback(async (id) => {
     if (!id) return;
     setDetailLoading(true);
-    setDrawerOpen(true);
+    setModalOpen(true);
     setSelectedId(id);
 
     try {
       const res = await fetch(
-        `${API_BASE_URL}/billing/sale/ledger/bulk/transactions/details/${id}`,
+        `${API_BACKEND_URL}/billing/sale/ledger/bulk/transactions/details/${id}`,
         {
           method: "GET",
           credentials: "include",
@@ -661,18 +572,6 @@ const BulkTransactionsComp = () => {
     });
   }, [rows, search]);
 
-  const totals = useMemo(() => {
-    return filteredRows.reduce(
-      (acc, item) => {
-        acc.amount += Number(item.amount || 0);
-        acc.allocated += Number(item.allocated || 0);
-        acc.remaining += Number(item.remaining || 0);
-        return acc;
-      },
-      { amount: 0, allocated: 0, remaining: 0 }
-    );
-  }, [filteredRows]);
-
   return (
     <>
       <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(124,58,237,0.08),_transparent_28%),linear-gradient(to_bottom,_#fafafe,_#f7f8fc)] p-4 md:p-6">
@@ -715,33 +614,6 @@ const BulkTransactionsComp = () => {
                 </button>
               </div>
             </div>
-
-            <div className="grid grid-cols-1 gap-4 px-6 py-6 md:grid-cols-2 xl:grid-cols-4">
-              <SummaryCard
-                icon={IndianRupee}
-                label="Total Amount"
-                value={`₹ ${fmtCurrency(totals.amount)}`}
-                tone="violet"
-              />
-              <SummaryCard
-                icon={CheckCircle2}
-                label="Allocated"
-                value={`₹ ${fmtCurrency(totals.allocated)}`}
-                tone="emerald"
-              />
-              <SummaryCard
-                icon={ArrowUpRight}
-                label="Remaining"
-                value={`₹ ${fmtCurrency(totals.remaining)}`}
-                tone="amber"
-              />
-              <SummaryCard
-                icon={Receipt}
-                label="Transactions"
-                value={fmtCompact(filteredRows.length)}
-                tone="sky"
-              />
-            </div>
           </div>
 
           <div className="rounded-[32px] border border-gray-200 bg-white shadow-sm">
@@ -749,7 +621,7 @@ const BulkTransactionsComp = () => {
               <div>
                 <h2 className="text-lg font-bold text-gray-900">Receipt Timeline</h2>
                 <p className="mt-1 text-sm text-gray-500">
-                  {pagination?.total ?? filteredRows.length} total records • showing premium transaction cards
+                  {pagination?.total ?? filteredRows.length} total records • showing premium transaction table
                 </p>
               </div>
 
@@ -760,38 +632,127 @@ const BulkTransactionsComp = () => {
               )}
             </div>
 
-            <div className="p-6">
+            <div className="overflow-x-auto p-2 sm:p-4">
               {loading ? (
-                <div className="grid gap-4">
-                  {[1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className="animate-pulse rounded-3xl border border-gray-200 bg-white p-5"
-                    >
-                      <div className="mb-4 flex gap-2">
-                        <div className="h-7 w-20 rounded-full bg-gray-100" />
-                        <div className="h-7 w-24 rounded-full bg-gray-100" />
-                      </div>
-                      <div className="mb-4 h-5 w-64 rounded-full bg-gray-100" />
-                      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                        {[1, 2, 3, 4].map((k) => (
-                          <div key={k} className="h-20 rounded-2xl bg-gray-100" />
-                        ))}
-                      </div>
-                    </div>
+                <div className="space-y-3 p-4">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="h-12 w-full animate-pulse rounded-2xl bg-gray-100" />
                   ))}
                 </div>
               ) : filteredRows.length ? (
-                <div className="space-y-4">
-                  {filteredRows.map((item) => (
-                    <TransactionRow
-                      key={item._id}
-                      item={item}
-                      active={selectedId === item._id && drawerOpen}
-                      onClick={() => fetchDetails(item._id)}
-                    />
-                  ))}
-                </div>
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 bg-gray-50/80">
+                      <th className="whitespace-nowrap px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">
+                        Company
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">
+                        Cycle
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3 text-center text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">
+                        Method
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">
+                        Amount
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">
+                        Allocated
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">
+                        Remaining
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3 text-center text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">
+                        Status
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">
+                        Created By
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">
+                        Date
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3 text-center text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {filteredRows.map((item) => {
+                      const method = getMethodConfig(item.method);
+                      const status = getStatusConfig(item.remaining);
+                      const MethodIcon = method.icon;
+                      const StatusIcon = status.icon;
+                      const isActive = selectedId === item._id && modalOpen;
+
+                      return (
+                        <tr
+                          key={item._id}
+                          className={`transition-colors ${
+                            isActive ? "bg-violet-50/60" : "hover:bg-violet-50/30"
+                          }`}
+                        >
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-2">
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-600">
+                                <Building2 className="h-4 w-4" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-bold text-gray-900">
+                                  {item.companyGroupId?.companyName || "Company"}
+                                </p>
+                                <p className="text-xs text-gray-400">
+                                  {item.transactionType || "PAYMENT"}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-4 text-sm font-semibold text-gray-700">
+                            {MONTH_NAMES[(item.month || 1) - 1]} {item.year}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-4 text-center">
+                            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold ${method.chip}`}>
+                              <MethodIcon className="h-3.5 w-3.5" />
+                              {method.label}
+                            </span>
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-4 text-right text-sm font-bold text-gray-900">
+                            ₹ {fmtCurrency(item.amount)}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-4 text-right text-sm font-bold text-emerald-600">
+                            ₹ {fmtCurrency(item.allocated)}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-4 text-right text-sm font-bold text-amber-600">
+                            ₹ {fmtCurrency(item.remaining)}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-4 text-center">
+                            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold ${status.className}`}>
+                              <StatusIcon className="h-3.5 w-3.5" />
+                              {status.label}
+                            </span>
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-600">
+                            <span className="inline-flex items-center gap-1.5">
+                              <User2 className="h-3.5 w-3.5 text-gray-400" />
+                              {item.createdBy?.name || "-"}
+                            </span>
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-500">
+                            {formatDateTime(item.transactionDate)}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-4 text-center">
+                            <button
+                              type="button"
+                              onClick={() => fetchDetails(item._id)}
+                              className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition-all hover:bg-violet-700"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               ) : (
                 <div className="rounded-[28px] border border-dashed border-gray-200 bg-gray-50 px-6 py-16 text-center">
                   <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-3xl bg-white shadow-sm">
@@ -808,9 +769,9 @@ const BulkTransactionsComp = () => {
         </div>
       </div>
 
-      <DetailDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+      <ReceiptModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
         loading={detailLoading}
         details={detailData}
       />
