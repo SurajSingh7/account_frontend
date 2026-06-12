@@ -23,13 +23,13 @@ const Header = () => {
                     <div className="flex gap-2">
                         <div
                             className="text-lg font-bold cursor-pointer hover:text-orange-300 transition"
-                            // onClick={() => (window.location.href = "/dsr/list")}
+                            onClick={() => (window.location.href = "/billing/account/pcd-closure")}
                         >
                             Netra Account
                         </div>
                         <div
                             className="text-lg font-bold cursor-pointer hover:text-orange-300 transition" >
-                           {/* <ZoomButtons variant="inline" show={1} /> */}
+                           <ZoomButtons variant="inline" show={1} />
                         </div>
                     </div>
 
