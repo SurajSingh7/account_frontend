@@ -854,15 +854,25 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-semibold">₹</span>
               <input
-                type="number"
-                value={form.basicAmount}
-                onChange={(e) => set('basicAmount', e.target.value)}
+                type="text"
+                value={
+                  form.basicAmount
+                    ? Number(String(form.basicAmount).replace(/,/g, '')).toLocaleString('en-IN')
+                    : ''
+                }
+                onChange={(e) =>
+                  set(
+                    'basicAmount',
+                    e.target.value.replace(/,/g, '')
+                  )
+                }
                 placeholder="0.00"
-                min="0"
-                step="0.01"
                 required
                 readOnly={isCreditNote && cnData?.amount != null && !isEditing}
-                className={`${inp} pl-7 ${isCreditNote && cnData?.amount != null && !isEditing ? 'bg-cyan-50 cursor-not-allowed' : ''}`}
+                className={`${inp} pl-7 ${isCreditNote && cnData?.amount != null && !isEditing
+                    ? 'bg-cyan-50 cursor-not-allowed'
+                    : ''
+                  }`}
               />
             </div>
             {isCreditNote && cnData?.amount != null && !isEditing && (
