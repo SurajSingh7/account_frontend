@@ -66,7 +66,7 @@ const TRANSACTION_TYPES = [
 // Types shown in "Add New Entry" form pills — TDS_CONFIRMED excluded (created only via Move)
 const FORM_TRANSACTION_TYPES = TRANSACTION_TYPES.filter((t) => t.value !== 'TDS_CONFIRMED');
 
-const SUB_TYPES = [
+const SUB_TYPES =[
   { value: 'MANUAL_ADJUSTMENT', label: 'Manual Adjustment' },
   { value: 'ADVANCE', label: 'Advance' },
   { value: 'REVERSAL', label: 'Reversal' },
@@ -75,7 +75,7 @@ const SUB_TYPES = [
 
 const MONTH_SCOPED_TYPES = ['PAYMENT', 'TDS_CONFIRMED', 'TDS_PROVISION', 'MISC_CHARGE'];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 const todayISO = () => new Date().toISOString().split('T')[0];
 const getTypeConfig = (v) => TRANSACTION_TYPES.find((t) => t.value === v) ?? TRANSACTION_TYPES[0];
 const fmtINR = (v) =>
@@ -540,7 +540,7 @@ function CreditNoteAmountBadge({ loading, data, error }) {
   );
 }
 
-// ─── EntryForm ────────────────────────────────────────────────────────────────
+// ─── EntryForm ───────────────────────────────────────────────────────────────
 // editingEntry: the ledger row object being edited, or null for "add" mode
 function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editingEntry, onCancelEdit, formRef }) {
   const defaultDate = monthBounds?.minDate ?? todayISO();
@@ -1141,7 +1141,7 @@ const LedgerUpdateEntry = () => {
           </span>
         </div>
 
-        <BillTabs billIds={billIds} activeTab={activeTab} setActiveTab={setActiveTab} />
+        <BillTabs billIds={billIds} activeTab={activeTab} setActiveTab={setActiveTab}/>
 
         <BillPanel
           key={billIds[activeTab]}
@@ -1149,7 +1149,6 @@ const LedgerUpdateEntry = () => {
           isEditMode={isEditMode}
           monthBounds={monthBounds}
         />
-
       </div>
     </div>
   );
