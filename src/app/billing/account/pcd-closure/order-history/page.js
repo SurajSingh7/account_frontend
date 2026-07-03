@@ -1,11 +1,11 @@
-import React from 'react'
+import React, { Suspense } from 'react'
 import OrderHistoryModal from '@/modules/billing/pcd-closure/modal/OrderHistoryModal';
 
 const page = () => {
     return (
-        <div>
+        <Suspense fallback={<div>Loading...</div>}>
             <OrderHistoryModal />
-        </div>
+        </Suspense>
     )
 }
 
