@@ -394,7 +394,7 @@ function LedgerTable({ entries, isEditMode, monthlyBillingId, onRefresh, onEditE
                       ? '—' : gst > 0 ? fmtINR(gst) : '—'}
                     </td>
                     <td className="px-4 py-3 text-gray-800 font-semibold text-sm tabular-nums">{fmtINR(e.totalAmount)}</td>
-                    <td className="px-4 py-3 text-gray-400 text-xs max-w-[180px] truncate">{e.notes ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-400 text-xs max-w-[180px]">{e.notes ?? '—'}</td>
 
                     {isEditMode && (
                       <td className="px-4 py-3">
@@ -855,23 +855,20 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-semibold">₹</span>
               <input
                 type="text"
-                value={
-                  form.basicAmount
-                    ? Number(String(form.basicAmount).replace(/,/g, '')).toLocaleString('en-IN')
-                    : ''
-                }
-                onChange={(e) =>
-                  set(
-                    'basicAmount',
-                    e.target.value.replace(/,/g, '')
-                  )
-                }
+                value={form.basicAmount || ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+
+                  if (/^\d*\.?\d*$/.test(value)) {
+                    set('basicAmount', value);
+                  }
+                }}
                 placeholder="0.00"
                 required
                 readOnly={isCreditNote && cnData?.amount != null && !isEditing}
                 className={`${inp} pl-7 ${isCreditNote && cnData?.amount != null && !isEditing
-                    ? 'bg-cyan-50 cursor-not-allowed'
-                    : ''
+                  ? 'bg-cyan-50 cursor-not-allowed'
+                  : ''
                   }`}
               />
             </div>
