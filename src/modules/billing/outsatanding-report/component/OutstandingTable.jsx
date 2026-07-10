@@ -127,8 +127,12 @@ const OrderRow = ({ item, index, showLsi }) => {
             </td>
 
             {/* Company */}
-            <td className="px-4 py-3 max-w-[200px]">
+            <td className="px-4 py-3 max-w-50">
                 {truncateWithMore(item.company, 18, '...more', (t) => setPopupText(t))}
+            </td>
+
+            <td className="px-4 py-3 max-w-50">
+                {truncateWithMore(item?.additionalCompanyName || "-", 18, '...more', (t) => setPopupText(t))}
             </td>
 
             {/* Order Type */}
@@ -231,6 +235,7 @@ const OutstandingTable = ({ data, onRefetch, showLsi }) => {
         { label: 'End A', align: 'left' },
         { label: 'End B', align: 'left' },
         { label: 'Company', align: 'left' },
+        { label: 'Add. Company/Partner name', align: 'left' },
         { label: 'Order Type', align: 'left' },
         { label: 'Entity', align: 'left' },
         { label: 'Product', align: 'left' },

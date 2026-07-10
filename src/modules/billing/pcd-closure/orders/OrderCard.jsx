@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Edit, Eye, History } from 'lucide-react';
+import { Edit, Eye, History, PlusCircle } from 'lucide-react';
 import { formatDateDisplay, truncateWithMore } from '../../shared/buildListParams/utils';
 import { usePathname, useRouter } from 'next/navigation';
 import EditPcdModal from '../modal/EditPcdModal';
 import { usePermissions } from '@/context/PermissionContext';
-
+import AdditionalCompnayNameModal from '../modal/AdditionalCompnayNameModal';
 
 // ─── Badge ────────────────────────────────────────────────────────────────────
 const Badge = ({ children, color }) => {
@@ -35,6 +35,7 @@ const OrderCard = ({ order, onRefetch }) => {
   const router = useRouter();
   const [showEndPopup, setShowEndPopup] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [additionalCompanyNameModalOpen, setAdditionalCompanyNameModalOpen] = useState(false);
 
   // ── Safely resolve fields from the NEW data shape ──────────────────────────
   const billingItems = order.billingItems || [];
@@ -54,11 +55,10 @@ const OrderCard = ({ order, onRefetch }) => {
   const baseRate = Number(order.offeredPrice?.rate) || 0;
 
   const companyLabel = order.company?.name || '';
+  const additionalCompanyLabel = order?.additionalCompanyName || '';
   const entityLabel = order.entity?.alias || order.entity?.name || '';
   const productLabel = order.product?.code || order.product?.name || '';
-  const bsoLabel = order.bso?.name || '';
   const orderTypeLabel = order.orderType || '';
-  const isActive = order.isActive !== undefined ? order.isActive : false;
   const pcdDate = order.pcdDate;
   const operationalDate = order.operationalDate;
   const terminateDate = order.terminationDate;
@@ -69,6 +69,7 @@ const OrderCard = ({ order, onRefetch }) => {
   const isTerminated = !!terminateDate;
 
   const showTerminateAlert = pathname.includes('/billing/account/terminate-orders') && isTerminated;
+  const showAdditionalCompanyModal = pathname.includes('/billing/account/pcd-closure')
 
   // ── Detect GST type per billing item ──────────────────────────────────────
   const circuits = order.summary?.circuits || [];
@@ -211,13 +212,13 @@ const OrderCard = ({ order, onRefetch }) => {
                   {order.orderId}
                 </span>
 
-
                 {orderTypeLabel && <Badge color="blue">{orderTypeLabel}</Badge>}
                 {entityLabel && <Badge color="orange">{entityLabel}</Badge>}
                 <span className="text-gray-400">•</span>
                 <span className="text-gray-600 font-semibold text-base">Company:</span>
                 <span className="px-2.5 py-0.5 bg-blue-100 text-blue-900 rounded-lg text-base font-semibold border border-blue-200">
                   {truncateWithMore(companyLabel, 50, "...more", setShowEndPopup)}
+                  {additionalCompanyLabel && ` (${truncateWithMore(additionalCompanyLabel, 50, "...more", setShowEndPopup)})`}
                 </span>
               </h3>
 
@@ -256,9 +257,19 @@ const OrderCard = ({ order, onRefetch }) => {
                 <Eye className='text-blue-600 cursor-pointer' />
               </button>
 
-               <button onClick={() => router.push(`/billing/account/pcd-closure/order-history?orderId=${order.orderId}`)}>
+              <button onClick={() => router.push(`/billing/account/pcd-closure/order-history?orderId=${order.orderId}`)}>
                 <History className="text-gray-600 cursor-pointer" />
               </button>
+
+              {showAdditionalCompanyModal &&
+                <button
+                  className="p-2 hover:bg-blue-50 rounded-lg"
+                  title="Add Additional Company name"
+                  onClick={() => setAdditionalCompanyNameModalOpen(true)}
+                >
+                  <PlusCircle className="w-5 h-5 text-yellow-600 cursor-pointer" />
+                </button>
+              }
 
               {isAdmin && (
                 <>
@@ -362,6 +373,13 @@ const OrderCard = ({ order, onRefetch }) => {
       <EditPcdModal
         isOpen={editModalOpen}
         onClose={() => setEditModalOpen(false)}
+        order={order}
+        onSuccess={onRefetch}
+      />
+
+      <AdditionalCompnayNameModal
+        isOpen={additionalCompanyNameModalOpen}
+        onClose={() => setAdditionalCompanyNameModalOpen(false)}
         order={order}
         onSuccess={onRefetch}
       />
