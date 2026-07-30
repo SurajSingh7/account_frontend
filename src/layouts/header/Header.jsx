@@ -1,14 +1,17 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Profile } from "./components/Profile";
 import { Navbar } from "./components/NavBar/Navbar";
+import { ModuleSwitcher } from "./components/NavBar/ModuleSwitcher";
+import { DEFAULT_MODULE } from "./components/NavBar/modules";
 import { usePermissions } from "@/context/PermissionContext";
 import ZoomButtons from "./components/zoom/ZoomButton";
 import { ROUTES } from "@/constants/routes";
 
 const Header = () => {
     const { userData } = usePermissions();
+    const [selectedModule, setSelectedModule] = useState(DEFAULT_MODULE);
 
     if (!userData) {
         return null;
@@ -28,6 +31,7 @@ const Header = () => {
                         >
                             Netra Account
                         </div>
+                        <ModuleSwitcher selectedModule={selectedModule} onSelect={setSelectedModule} />
                         <div
                             className="text-lg font-bold cursor-pointer hover:text-orange-300 transition" >
                            <ZoomButtons variant="inline" show={1} />
@@ -36,7 +40,7 @@ const Header = () => {
 
                     <div className="flex items-center space-x-4">
                         <div className="flex-1 flex justify-center">
-                            <Navbar />
+                            <Navbar selectedModule={selectedModule} />
                         </div>
                         <div>
                             <Profile />

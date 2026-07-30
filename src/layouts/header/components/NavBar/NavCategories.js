@@ -57,13 +57,13 @@ export const navCategories = [
         url: billingApi.readyOrder.all,
         action: ["READ"],
       },
-      {
-        name: "Order Links",
-        path: billing.orderLinks,
-        moduleName: "Order Links",
-        url: billingApi.readyOrder.all,
-        action: ["READ"],
-      },
+      // {
+      //   name: "Order Links",
+      //   path: billing.orderLinks,
+      //   moduleName: "Order Links",
+      //   url: billingApi.readyOrder.all,
+      //   action: ["READ"],
+      // },
     ],
   },
   {
