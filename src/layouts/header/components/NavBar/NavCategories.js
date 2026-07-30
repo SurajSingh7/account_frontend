@@ -5,10 +5,13 @@
 
 
 import { SHOW_DEV } from "@/config/getEnvVariables";
+import { ROUTES } from "@/constants/routes";
+import { API_ENDPOINTS } from "@/constants/api";
 
+const { billing } = ROUTES.customers;
+const { billing: billingApi } = API_ENDPOINTS.customers;
 
 export const navCategories = [
-
 
   {
     category: "Reports",
@@ -16,23 +19,23 @@ export const navCategories = [
 
       {
         name: "Billing Sell Report",
-        path: "/billing/account/billing-report",
+        path: billing.billingReport,
         moduleName: "Billing Sell report",
-        url: "/billing/sale/report/sell",
+        url: billingApi.report.sell,
         action: ["READ"],
       },
       {
         name: "Outstanding Report",
-        path: "/billing/account/outstanding-report",
+        path: billing.outstandingReport,
         moduleName: "Sale outstanding",
-        url: "/billing/sale/report/outstanding",
+        url: billingApi.report.outstanding,
         action: ["READ"],
       },
       {
         name: "Receipt Report",
-        path: "/billing/account/receipt-report",
+        path: billing.receiptReport,
         moduleName: "Receipt report",
-        url: "/billing/sale/report/receipt",
+        url: billingApi.report.receipt,
         action: ["READ"],
       },
     ],
@@ -42,23 +45,23 @@ export const navCategories = [
     items: [
       {
         name: "Pcd Closure",
-        path: "/billing/account/pcd-closure",
+        path: billing.pcdClosure.root,
         moduleName: "PCD Ready order module",
-        url: "/billing/sale/ready-order/all",
+        url: billingApi.readyOrder.all,
         action: ["READ"],
       },
       {
         name: "Terminate Orders",
-        path: "/billing/account/terminate-orders",
+        path: billing.terminateOrders,
         moduleName: "Terminate Orders",
-        url: "/billing/sale/ready-order/all",
+        url: billingApi.readyOrder.all,
         action: ["READ"],
       },
       {
         name: "Order Links",
-        path: "/billing/account/order-links",
+        path: billing.orderLinks,
         moduleName: "Order Links",
-        url: "/billing/sale/ready-order/all",
+        url: billingApi.readyOrder.all,
         action: ["READ"],
       },
     ],
@@ -68,14 +71,14 @@ export const navCategories = [
     items: [
       {
         name: "Bulk Payment",
-        path: "/billing/account/bulk-payment",
+        path: billing.bulkPayment,
         moduleName: "Bulk Payment",
         url: "/billing/account/bulk-payment",
         action: ["READ"],
       },
       {
         name: "Bulk Transactions",
-        path: "/billing/account/bulk-transactions",
+        path: billing.bulkTransactions,
         moduleName: "Bulk Transactions",
         url: "/billing/account/bulk-transactions",
         action: ["READ"],
@@ -88,7 +91,7 @@ export const navCategories = [
     items: [
       {
         name: "Outstanding Group Report",
-        path: "/billing/account/outstanding-group-report",
+        path: billing.outstandingGroupReport,
         moduleName: "",
         url: "/admin",
         action: ["CREATE", "UPDATE", "READ"],
@@ -96,7 +99,7 @@ export const navCategories = [
       },
       {
         name: "Billing Group Report",
-        path: "/billing/account/billing-group-report",
+        path: billing.billingGroupReport,
         moduleName: "",
         url: "/admin",
         action: ["CREATE", "UPDATE", "READ"],
@@ -104,7 +107,7 @@ export const navCategories = [
       },
       {
         name: "Receipt Group Report",
-        path: "/billing/account/receipt-group-report",
+        path: billing.receiptGroupReport,
         moduleName: "",
         url: "/admin",
         action: ["CREATE", "UPDATE", "READ"],
@@ -117,7 +120,7 @@ export const navCategories = [
     items: [
       {
         name: "Upload Opening Excel",
-        path: "/billing/account/upload-excel",
+        path: billing.uploadExcel,
         moduleName: "Upload Excel",
         url: "/billing/account/upload-excel",
         action: ["READ"],
@@ -133,7 +136,7 @@ export const navCategories = [
         items: [
           {
             name: "View Circuit D",
-            path: "/billing/account/view-circuit1",
+            path: billing.demo.viewCircuit,
             moduleName: "dsr",
             url: "/dsr",
             action: ["CREATE", "UPDATE"],
@@ -141,7 +144,7 @@ export const navCategories = [
           },
           {
             name: "Outstanding Report D",
-            path: "/billing/account/outstanding-report1",
+            path: billing.demo.outstandingReport,
             moduleName: "dsr",
             url: "/dsr",
             action: ["READ"],
@@ -149,7 +152,7 @@ export const navCategories = [
           },
           {
             name: "Billing Sell Report D",
-            path: "/billing/account/billing-report1",
+            path: billing.demo.billingReport,
             moduleName: "dsr",
             url: "/dsr",
             action: ["READ"],
@@ -157,7 +160,7 @@ export const navCategories = [
           },
           {
             name: "Receipt Report D",
-            path: "/billing/account/receipt1",
+            path: billing.demo.receiptReport,
             moduleName: "dsr",
             url: "/dsr",
             action: ["READ"],
@@ -165,7 +168,7 @@ export const navCategories = [
           },
           {
             name: "Bulk Update D",
-            path: "/billing/account/bulk-update1",
+            path: billing.demo.bulkUpdate,
             moduleName: "dsr",
             url: "/dsr",
             action: ["READ"],
@@ -178,7 +181,7 @@ export const navCategories = [
         items: [
           {
             name: "Outstanding Report",
-            path: "/billing/collection/outstanding-report",
+            path: billing.collectionOutstandingReport,
             moduleName: "dsr",
             url: "/dsr",
             action: ["READ"],
@@ -186,7 +189,7 @@ export const navCategories = [
           },
           {
             name: "Test Page",
-            path: "/test-page",
+            path: ROUTES.customers.testPage,
             moduleName: "dsr",
             url: "/dsr",
             action: ["READ"],
@@ -199,7 +202,7 @@ export const navCategories = [
         items: [
           {
             name: "Monthly Bill Generator",
-            path: "/billing/generator?orderId=",
+            path: `${billing.generator}?orderId=`,
             moduleName: "dsr",
             url: "/dsr",
             action: ["CREATE", "UPDATE"],

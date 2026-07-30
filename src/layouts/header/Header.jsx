@@ -5,6 +5,7 @@ import { Profile } from "./components/Profile";
 import { Navbar } from "./components/NavBar/Navbar";
 import { usePermissions } from "@/context/PermissionContext";
 import ZoomButtons from "./components/zoom/ZoomButton";
+import { ROUTES } from "@/constants/routes";
 
 const Header = () => {
     const { userData } = usePermissions();
@@ -23,7 +24,7 @@ const Header = () => {
                     <div className="flex gap-2">
                         <div
                             className="text-lg font-bold cursor-pointer hover:text-orange-300 transition"
-                            onClick={() => (window.location.href = "/billing/account/pcd-closure")}
+                            onClick={() => (window.location.href = ROUTES.customers.billing.pcdClosure.root)}
                         >
                             Netra Account
                         </div>

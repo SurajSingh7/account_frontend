@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { usePermissions } from "@/context/PermissionContext";
 import { ChevronDown } from "lucide-react";
 import { API_PORTAL_BACKEND_URL } from "@/config/getEnvVariables";
+import { API_ENDPOINTS } from "@/constants/api";
+import { ROUTES } from "@/constants/routes";
 import toast from "react-hot-toast";
 import ZoomButtons from "./zoom/ZoomButton";
 
@@ -30,7 +32,7 @@ export const Profile = () => {
   const handleLogout = async () => {
     try {
       const response = await fetch(
-        `${API_PORTAL_BACKEND_URL || ""}/hrms/logout`,
+        `${API_PORTAL_BACKEND_URL || ""}${API_ENDPOINTS.core.hrms.logout}`,
         {
           method: "GET",
           headers: { "Content-Type": "application/json" },
@@ -40,7 +42,7 @@ export const Profile = () => {
       if (response.ok) {
         // clearAuthData();
         toast.success("Logged out successfully");
-        window.location.href = "/";
+        window.location.href = ROUTES.core.home;
       }
     } catch (error) {
       console.error("Failed to log out", error);

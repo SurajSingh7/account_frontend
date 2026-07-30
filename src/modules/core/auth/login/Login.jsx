@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, Lock, Sun, Moon, LineChart, Users, Network, Store, Wifi, Briefcase } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { API_PORTAL_BACKEND_URL } from '@/config/getEnvVariables';
+import { API_ENDPOINTS } from '@/constants/api';
+import { ROUTES } from '@/constants/routes';
 // import ForgotPasswordNotice from '@/component/common/modal/ForgotPasswordNotice';
 
 const LoginComponent = () => {
@@ -41,7 +43,7 @@ const LoginComponent = () => {
         setLoading(true);
 
         try {
-            const response = await fetch(`${API_PORTAL_BACKEND_URL}/hrms/login`, {
+            const response = await fetch(`${API_PORTAL_BACKEND_URL}${API_ENDPOINTS.core.hrms.login}`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -54,7 +56,7 @@ const LoginComponent = () => {
 
             if (response.ok) {
                 if (result.key === "redir-to-broken") {
-                    window.location.href = "/error/server-error";
+                    window.location.href = ROUTES.core.serverError;
                     return;
                 }
 
@@ -70,7 +72,7 @@ const LoginComponent = () => {
                     }
 
                     toast.success(result.message);
-                    window.location.href = "/billing/account/outstanding-report";
+                    window.location.href = ROUTES.customers.billing.outstandingReport;
                 } else {
                     toast.error(result.message || "Login failed");
                 }

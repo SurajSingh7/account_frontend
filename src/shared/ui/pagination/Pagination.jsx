@@ -1,6 +1,6 @@
 'use client';
 
-import { PAGE_SIZE_OPTIONS } from '@/modules/billing/shared/constants';
+import { PAGE_SIZE_OPTIONS } from '@/modules/customers/billing/shared/constants';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 // ── Fully controlled — koi bhi internal state nahi ───────────────────────────
