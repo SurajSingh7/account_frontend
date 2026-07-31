@@ -1,5 +1,5 @@
 import { ROUTES } from "@/constants/routes";
-import { navCategories } from "./NavCategories";
+import { customerNavCategories } from "./CustomerNavCategories";
 import { purchaseNavCategories } from "./PurchaseNavCategories";
 
 export const MODULES = [
@@ -24,7 +24,7 @@ export const MODULE_COLORS = {
 };
 
 export const MODULE_NAV_CATEGORIES = {
-  customer: navCategories,
+  customer: customerNavCategories,
   purchase: purchaseNavCategories,
 };
 

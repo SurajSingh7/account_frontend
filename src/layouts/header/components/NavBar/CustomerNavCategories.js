@@ -11,7 +11,7 @@ import { API_ENDPOINTS } from "@/constants/api";
 const { billing } = ROUTES.customers;
 const { billing: billingApi } = API_ENDPOINTS.customers;
 
-export const navCategories = [
+export const customerNavCategories = [
 
   {
     category: "Reports",
