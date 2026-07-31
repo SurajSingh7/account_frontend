@@ -96,7 +96,7 @@ const OrderHistoryModal = () => {
               Billing · Order Record
             </p>
             <h2 className="text-[26px] font-semibold tracking-tight text-slate-900">
-              Order history
+              Order <span className="font-medium text-blue-500"> #{orderId} </span> history
             </h2>
           </div>
 
@@ -114,11 +114,10 @@ const OrderHistoryModal = () => {
               {/* Connector rail */}
               <div className="relative flex w-6 flex-none flex-col items-center">
                 <span
-                  className={`z-10 flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-semibold ring-4 ring-white ${
-                    item.isCurrent
-                      ? "bg-amber-500 text-white"
-                      : "bg-slate-200 text-slate-600"
-                  }`}
+                  className={`z-10 flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-semibold ring-4 ring-white ${item.isCurrent
+                    ? "bg-amber-500 text-white"
+                    : "bg-slate-200 text-slate-600"
+                    }`}
                 >
                   {item.versionNumber}
                 </span>
@@ -127,11 +126,10 @@ const OrderHistoryModal = () => {
 
               {/* Card */}
               <div
-                className={`min-w-0 flex-1 rounded-xl border bg-white transition-shadow ${
-                  item.isCurrent
-                    ? "border-amber-200 shadow-[0_2px_16px_-4px_rgba(217,119,6,0.18)]"
-                    : "border-slate-200 shadow-sm hover:shadow-md"
-                }`}
+                className={`min-w-0 flex-1 rounded-xl border bg-white transition-shadow ${item.isCurrent
+                  ? "border-amber-200 shadow-[0_2px_16px_-4px_rgba(217,119,6,0.18)]"
+                  : "border-slate-200 shadow-sm hover:shadow-md"
+                  }`}
               >
                 <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
                   <div>
@@ -159,6 +157,7 @@ const OrderHistoryModal = () => {
                   {item.revisionDate && (
                     <Info label="Revision date" value={formatDate(item.revisionDate)} />
                   )}
+                  <Info label="remarks" value={`${item?.remarks}`} emphasize />
                 </div>
               </div>
             </div>
@@ -169,19 +168,30 @@ const OrderHistoryModal = () => {
   );
 };
 
-const Info = ({ label, value, emphasize }) => (
-  <div className="min-w-0">
-    <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-      {label}
-    </p>
-    <p
-      className={`truncate text-[15px] text-slate-800 ${
-        emphasize ? "font-serif font-semibold text-slate-900" : "font-medium"
-      }`}
-    >
-      {value}
-    </p>
-  </div>
-);
+const Info = ({ label, value, emphasize, maxLength = 30 }) => {
+  const shouldTruncate = value?.length > maxLength;
+  const displayValue = shouldTruncate ? `${value?.slice(0, maxLength)}...` : value;
+
+  return (
+    <div className="min-w-0">
+      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+        {label}
+      </p>
+      <div className="relative group">
+        <p
+          className={`truncate text-[15px] text-slate-800 ${emphasize ? "font-serif font-semibold text-slate-900" : "font-medium"
+            }`}
+        >
+          {displayValue || '-'}
+        </p>
+        {shouldTruncate && (
+          <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200 absolute z-50 left-0 top-full mt-1 p-3 bg-gray-900 text-white text-sm rounded-lg shadow-xl max-w-xs whitespace-normal wrap-break-word pointer-events-none">
+            {value}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export default OrderHistoryModal;

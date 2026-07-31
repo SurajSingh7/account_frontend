@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { Edit, Eye, History } from 'lucide-react';
+import { Edit, Eye, History, PlusCircle } from 'lucide-react';
 import { formatDateDisplay, truncateWithMore } from '../../shared/buildListParams/utils';
 import { usePathname, useRouter } from 'next/navigation';
 import EditPcdModal from '../modal/EditPcdModal';
 import { usePermissions } from '@/context/PermissionContext';
-import { ROUTES } from '@/constants/routes';
-
+import AdditionalCompanyNameModal from '../modal/AdditionalCompanyNameModal';
 
 // ─── Badge ────────────────────────────────────────────────────────────────────
 const Badge = ({ children, color }) => {
@@ -28,7 +27,7 @@ const Badge = ({ children, color }) => {
 
 // ─── OrderCard ────────────────────────────────────────────────────────────────
 const OrderCard = ({ order, onRefetch }) => {
-const pathname = usePathname();
+  const pathname = usePathname();
 
   const { userData } = usePermissions();
   const isAdmin = userData?.role === 'Admin';
@@ -36,6 +35,7 @@ const pathname = usePathname();
   const router = useRouter();
   const [showEndPopup, setShowEndPopup] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [additionalCompanyNameModalOpen, setAdditionalCompanyNameModalOpen] = useState(false);
 
   // ── Safely resolve fields from the NEW data shape ──────────────────────────
   const billingItems = order.billingItems || [];
@@ -55,21 +55,21 @@ const pathname = usePathname();
   const baseRate = Number(order.offeredPrice?.rate) || 0;
 
   const companyLabel = order.company?.name || '';
+  const additionalCompanyLabel = order?.additionalCompanyName || '';
   const entityLabel = order.entity?.alias || order.entity?.name || '';
   const productLabel = order.product?.code || order.product?.name || '';
-  const bsoLabel = order.bso?.name || '';
   const orderTypeLabel = order.orderType || '';
-  const isActive = order.isActive !== undefined ? order.isActive : false;
   const pcdDate = order.pcdDate;
   const operationalDate = order.operationalDate;
-  const terminateDate = order.terminationDate ;
+  const terminateDate = order.terminationDate;
 
   // ── Terminated alert state: has terminateDate AND isActive is false ────────
   // const isTerminated = !!terminateDate && !isActive;
 
-    const isTerminated = !!terminateDate ;
+  const isTerminated = !!terminateDate;
 
-  const showTerminateAlert = pathname.includes('/customers/billing/account/terminate-orders') && isTerminated;
+  const showTerminateAlert = pathname.includes('/billing/account/terminate-orders') && isTerminated;
+  const showAdditionalCompanyModal = pathname.includes('/billing/account/pcd-closure')
 
   // ── Detect GST type per billing item ──────────────────────────────────────
   const circuits = order.summary?.circuits || [];
@@ -212,13 +212,13 @@ const pathname = usePathname();
                   {order.orderId}
                 </span>
 
-
                 {orderTypeLabel && <Badge color="blue">{orderTypeLabel}</Badge>}
                 {entityLabel && <Badge color="orange">{entityLabel}</Badge>}
                 <span className="text-gray-400">•</span>
                 <span className="text-gray-600 font-semibold text-base">Company:</span>
                 <span className="px-2.5 py-0.5 bg-blue-100 text-blue-900 rounded-lg text-base font-semibold border border-blue-200">
                   {truncateWithMore(companyLabel, 50, "...more", setShowEndPopup)}
+                  {additionalCompanyLabel && ` (${truncateWithMore(additionalCompanyLabel, 50, "...more", setShowEndPopup)})`}
                 </span>
               </h3>
 
@@ -239,22 +239,37 @@ const pathname = usePathname();
 
           <div className="flex flex-col items-end gap-2 text-right">
             <div className="flex gap-2 items-center flex-wrap justify-end">
+              {order?.hasRateRevision &&
+                <span className="hidden sm:block text-xs font-semibold text-orange-700 bg-orange-50 border border-orange-200 px-3 py-1 rounded-lg">
+                  Rate Revision : {formatDateDisplay(order?.revisionDate)}
+                </span>
+              }
               <span className="text-sm text-green-700 font-semibold bg-green-50 px-3 py-1.5 rounded-lg border border-green-200">
                 PCD Effective: {pcdDate ? formatDateDisplay(pcdDate) : '-'}
               </span>
 
-              <span className="text-sm text-orange-700 font-semibold bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-200">
+              <span className="text-sm text-blue-700 font-semibold bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
                 PCD Closing: {operationalDate ? formatDateDisplay(operationalDate) : '-'}
               </span>
 
               {/* View button */}
-              <button onClick={() => router.push(`${ROUTES.customers.billing.pcdClosure.view}?pcdId=${order._id}`)}>
+              <button onClick={() => router.push(`/billing/account/pcd-closure/view?pcdId=${order._id}`)}>
                 <Eye className='text-blue-600 cursor-pointer' />
               </button>
 
-              <button onClick={() => router.push(`${ROUTES.customers.billing.pcdClosure.orderHistory}?orderId=${order.orderId}`)}>
+              <button onClick={() => router.push(`/billing/account/pcd-closure/order-history?orderId=${order.orderId}`)}>
                 <History className="text-gray-600 cursor-pointer" />
               </button>
+
+              {showAdditionalCompanyModal &&
+                <button
+                  className="p-2 hover:bg-blue-50 rounded-lg"
+                  title="Add Additional Company name"
+                  onClick={() => setAdditionalCompanyNameModalOpen(true)}
+                >
+                  <PlusCircle className="w-5 h-5 text-yellow-600 cursor-pointer" />
+                </button>
+              }
 
               {isAdmin && (
                 <>
@@ -263,15 +278,15 @@ const pathname = usePathname();
                     title="Edit"
                     onClick={() => setEditModalOpen(true)}
                   >
-                    <Edit className="w-5 h-5 text-red-600" />
+                    <Edit className="w-5 h-5 text-red-600 cursor-pointer" />
                   </button>
 
                   <button
                     onClick={() =>
-                      router.push(`${ROUTES.customers.billing.pcdClosure.generateBill}?pcdId=${order._id}`)
+                      router.push(`/billing/account/pcd-closure/generate-bill?pcdId=${order._id}`)
                     }
                   >
-                    <div className='bg-black text-amber-50 font-bold px-1.5 text-center rounded-full'>
+                    <div className='bg-black text-amber-50 font-bold px-1.5 text-center rounded-full cursor-pointer'>
                       G
                     </div>
                   </button>
@@ -358,6 +373,13 @@ const pathname = usePathname();
       <EditPcdModal
         isOpen={editModalOpen}
         onClose={() => setEditModalOpen(false)}
+        order={order}
+        onSuccess={onRefetch}
+      />
+
+      <AdditionalCompanyNameModal
+        isOpen={additionalCompanyNameModalOpen}
+        onClose={() => setAdditionalCompanyNameModalOpen(false)}
         order={order}
         onSuccess={onRefetch}
       />
