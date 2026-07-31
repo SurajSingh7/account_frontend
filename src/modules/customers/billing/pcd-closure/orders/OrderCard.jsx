@@ -4,7 +4,7 @@ import { formatDateDisplay, truncateWithMore } from '../../shared/buildListParam
 import { usePathname, useRouter } from 'next/navigation';
 import EditPcdModal from '../modal/EditPcdModal';
 import { usePermissions } from '@/context/PermissionContext';
-import AdditionalCompnayNameModal from '../modal/AdditionalCompnayNameModal';
+import AdditionalCompanyNameModal from '../modal/AdditionalCompanyNameModal';
 
 // ─── Badge ────────────────────────────────────────────────────────────────────
 const Badge = ({ children, color }) => {
@@ -377,7 +377,7 @@ const OrderCard = ({ order, onRefetch }) => {
         onSuccess={onRefetch}
       />
 
-      <AdditionalCompnayNameModal
+      <AdditionalCompanyNameModal
         isOpen={additionalCompanyNameModalOpen}
         onClose={() => setAdditionalCompanyNameModalOpen(false)}
         order={order}
