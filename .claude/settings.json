@@ -19,7 +19,10 @@
       "Bash(rm -rf \"src/app/purchase/account/pcd-closure\")",
       "Bash(echo \"app rm exit=$?\")",
       "Bash(rm -rf \"src/modules/purchase/pcd-closure\")",
-      "Bash(echo \"module rm exit=$?\")"
+      "Bash(echo \"module rm exit=$?\")",
+      "Bash(git log *)",
+      "Bash(grep -c *)",
+      "Bash(git ls-tree *)"
     ]
   }
 }

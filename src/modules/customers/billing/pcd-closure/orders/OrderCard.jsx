@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Edit, Eye } from 'lucide-react';
+import { Edit, Eye, History } from 'lucide-react';
 import { formatDateDisplay, truncateWithMore } from '../../shared/buildListParams/utils';
 import { usePathname, useRouter } from 'next/navigation';
 import EditPcdModal from '../modal/EditPcdModal';
@@ -249,7 +249,11 @@ const pathname = usePathname();
 
               {/* View button */}
               <button onClick={() => router.push(`${ROUTES.customers.billing.pcdClosure.view}?pcdId=${order._id}`)}>
-                <Eye className='text-blue-600' />
+                <Eye className='text-blue-600 cursor-pointer' />
+              </button>
+
+              <button onClick={() => router.push(`${ROUTES.customers.billing.pcdClosure.orderHistory}?orderId=${order.orderId}`)}>
+                <History className="text-gray-600 cursor-pointer" />
               </button>
 
               {isAdmin && (

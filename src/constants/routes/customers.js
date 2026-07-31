@@ -10,6 +10,7 @@ export const CUSTOMER_ROUTES = {
       root: `${BILLING_BASE}/account/pcd-closure`,
       view: `${BILLING_BASE}/account/pcd-closure/view`,
       generateBill: `${BILLING_BASE}/account/pcd-closure/generate-bill`,
+      orderHistory: `${BILLING_BASE}/account/pcd-closure/order-history`,
     },
     terminateOrders: `${BILLING_BASE}/account/terminate-orders`,
     orderLinks: `${BILLING_BASE}/account/order-links`,

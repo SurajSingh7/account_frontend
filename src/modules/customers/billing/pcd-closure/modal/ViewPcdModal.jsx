@@ -26,8 +26,8 @@ const Detail = ({ label, value }) => (
 
 const Badge = ({ active }) => (
   <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border ${active
-      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-      : 'bg-red-50 text-red-600 border-red-200'
+    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    : 'bg-red-50 text-red-600 border-red-200'
     }`}>
     <span className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-emerald-500' : 'bg-red-400'}`} />
     {active ? 'Active' : 'Inactive'}

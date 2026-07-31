@@ -28,7 +28,7 @@ const Badge = ({ children, color }) => {
 
 // ─── OrderCard ────────────────────────────────────────────────────────────────
 const OrderCard = ({ order, onRefetch }) => {
-const pathname = usePathname();
+  const pathname = usePathname();
 
   const { userData } = usePermissions();
   const isAdmin = userData?.role === 'Admin';
@@ -62,12 +62,12 @@ const pathname = usePathname();
   const isActive = order.isActive !== undefined ? order.isActive : false;
   const locDate = order.locDate;
   const operationalDate = order.operationalDate;
-  const terminateDate = order.terminationDate ;
+  const terminateDate = order.terminationDate;
 
   // ── Terminated alert state: has terminateDate AND isActive is false ────────
   // const isTerminated = !!terminateDate && !isActive;
 
-    const isTerminated = !!terminateDate ;
+  const isTerminated = !!terminateDate;
 
   const showTerminateAlert = pathname.includes(ROUTES.purchase.terminateOrders) && isTerminated;
 
@@ -239,6 +239,11 @@ const pathname = usePathname();
 
           <div className="flex flex-col items-end gap-2 text-right">
             <div className="flex gap-2 items-center flex-wrap justify-end">
+              {order?.hasRateRevision &&
+                <span className="hidden sm:block text-xs font-semibold text-orange-700 bg-orange-50 border border-orange-200 px-3 py-1 rounded-lg">
+                  Rate Revision : {formatDateDisplay(order?.revisionDate)}
+                </span>
+              }
               <span className="text-sm text-green-700 font-semibold bg-green-50 px-3 py-1.5 rounded-lg border border-green-200">
                 LOC Effective: {locDate ? formatDateDisplay(locDate) : '-'}
               </span>
@@ -259,7 +264,7 @@ const pathname = usePathname();
                     title="Edit"
                     onClick={() => setEditModalOpen(true)}
                   >
-                    <Edit className="w-5 h-5 text-red-600" />
+                    <Edit className="w-5 h-5 text-red-600 cursor-pointer" />
                   </button>
 
                   <button
@@ -267,7 +272,7 @@ const pathname = usePathname();
                       router.push(`${ROUTES.purchase.locClosure.generateBill}?locId=${order._id}`)
                     }
                   >
-                    <div className='bg-black text-amber-50 font-bold px-1.5 text-center rounded-full'>
+                    <div className='bg-black text-amber-50 font-bold px-1.5 text-center rounded-full cursor-pointer'>
                       G
                     </div>
                   </button>
