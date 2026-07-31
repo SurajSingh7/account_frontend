@@ -2,6 +2,9 @@ export const PURCHASE_API = {
   companyGroup: {
     all: '/company/group/all',
   },
+  entity: {
+    all: '/config/parent/internal-company/all',
+  },
   config: {
     indianStates: '/config/indian-states/',
   },

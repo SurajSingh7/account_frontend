@@ -245,12 +245,10 @@ const OrderCard = ({ order, onRefetch }) => {
                 </span>
               }
               <span className="text-sm text-green-700 font-semibold bg-green-50 px-3 py-1.5 rounded-lg border border-green-200">
-                LOC Effective: {locDate ? formatDateDisplay(locDate) : '-'}
+                LOC Date: {locDate ? formatDateDisplay(locDate) : '-'}
               </span>
 
-              <span className="text-sm text-orange-700 font-semibold bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-200">
-                LOC Closing: {operationalDate ? formatDateDisplay(operationalDate) : '-'}
-              </span>
+              {bsoLabel && <Badge color="teal">{bsoLabel}</Badge>}
 
               {/* View button */}
               <button onClick={() => router.push(`${ROUTES.purchase.locClosure.view}?locId=${order._id}`)}>

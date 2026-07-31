@@ -12,7 +12,7 @@
  * derived automatically from whichever period keys are present.
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Search, Filter, X } from 'lucide-react';
 
 import SearchableDropdown  from './SearchableDropdown';
@@ -21,7 +21,7 @@ import OrderTypeSelect     from './dropdowns/OrderTypeSelect';
 import ProductSelect       from './dropdowns/ProductSelect';
 import EntitySelect        from './dropdowns/EntitySelect';
 
-import { useStates, useBsos, useCompanies } from '../helpers/hooks/useFilterOptions';
+import { useStates, useBsos, useEntities } from '../helpers/hooks/useFilterOptions';
 import { ALL_FIELDS }                        from './filterFieldRegistry';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -133,12 +133,11 @@ const FIELD_RENDERERS = {
   companyGroupId: (ctx) => (
     <div key="companyGroupId" className="flex-1 min-w-[200px]">
       <SearchableDropdown
-        options={ctx.companyOptions}
+        options={ctx.entityOptions}
         value={ctx.filters.companyGroupId}
         onChange={v => ctx.onChange({ companyGroupId: v, page: 1 })}
         placeholder="Filter by Company"
-        onSearch={ctx.setCompanySearch}
-        loading={ctx.companiesLoading}
+        loading={ctx.entitiesLoading}
       />
     </div>
   ),
@@ -155,10 +154,9 @@ const FilterBar = ({
   fields = ALL_FIELDS,
 }) => {
   // Hooks — always called unconditionally
-  const { states }                               = useStates();
-  const { bsos, loading: bsosLoading }           = useBsos();
-  const [companySearch, setCompanySearch]         = useState('');
-  const { companies, loading: companiesLoading }  = useCompanies(companySearch);
+  const { states }                     = useStates();
+  const { bsos, loading: bsosLoading } = useBsos();
+  const { entities, loading: entitiesLoading } = useEntities();
 
   const handleOrderType = useCallback((orderType) => onChange({ orderType, page: 1 }), [onChange]);
   const handleProductId = useCallback((productId) => onChange({ productId, page: 1 }), [onChange]);
@@ -168,20 +166,20 @@ const FilterBar = ({
     () => bsos.map(b => ({ value: b._id, label: b.name, sublabel: b.completeCompanyName })),
     [bsos],
   );
-  const companyOptions = useMemo(
-    () => companies.map(c => ({
-      value: c?._id,
-      label: truncateLabel(c.companyName, 15),
-      sublabel: c.panNumber,
+  const entityOptions = useMemo(
+    () => entities.map(e => ({
+      value: e?._id ?? e?.entityId,
+      label: truncateLabel(e.name ?? e.entityName ?? e.companyName, 15),
+      sublabel: e.alias,
     })),
-    [companies],
+    [entities],
   );
 
   const ctx = {
     filters, onChange, apiSummary, totalCount,
     states,
     bsoOptions, bsosLoading,
-    companyOptions, companiesLoading, setCompanySearch,
+    entityOptions, entitiesLoading,
     handleOrderType, handleProductId, handleEntityId,
   };
 

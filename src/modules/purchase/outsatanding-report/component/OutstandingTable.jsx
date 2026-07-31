@@ -137,9 +137,9 @@ const OrderRow = ({ item, index, showLsi }) => {
                 {item.orderType || '—'}
             </td>
 
-            {/* Entity */}
+            {/* BSO */}
             <td className="px-4 py-3 text-sm font-semibold text-slate-700">
-                {item.entity?.alias || '—'}
+                {item.bso?.name || '—'}
             </td>
 
             {/* Product */}
@@ -233,7 +233,7 @@ const OutstandingTable = ({ data, onRefetch, showLsi }) => {
         { label: 'End B', align: 'left' },
         { label: 'Company', align: 'left' },
         { label: 'Order Type', align: 'left' },
-        { label: 'Entity', align: 'left' },
+        { label: 'BSO', align: 'left' },
         { label: 'Product', align: 'left' },
         { label: 'State', align: 'left' },
         { label: 'Balance', align: 'right' },

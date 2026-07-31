@@ -4,6 +4,7 @@ import { API_ENDPOINTS } from "@/constants/api";
 
 const { purchase } = ROUTES;
 const purchaseApi = API_ENDPOINTS.purchase;
+const { billing: billingApi } = API_ENDPOINTS.customers;
 
 // NOTE: Purchase module has no backend permission entries yet, so these items
 // are only ever visible to admin (Navbar bypasses permission filtering for admin).
@@ -16,21 +17,24 @@ export const purchaseNavCategories = [
         name: "Billing Sell Report",
         path: purchase.billingReport,
         moduleName: "Purchase Billing Sell report",
-        url: purchaseApi.report.sell,
+        // url: purchaseApi.report.sell,
+         url: billingApi.report.sell,
         action: ["READ"],
       },
       {
         name: "Outstanding Report",
         path: purchase.outstandingReport,
         moduleName: "Purchase Sale outstanding",
-        url: purchaseApi.report.outstanding,
+        // url: purchaseApi.report.outstanding,
+           url: billingApi.report.outstanding,
         action: ["READ"],
       },
       {
         name: "Receipt Report",
         path: purchase.receiptReport,
         moduleName: "Purchase Receipt report",
-        url: purchaseApi.report.receipt,
+        // url: purchaseApi.report.receipt,
+          url: billingApi.report.receipt,
         action: ["READ"],
       },
     ],
@@ -42,14 +46,16 @@ export const purchaseNavCategories = [
         name: "Loc Closure",
         path: purchase.locClosure.root,
         moduleName: "Purchase LOC Ready order module",
-        url: purchaseApi.readyOrder.all,
+        // url: purchaseApi.readyOrder.all,
+          url: billingApi.readyOrder.all,
         action: ["READ"],
       },
       {
         name: "Terminate Orders",
         path: purchase.terminateOrders,
         moduleName: "Purchase Terminate Orders",
-        url: purchaseApi.readyOrder.all,
+        // url: purchaseApi.readyOrder.all,
+         url: billingApi.readyOrder.all,
         action: ["READ"],
       },
       // {
@@ -68,14 +74,16 @@ export const purchaseNavCategories = [
         name: "Bulk Payment",
         path: purchase.bulkPayment,
         moduleName: "Purchase Bulk Payment",
-        url: "/purchase/account/bulk-payment",
+        // url: "/purchase/account/bulk-payment",
+         url: "/billing/account/bulk-payment",
         action: ["READ"],
       },
       {
         name: "Bulk Transactions",
         path: purchase.bulkTransactions,
         moduleName: "Purchase Bulk Transactions",
-        url: "/purchase/account/bulk-transactions",
+        // url: "/purchase/account/bulk-transactions",
+          url: "/billing/account/bulk-transactions",
         action: ["READ"],
       },
     ],
@@ -84,16 +92,16 @@ export const purchaseNavCategories = [
     category: "Group Reports",
     items: [
       {
-        name: "Outstanding Group Report",
-        path: purchase.outstandingGroupReport,
+        name: "Billing Group Report",
+        path: purchase.billingGroupReport,
         moduleName: "",
         url: "/admin",
         action: ["CREATE", "UPDATE", "READ"],
         exceptions: ["canViewAll"],
       },
-      {
-        name: "Billing Group Report",
-        path: purchase.billingGroupReport,
+        {
+        name: "Outstanding Group Report",
+        path: purchase.outstandingGroupReport,
         moduleName: "",
         url: "/admin",
         action: ["CREATE", "UPDATE", "READ"],
@@ -123,7 +131,7 @@ export const purchaseNavCategories = [
   // },
 
   // DEV ONLY MENUS -- mirrors the SHOW_DEV-gated Collection/Generator entries in
-  // Customer's NavCategories.js (the legacy "AccountD"/"Test Page" demo items are
+  // Customer's CustomerNavCategories.js (the legacy "AccountD"/"Test Page" demo items are
   // intentionally not mirrored -- they have no wired-up Purchase pages).
   ...(SHOW_DEV
     ? [

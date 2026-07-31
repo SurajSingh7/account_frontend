@@ -226,12 +226,12 @@ const ViewLocModal = () => {
           </div>
           <div className="flex items-center gap-3">
             <span className="hidden sm:block text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-3 py-1 rounded-lg">
-              LOC Effective: {formatDateDisplay(order.locDate)}
+              LOC Date: {formatDateDisplay(order.locDate)}
             </span>
 
-            <span className="hidden sm:block text-xs font-semibold text-orange-700 bg-orange-50 border border-orange-200 px-3 py-1 rounded-lg">
+            {/* <span className="hidden sm:block text-xs font-semibold text-orange-700 bg-orange-50 border border-orange-200 px-3 py-1 rounded-lg">
               LOC Closing: {formatDateDisplay(order.operationalDate)}
-            </span>
+            </span> */}
 
             <Badge active={order.isActive} />
           </div>
