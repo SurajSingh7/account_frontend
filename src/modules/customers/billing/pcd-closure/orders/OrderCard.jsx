@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import EditPcdModal from '../modal/EditPcdModal';
 import { usePermissions } from '@/context/PermissionContext';
 import AdditionalCompanyNameModal from '../modal/AdditionalCompanyNameModal';
+import { ROUTES } from '@/constants/routes';
 
 // ─── Badge ────────────────────────────────────────────────────────────────────
 const Badge = ({ children, color }) => {
@@ -253,11 +254,11 @@ const OrderCard = ({ order, onRefetch }) => {
               </span>
 
               {/* View button */}
-              <button onClick={() => router.push(`/billing/account/pcd-closure/view?pcdId=${order._id}`)}>
+              <button onClick={() => router.push(`${ROUTES.customers.billing.pcdClosure.view}?pcdId=${order._id}`)}>
                 <Eye className='text-blue-600 cursor-pointer' />
               </button>
 
-              <button onClick={() => router.push(`/billing/account/pcd-closure/order-history?orderId=${order.orderId}`)}>
+              <button onClick={() => router.push(`${ROUTES.customers.billing.pcdClosure.orderHistory}?orderId=${order.orderId}`)}>
                 <History className="text-gray-600 cursor-pointer" />
               </button>
 
@@ -283,7 +284,7 @@ const OrderCard = ({ order, onRefetch }) => {
 
                   <button
                     onClick={() =>
-                      router.push(`/billing/account/pcd-closure/generate-bill?pcdId=${order._id}`)
+                      router.push(`${ROUTES.customers.billing.pcdClosure.generateBill}?pcdId=${order._id}`)
                     }
                   >
                     <div className='bg-black text-amber-50 font-bold px-1.5 text-center rounded-full cursor-pointer'>
