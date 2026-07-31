@@ -84,16 +84,16 @@ export const purchaseNavCategories = [
     category: "Group Reports",
     items: [
       {
-        name: "Outstanding Group Report",
-        path: purchase.outstandingGroupReport,
+        name: "Billing Group Report",
+        path: purchase.billingGroupReport,
         moduleName: "",
         url: "/admin",
         action: ["CREATE", "UPDATE", "READ"],
         exceptions: ["canViewAll"],
       },
-      {
-        name: "Billing Group Report",
-        path: purchase.billingGroupReport,
+        {
+        name: "Outstanding Group Report",
+        path: purchase.outstandingGroupReport,
         moduleName: "",
         url: "/admin",
         action: ["CREATE", "UPDATE", "READ"],

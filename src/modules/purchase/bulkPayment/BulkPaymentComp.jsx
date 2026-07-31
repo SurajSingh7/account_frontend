@@ -71,13 +71,13 @@ const CompanyGroupDropdown = ({ value, onChange }) => {
   const fetchGroups = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BACKEND_URL}${API_ENDPOINTS.purchase.companyGroup.all}`, {
+      const res = await fetch(`${API_BACKEND_URL}${API_ENDPOINTS.purchase.entity.all}`, {
         credentials: 'include',
       });
       const json = await res.json();
       if (json.success) setGroups(json.data || []);
     } catch {
-      toast.error('Failed to load company groups');
+      toast.error('Failed to load companies');
     } finally {
       setLoading(false);
     }
@@ -95,13 +95,16 @@ const CompanyGroupDropdown = ({ value, onChange }) => {
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
+  const getLabel = (g) => g.name ?? g.entityName ?? g.companyName ?? '';
+  const getId = (g) => g?._id ?? g?.entityId;
+
   const filtered = groups.filter(
     (g) =>
-      (g.name || '').toLowerCase().includes(search.toLowerCase()) ||
-      (g.companyName || '').toLowerCase().includes(search.toLowerCase())
+      getLabel(g).toLowerCase().includes(search.toLowerCase()) ||
+      (g.alias || '').toLowerCase().includes(search.toLowerCase())
   );
 
-  const selected = groups.find((g) => g._id === value);
+  const selected = groups.find((g) => getId(g) === value);
 
   return (
     <div ref={ref} className="relative">
@@ -115,7 +118,7 @@ const CompanyGroupDropdown = ({ value, onChange }) => {
             <Building2 className="h-3.5 w-3.5 text-violet-600" />
           </span>
           <span className={selected ? 'font-semibold text-gray-800' : 'text-gray-400'}>
-            {selected ? selected.name : 'Select company group...'}
+            {selected ? getLabel(selected) : 'Select company...'}
           </span>
         </span>
         <ChevronDown
@@ -147,33 +150,30 @@ const CompanyGroupDropdown = ({ value, onChange }) => {
             ) : filtered.length === 0 ? (
               <div className="py-8 text-center text-sm text-gray-400">No results found</div>
             ) : (
-              filtered.map((g) => (
-                <button
-                  key={g._id}
-                  type="button"
-                  onClick={() => {
-                    onChange(g._id);
-                    setOpen(false);
-                    setSearch('');
-                  }}
-                  className={`flex w-full items-center justify-between border-b border-gray-50 px-4 py-4 text-left transition-colors last:border-0 hover:bg-violet-50/60 ${
-                    value === g._id ? 'bg-violet-50' : ''
-                  }`}
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">{g.name}</p>
-                    <p className="mt-0.5 text-xs text-gray-400">{g.companyName}</p>
-                  </div>
+              filtered.map((g) => {
+                const id = getId(g);
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => {
+                      onChange(id);
+                      setOpen(false);
+                      setSearch('');
+                    }}
+                    className={`flex w-full items-center justify-between border-b border-gray-50 px-4 py-4 text-left transition-colors last:border-0 hover:bg-violet-50/60 ${
+                      value === id ? 'bg-violet-50' : ''
+                    }`}
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800">{getLabel(g)}</p>
+                      {g.alias && <p className="mt-0.5 text-xs text-gray-400">{g.alias}</p>}
+                    </div>
 
-                  {value === g._id ? (
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-violet-500" />
-                  ) : (
-                    <span className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-bold text-gray-500">
-                      {g.panNumber?.slice(-4)}
-                    </span>
-                  )}
-                </button>
-              ))
+                    {value === id && <CheckCircle2 className="h-4 w-4 shrink-0 text-violet-500" />}
+                  </button>
+                );
+              })
             )}
           </div>
         </div>

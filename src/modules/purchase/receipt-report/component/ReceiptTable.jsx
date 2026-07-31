@@ -123,9 +123,9 @@ const ReceiptRow = ({ item }) => {
           {item.orderType || '—'}
         </td>
 
-        {/* Entity */}
+        {/* BSO */}
         <td className="px-4 py-2.5 text-sm font-semibold text-slate-700">
-          {item.entity?.alias || '—'}
+          {item.bso?.name || '—'}
         </td>
 
         {/* Product */}
@@ -213,7 +213,7 @@ const ReceiptTable = ({ data }) => {
     { label: 'End B',         align: 'left'   },
     { label: 'Company',       align: 'left'   },
     { label: 'Order Type',    align: 'left'   },
-    { label: 'Entity',        align: 'left'   },
+    { label: 'BSO',           align: 'left'   },
     { label: 'Product',       align: 'left'   },
     { label: 'State',         align: 'left'   },
     { label: 'Split',         align: 'center' },

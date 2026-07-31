@@ -90,16 +90,16 @@ export const navCategories = [
     category: "Group Reports",
     items: [
       {
-        name: "Outstanding Group Report",
-        path: billing.outstandingGroupReport,
+        name: "Billing Group Report",
+        path: billing.billingGroupReport,
         moduleName: "",
         url: "/admin",
         action: ["CREATE", "UPDATE", "READ"],
         exceptions: ["canViewAll"],
       },
-      {
-        name: "Billing Group Report",
-        path: billing.billingGroupReport,
+       {
+        name: "Outstanding Group Report",
+        path: billing.outstandingGroupReport,
         moduleName: "",
         url: "/admin",
         action: ["CREATE", "UPDATE", "READ"],

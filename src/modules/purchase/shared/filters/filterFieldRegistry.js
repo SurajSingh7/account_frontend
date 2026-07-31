@@ -35,9 +35,11 @@ export const FILTER_REGISTRY = [
 // ─── Presets ──────────────────────────────────────────────────────────────────
 
 /** LOC Closure — all 3 period modes */
+// NOTE: 'entityId' intentionally omitted from all purchase presets below —
+// entity filter is hidden for now (not deleted, in case it's needed again).
 export const LOC_FIELDS = [
   'search', , 'orderType', 'productId',
-  'entityId', 'stateCode','companyGroupId',
+  'stateCode', 'bsoId', 'companyGroupId',
   'period', 'dateRange',
 ];
 export const OrderLinks_FIELDS = [
@@ -53,24 +55,24 @@ export const OrdersTerminate_FIELDS = [
 /** Billing — period + dateRange only, no monthRange */
 export const BILLING_FIELDS = [
   'search', , 'orderType', 'productId',
-  'entityId', 'stateCode','companyGroupId','active',
+  'stateCode', 'bsoId', 'companyGroupId', 'active',
   'period', 'monthRange',
 ];
 export const RECEIPT_FIELDS = [
   'search', , 'orderType', 'productId',
-  'entityId', 'stateCode','companyGroupId','active',
+  'stateCode', 'bsoId', 'companyGroupId', 'active',
   'period','monthRange',
 ];
 
 export const OUTSTANDING_FIELDS = [
  'search', , 'orderType', 'productId',
-  'entityId', 'stateCode','companyGroupId','active',
-  'period', 
+  'stateCode', 'bsoId', 'companyGroupId', 'active',
+  'period',
 ];
 export const GENERAL_FIELDS = [
-  'search', 'stateCode', 'orderType', 'productId',
-  'entityId', 'active', 'companyGroupId',
-  'period', 'dateRange', 
+  'search', 'stateCode', 'bsoId', 'orderType', 'productId',
+  'active', 'companyGroupId',
+  'period', 'dateRange',
 ];
 
                                                                                   
