@@ -117,18 +117,19 @@ export const purchaseNavCategories = [
       },
     ],
   },
-  // {
-  //   category: "Data Import",
-  //   items: [
-  //     {
-  //       name: "Upload Opening Excel",
-  //       path: purchase.uploadExcel,
-  //       moduleName: "Purchase Upload Excel",
-  //       url: "/purchase/account/upload-excel",
-  //       action: ["READ"],
-  //     },
-  //   ],
-  // },
+  {
+    category: "Data Import",
+    items: [
+      {
+        name: "Upload Opening Excel",
+        path: purchase.uploadExcel,
+        moduleName: "Purchase Upload Excel",
+        // url: "/purchase/account/upload-excel",
+         url: "/billing/account/upload-excel",
+        action: ["READ"],
+      },
+    ],
+  },
 
   // DEV ONLY MENUS -- mirrors the SHOW_DEV-gated Collection/Generator entries in
   // Customer's CustomerNavCategories.js (the legacy "AccountD"/"Test Page" demo items are

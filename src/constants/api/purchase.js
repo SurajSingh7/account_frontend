@@ -20,6 +20,7 @@ export const PURCHASE_API = {
     modify: '/billing/purchase/ledger/modify',
     moveProvisionToConfirm: '/billing/purchase/ledger/move-provision-to-confirm/',
     calculateCreditNoteAmount: '/billing/purchase/ledger/calculate-credit-note-amount',
+    calculateTdsRate: '/billing/purchase/ledger/calculate-tds-rate',
     bulk: {
       paymentPrev: '/billing/purchase/ledger/bulk/payment-prev',
       paymentSubmit: '/billing/purchase/ledger/bulk/payment-submit',

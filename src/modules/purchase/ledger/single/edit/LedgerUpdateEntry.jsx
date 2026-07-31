@@ -64,8 +64,9 @@ const TRANSACTION_TYPES = [
   },
 ];
 
-// Types shown in "Add New Entry" form pills — TDS_CONFIRMED excluded (created only via Move)
-const FORM_TRANSACTION_TYPES = TRANSACTION_TYPES.filter((t) => t.value !== 'TDS_CONFIRMED');
+// Types shown in "Add New Entry" form pills — TDS_PROVISION replaced by TDS_CONFIRMED
+// (amount is auto-fetched from the calculate-tds-rate API, not typed manually)
+const FORM_TRANSACTION_TYPES = TRANSACTION_TYPES.filter((t) => t.value !== 'TDS_PROVISION');
 
 const SUB_TYPES =[
   { value: 'MANUAL_ADJUSTMENT', label: 'Manual Adjustment' },
@@ -180,6 +181,23 @@ async function moveProvisionToConfirm({ monthlyBillingId, notes }) {
     throw new Error(e.message || `Move failed (${res.status})`);
   }
   return res.json();
+}
+
+async function fetchTdsConfirmAmount(monthlyBillingId) {
+  const res = await fetch(
+    `${API_BACKEND_URL}${API_ENDPOINTS.purchase.ledger.calculateTdsRate}/${monthlyBillingId}`,
+    { method: 'GET', headers: apiHeaders(), credentials: 'include' },
+  );
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.message || `TDS rate lookup failed (${res.status})`);
+  }
+  const json = await res.json();
+  const d = json?.data ?? json;
+  return {
+    amount: d?.tdsAmount ?? d?.amount ?? d?.tdsConfirmAmount ?? d?.totalAmount ?? null,
+    rate: d?.tdsRate ?? d?.rate ?? null,
+  };
 }
 
 async function fetchCreditNoteAmount({ startDate, endDate, monthlyBillingId }) {
@@ -433,7 +451,7 @@ function LedgerTable({ entries, isEditMode, monthlyBillingId, onRefresh, onEditE
 
 // ─── TransactionTypePills ─────────────────────────────────────────────────────
 // In edit mode: all types shown but non-selected ones are disabled (locked to current type)
-// In add mode: TDS_CONFIRMED excluded
+// In add mode: TDS_PROVISION excluded (TDS_CONFIRMED takes its place, amount auto-fetched)
 function TransactionTypePills({ selected, onChange, isEditMode }) {
   const typesToShow = isEditMode ? TRANSACTION_TYPES : FORM_TRANSACTION_TYPES;
 
@@ -567,6 +585,10 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
   const [cnLoading, setCnLoading] = useState(false);
   const debounceRef = useRef(null);
 
+  const [tdsData, setTdsData] = useState(null);
+  const [tdsError, setTdsError] = useState('');
+  const [tdsLoading, setTdsLoading] = useState(false);
+
   // ── Populate form when editingEntry changes ───────────────────────────────
   useEffect(() => {
     if (editingEntry) {
@@ -594,12 +616,16 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
       setSuccess('');
       setCnData(null);
       setCnError('');
+      setTdsData(null);
+      setTdsError('');
     } else {
       setForm((p) => ({ ...blankForm(), date: defaultDate }));
       setError('');
       setSuccess('');
       setCnData(null);
       setCnError('');
+      setTdsData(null);
+      setTdsError('');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingEntry, defaultDate]);
@@ -654,17 +680,53 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.transactionType, form.periodStart, form.periodEnd, monthlyBillingId]);
 
+  // ── TDS Confirm auto-fetch ─────────────────────────────────────────────────
+  useEffect(() => {
+    const isTdsConfirm = form.transactionType === 'TDS_CONFIRMED';
+    if (!isTdsConfirm || isEditing) {
+      setTdsData(null);
+      setTdsError('');
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      setTdsLoading(true);
+      setTdsError('');
+      setTdsData(null);
+      try {
+        const result = await fetchTdsConfirmAmount(monthlyBillingId);
+        if (cancelled) return;
+        setTdsData(result);
+        if (result.amount != null) {
+          setForm((p) => ({ ...p, basicAmount: String(result.amount) }));
+        }
+      } catch (err) {
+        if (cancelled) return;
+        setTdsError(err.message);
+        setForm((p) => ({ ...p, basicAmount: '' }));
+      } finally {
+        if (!cancelled) setTdsLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [form.transactionType, monthlyBillingId, isEditing]);
+
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
   const cfg = getTypeConfig(form.transactionType);
 
   const isMonthScoped = MONTH_SCOPED_TYPES.includes(form.transactionType);
   const isCreditNote = form.transactionType === 'CREDIT_NOTE';
+  const isTdsConfirm = form.transactionType === 'TDS_CONFIRMED';
   const dateAttrs = monthBounds ? { min: monthBounds.minDate, max: monthBounds.maxDate } : {};
 
   const handleTypeChange = (v) => {
     if (isEditing) return; // locked in edit mode
     setCnData(null);
     setCnError('');
+    setTdsData(null);
+    setTdsError('');
     setForm((p) => ({ ...p, transactionType: v, date: defaultDate, periodStart: '', periodEnd: '', basicAmount: '' }));
   };
 
@@ -851,6 +913,9 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
               {isCreditNote && cnLoading && (
                 <span className="normal-case font-normal text-cyan-400 ml-1">(fetching…)</span>
               )}
+              {isTdsConfirm && tdsLoading && (
+                <span className="normal-case font-normal text-violet-400 ml-1">(fetching…)</span>
+              )}
             </label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-semibold">₹</span>
@@ -866,8 +931,12 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
                 }}
                 placeholder="0.00"
                 required
-                readOnly={isCreditNote && cnData?.amount != null && !isEditing}
-                className={`${inp} pl-7 ${isCreditNote && cnData?.amount != null && !isEditing
+                readOnly={
+                  (isCreditNote && cnData?.amount != null && !isEditing) ||
+                  (isTdsConfirm && tdsData?.amount != null && !isEditing)
+                }
+                className={`${inp} pl-7 ${(isCreditNote && cnData?.amount != null && !isEditing) ||
+                  (isTdsConfirm && tdsData?.amount != null && !isEditing)
                   ? 'bg-cyan-50 cursor-not-allowed'
                   : ''
                   }`}
@@ -875,6 +944,14 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
             </div>
             {isCreditNote && cnData?.amount != null && !isEditing && (
               <p className="mt-1 text-[11px] text-cyan-500 font-semibold">✅ Auto-filled from period calculation</p>
+            )}
+            {isTdsConfirm && tdsData?.amount != null && !isEditing && (
+              <p className="mt-1 text-[11px] text-violet-500 font-semibold">
+                ✅ Auto-filled from TDS rate calculation{tdsData.rate != null ? ` (rate: ${tdsData.rate}%)` : ''}
+              </p>
+            )}
+            {isTdsConfirm && tdsError && !isEditing && (
+              <p className="mt-1 text-[11px] text-red-500 font-semibold">⚠️ {tdsError}</p>
             )}
           </div>
 

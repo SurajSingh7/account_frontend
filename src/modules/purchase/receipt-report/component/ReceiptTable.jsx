@@ -86,7 +86,6 @@ const ReceiptRow = ({ item }) => {
 
   const receivedAmt      = item.received      ?? 0
   const tdsConfirmAmt    = item.tdsConfirm    ?? 0
-  const tdsProvisionAmt  = item.tdsProvision  ?? 0
   const totalReceiptsAmt = item.totalReceipts ?? 0
 
   return (
@@ -161,13 +160,6 @@ const ReceiptRow = ({ item }) => {
           </span>
         </td>
 
-        {/* TDS Provision */}
-        <td className="px-4 py-2.5 text-right bg-orange-50/40">
-          <span className="text-base font-extrabold text-orange-600 tabular-nums">
-            ₹{fmt(tdsProvisionAmt)}
-          </span>
-        </td>
-
         {/* Total Receipts + Info */}
         <td className="px-4 py-2.5 text-right bg-green-50/60">
           <div className="flex items-center justify-end gap-2">
@@ -219,7 +211,6 @@ const ReceiptTable = ({ data }) => {
     { label: 'Split',         align: 'center' },
     { label: 'Received',      align: 'right'  },
     { label: 'TDS Confirm',   align: 'right'  },
-    { label: 'TDS Provision', align: 'right'  },
     { label: 'Total Receipts', align: 'right' },
   ]
 
