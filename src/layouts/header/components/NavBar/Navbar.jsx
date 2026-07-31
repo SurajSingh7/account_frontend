@@ -6,17 +6,18 @@ import { usePathname } from "next/navigation";
 import { ChevronDown, Menu, X } from "lucide-react";
 import { usePermissions } from "@/context/PermissionContext";
 import { useFilteredNav } from "./PermissionNavBuilder";
-import { navCategories } from "./NavCategories";
+import { MODULE_NAV_CATEGORIES, DEFAULT_MODULE } from "./modules";
 
-export const Navbar = () => {
+export const Navbar = ({ selectedModule = DEFAULT_MODULE }) => {
   const { permissions, userData } = usePermissions();
+  const activeNavCategories = MODULE_NAV_CATEGORIES[selectedModule] ?? MODULE_NAV_CATEGORIES[DEFAULT_MODULE];
 
   let filteredCategories;
 
   if ((userData?.role || "").toLowerCase() === "admin") {
-    filteredCategories = navCategories;
+    filteredCategories = activeNavCategories;
   } else {
-    filteredCategories = useFilteredNav(navCategories, permissions);
+    filteredCategories = useFilteredNav(activeNavCategories, permissions);
   }
 
 

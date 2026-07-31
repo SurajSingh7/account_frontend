@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" --max-time 3 http://localhost:5001/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" --max-time 3 http://localhost:8006/)",
+      "Bash(chromium-cli --help)",
+      "Bash(timeout 40 bash -c 'until curl -sf http://localhost:3000 -o /tmp/root.html; do sleep 1; done')",
+      "Read(//tmp/**)",
+      "Bash(jobs -l)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(mv \"src/app/purchase/account/pcd-closure\" \"src/app/purchase/account/loc-closure\")",
+      "Bash(mv \"src/modules/purchase/pcd-closure\" \"src/modules/purchase/loc-closure\")",
+      "Bash(mv \"src/modules/purchase/loc-closure/PcdClosureComp.jsx\" \"src/modules/purchase/loc-closure/LocClosureComp.jsx\")",
+      "Bash(mv \"src/modules/purchase/loc-closure/modal/EditPcdModal.jsx\" \"src/modules/purchase/loc-closure/modal/EditLocModal.jsx\")",
+      "Bash(mv \"src/modules/purchase/loc-closure/modal/ViewPcdModal.jsx\" \"src/modules/purchase/loc-closure/modal/ViewLocModal.jsx\")",
+      "Bash(cp -r \"src/app/purchase/account/pcd-closure\" \"src/app/purchase/account/loc-closure\")",
+      "Bash(cp -r \"src/modules/purchase/pcd-closure\" \"src/modules/purchase/loc-closure\")",
+      "Bash(rm -rf \"src/app/purchase/account/pcd-closure\")",
+      "Bash(echo \"app rm exit=$?\")",
+      "Bash(rm -rf \"src/modules/purchase/pcd-closure\")",
+      "Bash(echo \"module rm exit=$?\")",
+      "Bash(git log *)",
+      "Bash(grep -c *)",
+      "Bash(git ls-tree *)"
+    ]
+  }
+}

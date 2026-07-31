@@ -2,6 +2,8 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { API_BACKEND_URL, API_PORTAL_BACKEND_URL } from '@/config/getEnvVariables';
+import { API_ENDPOINTS } from '@/constants/api';
+import { ROUTES } from '@/constants/routes';
 
 const PermissionContext = createContext();
 
@@ -19,11 +21,11 @@ export const PermissionProvider = ({ children }) => {
 
       // --- Parallel fetch for both APIs ---
       const [authRes, permissionRes] = await Promise.all([
-        fetch(`${API_PORTAL_BACKEND_URL}/hrms/authdata`, {
+        fetch(`${API_PORTAL_BACKEND_URL}${API_ENDPOINTS.core.hrms.authData}`, {
           method: 'GET',
           credentials: 'include',
         }),
-        fetch(`${API_BACKEND_URL}/users/permissions`, {
+        fetch(`${API_BACKEND_URL}${API_ENDPOINTS.core.users.permissions}`, {
           method: 'GET',
           credentials: 'include',
         }),
@@ -31,7 +33,7 @@ export const PermissionProvider = ({ children }) => {
 
       // --- Handle unauthorized or forbidden ---
       if (authRes.status === 403 || permissionRes.status === 403) {
-        router.push('/rostertestingg/error/authorize/');
+        router.push(ROUTES.core.unauthorized);
         return;
       }
 
@@ -81,7 +83,7 @@ export const PermissionProvider = ({ children }) => {
       setError(err.message || 'Something went wrong');
 
       if (err.message.includes('401')) {
-        router.push('/');
+        router.push(ROUTES.core.home);
       }
     } finally {
       setLoading(false);
