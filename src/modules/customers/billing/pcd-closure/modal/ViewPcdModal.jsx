@@ -305,7 +305,16 @@ const ViewPcdModal = () => {
             </div>
           )}
         </SectionCard>
-
+        <SectionCard title={"Additional Company name / Partner "}>
+          <div className='text-center py-5'>
+            <p className="text-lg text-gray-700 font-medium">{order?.additionalCompanyName || "No Additional Company found"}</p>
+          </div>
+        </SectionCard>
+        <SectionCard title={"Remarks/Note"}>
+          <div className='text-center py-5'>
+            <p className="text-sm text-gray-700 bg-yellow-500 font-medium">{order?.remarks || "No remarks found"}</p>
+          </div>
+        </SectionCard>
       </div>
     </div>
   );
