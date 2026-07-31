@@ -573,6 +573,7 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
     subType: 'MANUAL_ADJUSTMENT',
     basicAmount: '',
     notes: '',
+    remarks: '',
   });
 
   const [form, setForm] = useState(blankForm());
@@ -611,6 +612,7 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
         subType: editingEntry.subType ?? 'MANUAL_ADJUSTMENT',
         basicAmount: String(editingEntry.basicAmount ?? editingEntry.amount ?? ''),
         notes: editingEntry.notes ?? '',
+        remarks: editingEntry.remarks ?? '',
       });
       setError('');
       setSuccess('');
@@ -745,6 +747,7 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
       date,
       subType: form.subType,
       ...(form.notes ? { notes: form.notes } : {}),
+      ...(form.remarks ? { remarks: form.remarks } : {}),
     };
     if (periodStart && periodEnd) payload.transactionPeriod = { start: periodStart, end: periodEnd };
     payload.basicAmount = Number(form.basicAmount);
@@ -754,6 +757,7 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
   const buildEditPayload = () => ({
     basicAmount: Number(form.basicAmount),
     notes: form.notes,
+    remarks: form.remarks,
     subType: form.subType,
     date: form.date,
     ...(form.periodStart && form.periodEnd
@@ -1003,6 +1007,20 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
               type="text"
               value={form.notes}
               onChange={(e) => set('notes', e.target.value)}
+              placeholder="Optional…"
+              className={inpNeutral}
+            />
+          </div>
+
+          {/* Remarks */}
+          <div>
+            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">
+              Remarks
+            </label>
+            <input
+              type="text"
+              value={form.remarks}
+              onChange={(e) => set('remarks', e.target.value)}
               placeholder="Optional…"
               className={inpNeutral}
             />
