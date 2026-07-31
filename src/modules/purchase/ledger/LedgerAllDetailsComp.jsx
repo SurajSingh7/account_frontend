@@ -7,8 +7,8 @@ import { API_ENDPOINTS } from '@/constants/api';
 
 const HIDDEN_COLUMNS_MAP = {
   bill:        ['runningOutstanding', 'outstandingAfterAdjustment', 'receiptAmount','actions','tdsConfirm','tdsProvision','received'],
-  recipt:      ['runningOutstanding','miscBill', 'outstandingAfterAdjustment', ,'actions','netBilling','days','period','basicBill','cgst','sgst','igst','basicGst'],
-  outstanding: [,'receiptAmount','netBilling'],
+  recipt:      ['runningOutstanding','miscBill', 'outstandingAfterAdjustment', ,'actions','netBilling','days','period','basicBill','cgst','sgst','igst','basicGst','tdsProvision'],
+  outstanding: [,'receiptAmount','netBilling','tdsProvision'],
 };
 
 const LedgerAllDetailsComp = () => {

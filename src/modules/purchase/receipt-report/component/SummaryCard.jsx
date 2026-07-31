@@ -1,5 +1,5 @@
 'use client'
-import { Hash, TrendingUp, FileX, CheckCircle, Clock, Receipt } from 'lucide-react'
+import { Hash, TrendingUp, FileX, CheckCircle, Receipt } from 'lucide-react'
 
 const SummaryCard = ({ summary }) => {
   const fmt = (n) =>
@@ -55,17 +55,6 @@ const SummaryCard = ({ summary }) => {
       iconClr: 'text-indigo-600',
       textClr: 'text-indigo-600',
       lblClr:  'text-indigo-400',
-    },
-    {
-      label:   'TDS Provision',
-      value:   summary?.tdsProvision ?? 0,          // was: totalTdsProvision
-      icon:    Clock,
-      border:  'border-orange-100',
-      bg:      'from-orange-50/80',
-      iconBg:  'bg-orange-100',
-      iconClr: 'text-orange-500',
-      textClr: 'text-orange-500',
-      lblClr:  'text-orange-400',
     },
     {
       label:   'Total Receipts',
