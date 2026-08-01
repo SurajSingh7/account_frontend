@@ -134,6 +134,12 @@ function extractSummary(raw) {
   return null;
 }
 
+function extractRemarks(raw) {
+  if (!raw) return '';
+  const d = raw.data ?? raw;
+  return d?.notes ?? '';
+}
+
 // ─── API ──────────────────────────────────────────────────────────────────────
 const apiHeaders = () => ({ 'Content-Type': 'application/json' });
 
@@ -166,6 +172,30 @@ async function putLedgerEntry(id, payload) {
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
     throw new Error(e.message || `Update failed (${res.status})`);
+  }
+  return res.json();
+}
+
+async function fetchMonthlyDetail(billId) {
+  const res = await fetch(
+    `${API_BACKEND_URL}${API_ENDPOINTS.customers.billing.monthly.detail}/${billId}`,
+    { method: 'GET', headers: apiHeaders(), credentials: 'include' },
+  );
+  if (!res.ok) throw new Error(`Failed to load (${res.status})`);
+  return res.json();
+}
+
+async function postMonthlyRemarks(billId, remarks) {
+  const res = await fetch(
+    `${API_BACKEND_URL}${API_ENDPOINTS.customers.billing.monthly.remarks}/${billId}`,
+    {
+      method: 'POST', headers: apiHeaders(), credentials: 'include',
+      body: JSON.stringify({ remarks }),
+    },
+  );
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.message || `Submit failed (${res.status})`);
   }
   return res.json();
 }
@@ -321,6 +351,113 @@ function MoveModal({ monthlyBillingId, onClose, onSuccess }) {
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+// ─── RemarksModal ─────────────────────────────────────────────────────────────
+function RemarksModal({ initialValue, onClose, onSuccess }) {
+  const [remarks, setRemarks] = useState(initialValue ?? '');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const isEditing = !!initialValue;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSubmitting(true);
+    try {
+      await onSuccess(remarks);
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-700">
+              {isEditing ? '✏️ Edit Remark' : '📝 Add Remarks'}
+            </span>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {error && (
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg">
+              <span>⚠️</span> {error}
+            </div>
+          )}
+          <div>
+            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Remark</label>
+            <textarea
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+              placeholder="Write a remark…"
+              rows={4}
+              autoFocus
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-amber-200 transition-colors text-gray-800 placeholder-gray-400 resize-none"
+            />
+          </div>
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 rounded-lg text-sm font-bold text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || !remarks.trim()}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-white bg-amber-500 hover:bg-amber-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {submitting ? (
+                <>
+                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                  Saving…
+                </>
+              ) : isEditing ? '✏️ Update Remark' : '📝 Submit Remark'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── RemarksBanner ────────────────────────────────────────────────────────────
+function RemarksBanner({ remarks, onEdit }) {
+  if (!remarks) return null;
+  return (
+    <div className="bg-yellow-50 border border-yellow-200 rounded-2xl px-5 py-3 flex items-start justify-between gap-3">
+      <div className="flex items-start gap-2 min-w-0">
+        <span className="text-base leading-none mt-0.5">📝</span>
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold text-yellow-600 uppercase tracking-widest mb-0.5">Remarks</p>
+          <p className="text-sm text-yellow-800 wrap-break-word">{remarks}</p>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onEdit}
+        className="shrink-0 inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-white text-yellow-700 border border-yellow-300 hover:bg-yellow-100 transition-colors"
+      >
+        ✏️ Edit Remark
+      </button>
     </div>
   );
 }
@@ -543,7 +680,7 @@ function CreditNoteAmountBadge({ loading, data, error }) {
 
 // ─── EntryForm ───────────────────────────────────────────────────────────────
 // editingEntry: the ledger row object being edited, or null for "add" mode
-function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editingEntry, onCancelEdit, formRef }) {
+function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editingEntry, onCancelEdit, formRef, remarks, onOpenRemarksModal }) {
   const defaultDate = monthBounds?.minDate ?? todayISO();
   const isEditing = !!editingEntry;
 
@@ -555,7 +692,6 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
     subType: 'MANUAL_ADJUSTMENT',
     basicAmount: '',
     notes: '',
-    remarks: '',
   });
 
   const [form, setForm] = useState(blankForm());
@@ -590,7 +726,6 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
         subType: editingEntry.subType ?? 'MANUAL_ADJUSTMENT',
         basicAmount: String(editingEntry.basicAmount ?? editingEntry.amount ?? ''),
         notes: editingEntry.notes ?? '',
-        remarks: editingEntry.remarks ?? '',
       });
       setError('');
       setSuccess('');
@@ -685,7 +820,6 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
       date,
       subType: form.subType,
       ...(form.notes ? { notes: form.notes } : {}),
-      ...(form.remarks ? { remarks: form.remarks } : {}),
     };
     if (periodStart && periodEnd) payload.transactionPeriod = { start: periodStart, end: periodEnd };
     payload.basicAmount = Number(form.basicAmount);
@@ -695,7 +829,6 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
   const buildEditPayload = () => ({
     basicAmount: Number(form.basicAmount),
     notes: form.notes,
-    remarks: form.remarks,
     subType: form.subType,
     date: form.date,
     ...(form.periodStart && form.periodEnd
@@ -766,6 +899,15 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
           <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${cfg.badge}`}>
             {cfg.icon} {cfg.label}
           </span>
+          {isEditMode && onOpenRemarksModal && (
+            <button
+              type="button"
+              onClick={onOpenRemarksModal}
+              className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+            >
+              {remarks ? '✏️ Edit Remark' : '+ Add Remarks'}
+            </button>
+          )}
           {isEditing && (
             <button
               type="button"
@@ -937,20 +1079,6 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
               className={inpNeutral}
             />
           </div>
-
-          {/* Remarks */}
-          <div>
-            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">
-              Remarks
-            </label>
-            <input
-              type="text"
-              value={form.remarks}
-              onChange={(e) => set('remarks', e.target.value)}
-              placeholder="Optional…"
-              className={inpNeutral}
-            />
-          </div>
         </div>
 
         {/* Submit / Update */}
@@ -996,6 +1124,8 @@ function BillPanel({ billId, isEditMode, monthBounds }) {
   const [entries, setEntries] = useState([]);
   const [summary, setSummary] = useState(null);
   const [editingEntry, setEditingEntry] = useState(null); // row being edited
+  const [remarks, setRemarks] = useState('');
+  const [showRemarksModal, setShowRemarksModal] = useState(false);
 
   const formRef = useRef(null);
 
@@ -1013,7 +1143,21 @@ function BillPanel({ billId, isEditMode, monthBounds }) {
     }
   }, [billId]);
 
-  useEffect(() => { load(); }, [load]);
+  const loadRemarks = useCallback(async () => {
+    try {
+      const json = await fetchMonthlyDetail(billId);
+      setRemarks(extractRemarks(json));
+    } catch {
+      setRemarks('');
+    }
+  }, [billId]);
+
+  useEffect(() => { load(); loadRemarks(); }, [load, loadRemarks]);
+
+  const handleSaveRemarks = async (value) => {
+    await postMonthlyRemarks(billId, value);
+    await loadRemarks();
+  };
 
   // Scroll to form when edit starts
   const handleEditEntry = (entry) => {
@@ -1051,6 +1195,13 @@ function BillPanel({ billId, isEditMode, monthBounds }) {
 
   return (
     <div className="space-y-4">
+      {showRemarksModal && (
+        <RemarksModal
+          initialValue={remarks}
+          onClose={() => setShowRemarksModal(false)}
+          onSuccess={handleSaveRemarks}
+        />
+      )}
       <EntryForm
         monthlyBillingId={billId}
         isEditMode={isEditMode}
@@ -1059,7 +1210,10 @@ function BillPanel({ billId, isEditMode, monthBounds }) {
         editingEntry={editingEntry}
         onCancelEdit={handleCancelEdit}
         formRef={formRef}
+        remarks={remarks}
+        onOpenRemarksModal={() => setShowRemarksModal(true)}
       />
+      <RemarksBanner remarks={remarks} onEdit={() => setShowRemarksModal(true)} />
       <SummaryBar summary={summary} />
       <LedgerTable
         entries={entries}
