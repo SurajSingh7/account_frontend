@@ -91,10 +91,11 @@ const BillingRow = ({ item }) => {
 
   const handleViewBreakdown = () => router.push(`${ROUTES.purchase.ledger.list}?${buildQuery()}`);
 
-  const billingAmt    = item.billing     ?? 0;
-  const miscAmt       = item.miscCharge  ?? 0;
-  const creditNoteAmt = item.creditNote  ?? 0;
-  const netBillingAmt = item.netBilling  ?? 0;
+  const billingAmt    = item.billing           ?? 0;
+  const openingAdjAmt = item.openingAdjustment ?? 0;
+  const miscAmt       = item.miscCharge        ?? 0;
+  const creditNoteAmt = item.creditNote        ?? 0;
+  const netBillingAmt = item.netBilling        ?? 0;
 
   return (
     <>
@@ -175,6 +176,13 @@ const BillingRow = ({ item }) => {
           </span>
         </td>
 
+        {/* Opening Adj */}
+        <td className="px-4 py-2.5 text-right bg-amber-50/40">
+          <span className="text-base font-extrabold text-amber-600 tabular-nums">
+            ₹{fmt(openingAdjAmt)}
+          </span>
+        </td>
+
         {/* Net Billing */}
         <td className="px-4 py-2.5 text-right bg-rose-50/40">
           <div className="flex items-center justify-end gap-2">
@@ -228,6 +236,7 @@ const BillingTable = ({ data }) => {
     { label: 'Billing',                align: 'right'  },
     { label: 'Misc',                   align: 'right'  },
     { label: 'Credit Notes (incl. GST)', align: 'right' },
+    { label: 'Opening Adj',            align: 'right'  },
     { label: 'Net Billing',            align: 'right'  },
   ];
 

@@ -50,6 +50,7 @@ const BillingReportComp = () => {
   const apiSummary = {
     totalOrders:  data?.summary?.totalOrders  || 0,
     billing:      data?.summary?.billing      || 0,
+    openingAdjustment: data?.summary?.openingAdjustment || 0,
     miscCharge:   data?.summary?.miscCharge   || 0,
     creditNote:   data?.summary?.creditNote   || 0,
     netBilling:   data?.summary?.netBilling   || 0,
