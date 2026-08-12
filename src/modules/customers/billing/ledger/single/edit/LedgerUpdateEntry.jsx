@@ -532,7 +532,7 @@ function LedgerTable({ entries, isEditMode, monthlyBillingId, onRefresh, onEditE
                       ? '—' : gst > 0 ? fmtINR(gst) : '—'}
                     </td>
                     <td className="px-4 py-3 text-gray-800 font-semibold text-sm tabular-nums">{fmtINR(e.totalAmount)}</td>
-                    <td className="px-4 py-3 text-gray-400 text-xs max-w-[180px] truncate">{e.notes ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-400 text-xs text-wrap">{e.notes ?? '—'}</td>
 
                     {isEditMode && (
                       <td className="px-4 py-3">

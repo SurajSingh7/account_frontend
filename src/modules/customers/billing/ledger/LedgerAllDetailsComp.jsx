@@ -6,20 +6,20 @@ import LedgerList from './component/LedgerList';
 import { API_ENDPOINTS } from '@/constants/api';
 
 const HIDDEN_COLUMNS_MAP = {
-  bill:        ['runningOutstanding', 'outstandingAfterAdjustment', 'receiptAmount','actions','tdsConfirm','tdsProvision','received'],
-  recipt:      ['runningOutstanding','miscBill', 'outstandingAfterAdjustment', ,'actions','netBilling','days','period','basicBill','cgst','sgst','igst','basicGst','receiptAmount'],
-  outstanding: [,'receiptAmount','netBilling'],
+  bill: ['runningOutstanding', 'outstandingAfterAdjustment', 'receiptAmount', 'actions', 'tdsConfirm', 'tdsProvision', 'received'],
+  recipt: ['runningOutstanding', 'miscBill', 'outstandingAfterAdjustment', , 'actions', 'netBilling', 'days', 'period', 'basicBill', 'cgst', 'sgst', 'igst', 'basicGst', 'creditNotes'],
+  outstanding: [, 'receiptAmount', 'netBilling'],
 };
 
 const LedgerAllDetailsComp = () => {
   const searchParams = useSearchParams();
 
-  const orderId       = searchParams.get('orderId')       ?? '';
+  const orderId = searchParams.get('orderId') ?? '';
   const billingReadId = searchParams.get('billingReadId') ?? '';
-  const circuitKey    = searchParams.get('circuitKey')    ?? '';
-  const ledgerName    = searchParams.get('ledgerName')    ?? '';   
+  const circuitKey = searchParams.get('circuitKey') ?? '';
+  const ledgerName = searchParams.get('ledgerName') ?? '';
 
-  const hiddenColumns = HIDDEN_COLUMNS_MAP[ledgerName] ?? [];     
+  const hiddenColumns = HIDDEN_COLUMNS_MAP[ledgerName] ?? [];
 
   const { data, pagination, loading, error, refetch, setPage } = useLedgerList({
     endpoint: API_ENDPOINTS.customers.billing.ledger.monthlyOrder,
