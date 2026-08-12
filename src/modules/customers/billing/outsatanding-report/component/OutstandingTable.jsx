@@ -2,9 +2,12 @@
 import React, { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import { FileText, X, Info, FileSpreadsheet } from 'lucide-react'
+import { FileText, X, Info, FileSpreadsheet, RefreshCw, Loader2 } from 'lucide-react'
+import { toast } from 'react-hot-toast'
 import { truncateWithMore } from '@/modules/customers/billing/shared/buildListParams/utils'
 import { ROUTES } from '@/constants/routes'
+import { API_BACKEND_URL } from '@/config/getEnvVariables'
+import { usePermissions } from '@/context/PermissionContext'
 
 // ── helpers ───────────────────────────────────────────────────
 const fmt = (n) =>
@@ -81,7 +84,7 @@ const TextPopup = ({ text, onClose }) => {
 }
 
 // ── Row Component ─────────────────────────────────────────────
-const OrderRow = ({ item, index, showLsi }) => {
+const OrderRow = ({ item, index, showLsi, isAdmin, bulkMode, isSelected, onToggleSelect }) => {
     const router = useRouter()
     const [popupText, setPopupText] = useState(null)
     const s = statusStyle(item.status)
@@ -105,6 +108,20 @@ const OrderRow = ({ item, index, showLsi }) => {
 
     return (
         <tr className="hover:bg-blue-50/30 transition-colors border-b border-slate-100">
+            {/* Bulk-select checkbox */}
+            {isAdmin && (
+                <td className="px-4 py-3 text-center">
+                    {bulkMode && (
+                        <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => onToggleSelect(item.orderId)}
+                            className="w-4 h-4 accent-blue-600 cursor-pointer"
+                        />
+                    )}
+                </td>
+            )}
+
             {/* Order ID */}
             <td className="px-4 py-3">
                 <span className="text-sm font-bold text-blue-600">{item.orderId}</span>
@@ -217,8 +234,52 @@ const OrderRow = ({ item, index, showLsi }) => {
 }
 
 // ── Main Table Component ──────────────────────────────────────
-const OutstandingTable = ({ data, onRefetch, showLsi }) => {
+const OutstandingTable = ({ data, onRefetch, showLsi, syncEndpoint }) => {
     const rows = data?.data || []
+    const { userData } = usePermissions()
+    const isAdmin = userData?.role === 'Admin'
+
+    const [bulkMode, setBulkMode] = useState(false)
+    const [selectedIds, setSelectedIds] = useState([])
+    const [syncing, setSyncing] = useState(false)
+
+    const toggleSelect = (orderId) => {
+        setSelectedIds((prev) =>
+            prev.includes(orderId) ? prev.filter((id) => id !== orderId) : [...prev, orderId]
+        )
+    }
+
+    const allSelected = rows.length > 0 && selectedIds.length === rows.length
+    const toggleSelectAll = () => {
+        setSelectedIds(allSelected ? [] : rows.map((item) => item.orderId))
+    }
+
+    const exitBulkMode = () => {
+        setBulkMode(false)
+        setSelectedIds([])
+    }
+
+    const handleBulkSync = async () => {
+        if (!selectedIds.length || !syncEndpoint || syncing) return
+        setSyncing(true)
+        try {
+            const res = await fetch(`${API_BACKEND_URL}${syncEndpoint}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ orderIds: selectedIds.map(String) }),
+            })
+            const json = await res.json()
+            if (!res.ok) throw new Error(json?.message || `Request failed (${res.status})`)
+            toast.success(`Synced ${selectedIds.length} order(s) successfully!`)
+            exitBulkMode()
+            onRefetch?.()
+        } catch (err) {
+            toast.error(err.message || 'Bulk sync failed. Please try again.')
+        } finally {
+            setSyncing(false)
+        }
+    }
 
     if (!rows.length) {
         return (
@@ -249,11 +310,60 @@ const OutstandingTable = ({ data, onRefetch, showLsi }) => {
 
     return (
         <div className="flex flex-col gap-3">
+            {bulkMode && (
+                <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5">
+                    <span className="text-sm font-semibold text-blue-700">
+                        {selectedIds.length} order{selectedIds.length === 1 ? '' : 's'} selected
+                    </span>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={exitBulkMode}
+                            disabled={syncing}
+                            className="px-3 py-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleBulkSync}
+                            disabled={!selectedIds.length || syncing}
+                            className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                            {syncing ? 'Syncing…' : 'Sync Selected'}
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead>
                             <tr className="bg-gradient-to-r from-gray-50 to-blue-50 border-b-2 border-gray-200">
+                                {isAdmin && (
+                                    <th className="px-4 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider text-center">
+                                        {bulkMode ? (
+                                            <input
+                                                type="checkbox"
+                                                checked={allSelected}
+                                                onChange={toggleSelectAll}
+                                                title="Select all"
+                                                className="w-4 h-4 accent-blue-600 cursor-pointer"
+                                            />
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={() => setBulkMode(true)}
+                                                title="Bulk sync orders"
+                                                className="p-1 text-blue-600 hover:text-blue-800 transition-colors"
+                                            >
+                                                <RefreshCw className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </th>
+                                )}
                                 {columns.map(({ label, align }) => (
                                     <th
                                         key={label}
@@ -272,6 +382,10 @@ const OutstandingTable = ({ data, onRefetch, showLsi }) => {
                                     item={item}
                                     index={index}
                                     showLsi={showLsi}
+                                    isAdmin={isAdmin}
+                                    bulkMode={bulkMode}
+                                    isSelected={selectedIds.includes(item.orderId)}
+                                    onToggleSelect={toggleSelect}
                                 />
                             ))}
                         </tbody>

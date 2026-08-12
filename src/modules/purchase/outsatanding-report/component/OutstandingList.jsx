@@ -30,6 +30,7 @@ const OutstandingList = ({
   error,
   onRefetch,
   showLsi,
+  syncEndpoint,
 }) => {
 
   // ── Loading ──────────────────────────────────────────────────────────────
@@ -83,6 +84,7 @@ const OutstandingList = ({
       data={data}
       onRefetch={onRefetch}
       showLsi={showLsi}
+      syncEndpoint={syncEndpoint}
     />
   );
 };

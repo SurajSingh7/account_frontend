@@ -149,6 +149,7 @@ const OutStandingReportComp = () => {
           onRefetch={refetch}
           showLsi={showLsi}
           onToggleLsi={() => setShowLsi(v => !v)}
+          syncEndpoint={API_ENDPOINTS.purchase.monthly.sync}
         />
 
         {pagination?.total > 0 && (
