@@ -29,7 +29,8 @@ const LedgerList = ({
   onRefetch,
   onPageChange,
   hiddenColumns = [],
-  ledgerName
+  ledgerName,
+  syncEndpoint
 }) => {
 
   if (loading) {
@@ -80,6 +81,8 @@ if (!rows.length) {
         data={data}
         hiddenColumns={hiddenColumns}
         ledgerName={ledgerName}
+        syncEndpoint={syncEndpoint}
+        onRefetch={onRefetch}
       />
 
       {pagination && pagination.totalPages > 1 && (

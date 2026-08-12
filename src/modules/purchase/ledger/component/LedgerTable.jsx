@@ -1,12 +1,14 @@
 'use client'
 import React, { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Eye, Pencil, FileText, ArrowLeft, CheckCheck, Info, SlidersHorizontal } from 'lucide-react'
+import { Eye, Pencil, FileText, ArrowLeft, CheckCheck, Info, SlidersHorizontal, RefreshCw, Loader2 } from 'lucide-react'
+import { toast } from 'react-hot-toast'
 import { enrichOutstandingLedger } from '../helpers/buildOutstandingLedger'
 import AggregatedMonthsModal from './AggregatedMonthsModal'
 import AdjustmentAmountModal from './OpeningAdjustmentModal'
 import { roundUp } from '../../shared/constants'
 import { ROUTES } from '@/constants/routes'
+import { API_BACKEND_URL } from '@/config/getEnvVariables'
 
 
 
@@ -370,8 +372,49 @@ const LedgerFooter = ({ totals, visibleDefs }) => {
 }
 
 
+// ─── SYNC BUTTON ──────────────────────────────────────────────────────────────
+const SyncButton = ({ orderId, syncEndpoint, onSynced }) => {
+  const [loading, setLoading] = useState(false)
+
+  const handleSync = async () => {
+    if (!orderId || !syncEndpoint || loading) return
+    setLoading(true)
+    try {
+      const res = await fetch(`${API_BACKEND_URL}${syncEndpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ orderId: String(orderId) }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json?.message || `Request failed (${res.status})`)
+      toast.success('Monthly billing synced successfully!')
+      if (onSynced) onSynced()
+      else window.location.reload()
+    } catch (err) {
+      toast.error(err.message || 'Sync failed. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleSync}
+      disabled={loading}
+      title="Sync monthly billing"
+      className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-semibold text-sm transition-all shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
+    >
+      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+      {loading ? 'Syncing…' : 'Sync'}
+    </button>
+  )
+}
+
+
 // ─── HEADER BAR ───────────────────────────────────────────────────────────────
-const LedgerHeader = ({ title, meta, chips, onBack, ledgerName, orderId, stateCode, openingAdjustment, circuitKey }) => {
+const LedgerHeader = ({ title, meta, chips, onBack, ledgerName, orderId, stateCode, openingAdjustment, circuitKey, syncEndpoint, onRefetch }) => {
   const router = useRouter()
   const [adjModalOpen, setAdjModalOpen] = useState(false)   // ← new state
 
@@ -421,42 +464,46 @@ const LedgerHeader = ({ title, meta, chips, onBack, ledgerName, orderId, stateCo
         )}
       </div>
 
-      {/* ── Right: Adjustment Amount button ── */}
-      {(ledgerName?.toLowerCase() === 'outstanding') &&
-        <div
-          className=" flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 backdrop-blur-md border border-white/20 shadow-md mr-4 "
-        >
-          {/* Amount */}
-          <div className="px-2 py-1 rounded-md bg-white text-slate-900 text-xs font-bold">
-            ₹{openingAdjustment}
-          </div>
+      {/* ── Right: Sync + Adjustment Amount button ── */}
+      <div className="flex items-center gap-3 mr-4">
+        <SyncButton orderId={orderId} syncEndpoint={syncEndpoint} onSynced={onRefetch} />
 
-          <span className="text-sm font-bold text-white whitespace-nowrap">
-            Opening Adjustment
-          </span>
-
-          {/* Only arrow clickable */}
-          <button
-            type="button"
-            onClick={() => setAdjModalOpen(true)}
-            className=" flex items-center justify-center w-7 h-7 rounded-full bg-white/15 hover:bg-white/25 text-white transition-all hover:scale-110"
+        {(ledgerName?.toLowerCase() === 'outstanding') &&
+          <div
+            className=" flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 backdrop-blur-md border border-white/20 shadow-md "
           >
-            <svg
-              className="w-3.5 h-3.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+            {/* Amount */}
+            <div className="px-2 py-1 rounded-md bg-white text-slate-900 text-xs font-bold">
+              ₹{openingAdjustment}
+            </div>
+
+            <span className="text-sm font-bold text-white whitespace-nowrap">
+              Opening Adjustment
+            </span>
+
+            {/* Only arrow clickable */}
+            <button
+              type="button"
+              onClick={() => setAdjModalOpen(true)}
+              className=" flex items-center justify-center w-7 h-7 rounded-full bg-white/15 hover:bg-white/25 text-white transition-all hover:scale-110"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2.5}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-          </button>
-        </div>
-      }
+              <svg
+                className="w-3.5 h-3.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2.5}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
+          </div>
+        }
+      </div>
       
       {/* ── Modal ── */}
       {adjModalOpen && (
@@ -483,6 +530,8 @@ const LedgerTable = ({
   onBack,
   showHeader = true,
   ledgerName,
+  syncEndpoint,
+  onRefetch,
 }) => {
   const rawRows = data?.data?.data ?? data?.data ?? data ?? []
   const apiTotals = data?.data?.totals ?? data?.totals ?? {}
@@ -502,7 +551,7 @@ const LedgerTable = ({
   if (!rows.length) {
     return (
       <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-        {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} ledgerName={ledgerName} orderId={orderId} stateCode={stateCode} openingAdjustment={openingAdjustment} circuitKey={circuitKey} />}
+        {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} ledgerName={ledgerName} orderId={orderId} stateCode={stateCode} openingAdjustment={openingAdjustment} circuitKey={circuitKey} syncEndpoint={syncEndpoint} onRefetch={onRefetch} />}
         <div className="flex flex-col items-center justify-center py-16 text-slate-400">
           <FileText className="w-10 h-10 mb-3 text-slate-300" />
           <p className="text-sm font-medium">No ledger records found</p>
@@ -513,7 +562,7 @@ const LedgerTable = ({
 
   return (
     <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-      {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} ledgerName={ledgerName} orderId={orderId} stateCode={stateCode} openingAdjustment={openingAdjustment} circuitKey={circuitKey} />}
+      {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} ledgerName={ledgerName} orderId={orderId} stateCode={stateCode} openingAdjustment={openingAdjustment} circuitKey={circuitKey} syncEndpoint={syncEndpoint} onRefetch={onRefetch} />}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>

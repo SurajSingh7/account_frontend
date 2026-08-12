@@ -7,7 +7,7 @@ import { API_ENDPOINTS } from '@/constants/api';
 
 const HIDDEN_COLUMNS_MAP = {
   bill:        ['runningOutstanding', 'outstandingAfterAdjustment', 'receiptAmount','actions','tdsConfirm','tdsProvision','received'],
-  recipt:      ['runningOutstanding','miscBill', 'outstandingAfterAdjustment', ,'actions','netBilling','days','period','basicBill','cgst','sgst','igst','basicGst','tdsProvision'],
+  recipt:      ['runningOutstanding','miscBill', 'outstandingAfterAdjustment', ,'actions','netBilling','days','period','basicBill','cgst','sgst','igst','basicGst','tdsProvision','receiptAmount'],
   outstanding: [,'receiptAmount','netBilling','tdsProvision'],
 };
 
@@ -40,6 +40,7 @@ const LedgerAllDetailsComp = () => {
           meta={`Order: ${orderId || '–'}`}
           hiddenColumns={hiddenColumns}
           ledgerName={ledgerName}
+          syncEndpoint={API_ENDPOINTS.purchase.monthly.sync}
         />
       </main>
     </div>
