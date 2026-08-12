@@ -36,6 +36,7 @@ export const CUSTOMER_API = {
       generate: '/billing/sale/monthly/generate',
       detail: '/billing/sale/monthly',
       remarks: '/billing/sale/monthly/remarks',
+      sync: '/billing/sale/monthly/sync',
     },
     report: {
       sell: '/billing/sale/report/sell',

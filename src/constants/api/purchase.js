@@ -39,6 +39,7 @@ export const PURCHASE_API = {
     generate: '/billing/purchase/monthly/generate',
     detail: '/billing/purchase/monthly',
     remarks: '/billing/purchase/monthly/remarks',
+    sync: '/billing/purchase/monthly/sync',
   },
   report: {
     sell: '/billing/purchase/report/sell',
