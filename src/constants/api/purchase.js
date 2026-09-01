@@ -30,6 +30,9 @@ export const PURCHASE_API = {
       openingAdjustmentHistory: '/billing/purchase/ledger/bulk/opening-adjustment-history',
     },
   },
+  locList : {
+    all : "/bso/loc/all"
+  },
   readyOrder: {
     all: '/billing/purchase/ready-order/all',
     base: '/billing/purchase/ready-order',

@@ -12,6 +12,7 @@ export const PURCHASE_ROUTES = {
     view: `${PURCHASE_BASE}/account/loc-closure/view`,
     generateBill: `${PURCHASE_BASE}/account/loc-closure/generate-bill`,
   },
+  locList : `${PURCHASE_BASE}/account/loc-list`,
   terminateOrders: `${PURCHASE_BASE}/account/terminate-orders`,
   orderLinks: `${PURCHASE_BASE}/account/order-links`,
   bulkPayment: `${PURCHASE_BASE}/account/bulk-payment`,
