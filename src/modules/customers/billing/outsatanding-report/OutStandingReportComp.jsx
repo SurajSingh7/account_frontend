@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation'; // ← ye wapas add karo
 import { useFilters } from '../shared/helpers/hooks/useFilters';
 import { useFetchList } from '../shared/helpers/hooks/useFetchList';
@@ -30,9 +30,11 @@ const OutStandingReportComp = () => {
 
   // ✅ For parent company group connect with its child
   const companyGroupId = searchParams.get('companyGroupId');
+  const companyGroupHandled = useRef(false);
 
   useEffect(() => {
-    if (companyGroupId) {
+    if (companyGroupId && !companyGroupHandled.current) {
+      companyGroupHandled.current = true;
       setFilter({ companyGroupId, page: 1 });
 
       const params = new URLSearchParams(searchParams.toString());

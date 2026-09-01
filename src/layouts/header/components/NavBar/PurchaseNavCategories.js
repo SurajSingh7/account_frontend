@@ -14,7 +14,7 @@ export const purchaseNavCategories = [
     category: "Reports",
     items: [
       {
-        name: "Billing Sell Report",
+        name: "Purchase Billing Sell ",
         path: purchase.billingReport,
         moduleName: "Purchase Billing Sell report",
         // url: purchaseApi.report.sell,
@@ -22,7 +22,7 @@ export const purchaseNavCategories = [
         action: ["READ"],
       },
       {
-        name: "Outstanding Report",
+        name: "Purchase Outstanding ",
         path: purchase.outstandingReport,
         moduleName: "Purchase Sale outstanding",
         // url: purchaseApi.report.outstanding,
@@ -30,7 +30,7 @@ export const purchaseNavCategories = [
         action: ["READ"],
       },
       {
-        name: "Receipt Report",
+        name: "Purchase Receipt ",
         path: purchase.receiptReport,
         moduleName: "Purchase Receipt report",
         // url: purchaseApi.report.receipt,
