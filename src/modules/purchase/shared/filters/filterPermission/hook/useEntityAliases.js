@@ -44,7 +44,9 @@ export const useEntityAliases = () => {
           API_ENDPOINTS.external.entityAliasGist
         );
 
-        const data = await res.json();
+        // gist may contain trailing commas (invalid JSON) - strip them before parsing
+        const text = await res.text();
+        const data = JSON.parse(text.replace(/,\s*([\]}])/g, "$1"));
 
         const currentEmployee = data.find((item) => {
 
