@@ -1,7 +1,7 @@
 'use client'
 import React, { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Eye, Pencil, FileText, ArrowLeft, CheckCheck, Info, SlidersHorizontal, RefreshCw, Loader2 } from 'lucide-react'
+import { Eye, Pencil, FileText, ArrowLeft, CheckCheck, Info, RefreshCw, Loader2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { enrichOutstandingLedger } from '../helpers/buildOutstandingLedger'
 import AggregatedMonthsModal from './AggregatedMonthsModal'
@@ -9,21 +9,18 @@ import AdjustmentAmountModal from './OpeningAdjustmentModal'
 import { roundUp } from '../../shared/constants'
 import { ROUTES } from '@/constants/routes'
 import { API_BACKEND_URL } from '@/config/getEnvVariables'
-
-
+import { usePermissions } from '@/context/PermissionContext'
 
 const fmt = (n) =>
   (n || 0).toLocaleString('en-IN', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })
-
+})
 
 const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ]
-
 
 const normalizeRow = (item) => {
   const monthYear =
@@ -65,8 +62,6 @@ const normalizeRow = (item) => {
   }
 }
 
-
-// ─── DAYS CELL — opens centered modal ────────────────────────────────────────
 const DaysCell = ({ item }) => {
   const [open, setOpen] = useState(false)
   const hasAggregated = item.aggregatedMonths && item.aggregatedMonths.length > 1
@@ -102,8 +97,6 @@ const DaysCell = ({ item }) => {
   )
 }
 
-
-// ─── COLUMN DEFINITIONS ───────────────────────────────────────────────────────
 export const LEDGER_COLUMNS = [
   { id: 'month', label: <> Billing <br /> Month </>, align: 'left', order: 1 },
   { id: 'days', label: 'Days', align: 'center', order: 2 },
@@ -125,9 +118,16 @@ export const LEDGER_COLUMNS = [
   { id: 'actions', label: 'Actions', align: 'center', order: 20 },
 ]
 
+const renderRowCell = (id, item, router, userData) => {
+  const currentLoginEmployee = userData?.employeeCode;
 
-// ─── ROW CELL RENDERER ────────────────────────────────────────────────────────
-const renderRowCell = (id, item, router) => {
+  const EMPLOYEES_EXCLUDED_FROM_EDIT_LEDGER = [
+    "GTEL271",
+    "HWIBRO177"
+  ]
+  
+  const isEmployeeExcluded = EMPLOYEES_EXCLUDED_FROM_EDIT_LEDGER.includes(currentLoginEmployee);
+
   switch (id) {
     case 'month':
       return (
@@ -292,18 +292,20 @@ const renderRowCell = (id, item, router) => {
               <Eye className="w-4 h-4" />
             </button>
 
-            <button
-              type="button"
-              title="Edit record"
-              onClick={() =>
-                router.push(
-                  `${ROUTES.customers.billing.ledger.form}?mode=edit&month=${item.monthYear}&billIds=${(item.billIds ?? []).join(',')}`
-                )
-              }
-              className="p-2 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 rounded-lg transition-colors"
-            >
-              <Pencil className="w-4 h-4" />
-            </button>
+            {!isEmployeeExcluded && (
+              <button
+                type="button"
+                title="Edit record"
+                onClick={() =>
+                  router.push(
+                    `${ROUTES.customers.billing.ledger.form}?mode=edit&month=${item.monthYear}&billIds=${(item.billIds ?? []).join(',')}`
+                  )
+                }
+                className="p-2 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 rounded-lg transition-colors"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+            )}
 
           </div>
         </td>
@@ -313,7 +315,6 @@ const renderRowCell = (id, item, router) => {
       return <td key={id} className="px-3 py-3" />
   }
 }
-
 
 // ─── FOOTER CELL RENDERER ─────────────────────────────────────────────────────
 const renderFooterCell = (id, t) => {
@@ -342,9 +343,8 @@ const renderFooterCell = (id, t) => {
   }
 }
 
-
 // ─── ROW COMPONENT ────────────────────────────────────────────────────────────
-const LedgerRow = ({ item: rawItem, visibleDefs }) => {
+const LedgerRow = ({ item: rawItem, visibleDefs, userData }) => {
   const router = useRouter()
   const item = normalizeRow(rawItem)
 
@@ -352,12 +352,11 @@ const LedgerRow = ({ item: rawItem, visibleDefs }) => {
     <tr className="hover:bg-blue-50/20 transition-colors border-b border-slate-100">
       {visibleDefs.map(({ id }) => {
         if (id === 'days') return <DaysCell key={id} item={item} />
-        return renderRowCell(id, item, router)
+        return renderRowCell(id, item, router, userData)
       })}
     </tr>
   )
 }
-
 
 // ─── FOOTER COMPONENT ─────────────────────────────────────────────────────────
 const LedgerFooter = ({ totals, visibleDefs }) => {
@@ -370,7 +369,6 @@ const LedgerFooter = ({ totals, visibleDefs }) => {
     </tfoot>
   )
 }
-
 
 // ─── SYNC BUTTON ──────────────────────────────────────────────────────────────
 const SyncButton = ({ orderId, syncEndpoint, onSynced }) => {
@@ -411,7 +409,6 @@ const SyncButton = ({ orderId, syncEndpoint, onSynced }) => {
     </button>
   )
 }
-
 
 // ─── HEADER BAR ───────────────────────────────────────────────────────────────
 const LedgerHeader = ({ title, meta, chips, onBack, ledgerName, orderId, stateCode, openingAdjustment, circuitKey, syncEndpoint, onRefetch }) => {
@@ -504,7 +501,7 @@ const LedgerHeader = ({ title, meta, chips, onBack, ledgerName, orderId, stateCo
           </div>
         }
       </div>
-      
+
       {/* ── Modal ── */}
       {adjModalOpen && (
         <AdjustmentAmountModal
@@ -518,7 +515,6 @@ const LedgerHeader = ({ title, meta, chips, onBack, ledgerName, orderId, stateCo
     </div>
   )
 }
-
 
 // ─── MAIN TABLE ───────────────────────────────────────────────────────────────
 const LedgerTable = ({
@@ -536,13 +532,13 @@ const LedgerTable = ({
   const rawRows = data?.data?.data ?? data?.data ?? data ?? []
   const apiTotals = data?.data?.totals ?? data?.totals ?? {}
   const { rows, totals } = enrichOutstandingLedger(rawRows, apiTotals)
+  const { userData } = usePermissions();
 
   const searchParams = useSearchParams();
   const orderId = searchParams.get('orderId');
   const stateCode = searchParams.get('stateCode');
   const circuitKey = searchParams.get('circuitKey');
-  const openingAdjustment = totals?.openingAdjustment
-
+  const openingAdjustment = totals?.openingAdjustment;
 
   const visibleDefs = LEDGER_COLUMNS
     .filter((col) => !hiddenColumns.includes(col.id))
@@ -583,6 +579,7 @@ const LedgerTable = ({
                 key={item._id ?? item.id ?? index}
                 item={item}
                 visibleDefs={visibleDefs}
+                userData = {userData}
               />
             ))}
           </tbody>
