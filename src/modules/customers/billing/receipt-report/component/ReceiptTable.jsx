@@ -79,6 +79,7 @@ const ReceiptRow = ({ item }) => {
       billingReadId: item.billingReadId,
       dsrId:        item.dsrId,
       circuitKey:   item.circuitKey || '',
+      companyName : item?.company,
       ledgerName:   'recipt',
     }).toString()
 

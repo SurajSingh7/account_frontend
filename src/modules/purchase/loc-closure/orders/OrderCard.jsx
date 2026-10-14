@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Edit, Eye } from 'lucide-react';
+import { Eye, History, Pencil, ReceiptIndianRupee } from 'lucide-react';
 import { formatDateDisplay, truncateWithMore } from '../../shared/buildListParams/utils';
 import { usePathname, useRouter } from 'next/navigation';
 import EditLocModal from '../modal/EditLocModal';
 import { usePermissions } from '@/context/PermissionContext';
 import { ROUTES } from '@/constants/routes';
+import ActionMenu from '@/shared/ui/orderCardActions/ActionMenu';
 
 
 // ─── Badge ────────────────────────────────────────────────────────────────────
@@ -250,32 +251,43 @@ const OrderCard = ({ order, onRefetch }) => {
 
               {bsoLabel && <Badge color="teal">{bsoLabel}</Badge>}
 
-              {/* View button */}
-              <button onClick={() => router.push(`${ROUTES.purchase.locClosure.view}?locId=${order._id}`)}>
-                <Eye className='text-blue-600' />
-              </button>
-
-              {isAdmin && (
-                <>
-                  <button
-                    className="p-2 hover:bg-blue-50 rounded-lg"
-                    title="Edit"
-                    onClick={() => setEditModalOpen(true)}
-                  >
-                    <Edit className="w-5 h-5 text-red-600 cursor-pointer" />
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      router.push(`${ROUTES.purchase.locClosure.generateBill}?locId=${order._id}`)
-                    }
-                  >
-                    <div className='bg-black text-amber-50 font-bold px-1.5 text-center rounded-full cursor-pointer'>
-                      G
-                    </div>
-                  </button>
-                </>
-              )}
+              <ActionMenu
+                label="Order actions"
+                items={[
+                  {
+                    key: 'view',
+                    label: 'View details',
+                    description: 'Open the LOC closure details',
+                    icon: Eye,
+                    iconClassName: 'text-blue-600',
+                    onClick: () => router.push(`${ROUTES.purchase.locClosure.view}?locId=${order._id}`),
+                  },
+                  {
+                    key: 'history',
+                    label: 'Order history',
+                    description: 'See all changes made to this order',
+                    icon: History,
+                    iconClassName: 'text-blue-600',
+                    onClick: () => router.push(`${ROUTES.purchase.locClosure.viewHistory}?orderId=${order.orderId}`),
+                  },
+                  {
+                    key: 'edit',
+                    label: 'Edit',
+                    icon: Pencil,
+                    iconClassName: 'text-red-600',
+                    hidden: !isAdmin,
+                    onClick: () => setEditModalOpen(true),
+                  },
+                  {
+                    key: 'generate-invoice-bill',
+                    label: 'Generate Invoice Bill',
+                    icon: ReceiptIndianRupee,
+                    iconClassName: 'text-gray-900',
+                    hidden: !isAdmin,
+                    onClick: () => router.push(`${ROUTES.purchase.locClosure.generateBill}?locId=${order._id}`),
+                  },
+                ]}
+              />
             </div>
 
             <div className="flex flex-wrap gap-2 justify-end">

@@ -80,6 +80,7 @@ const ReceiptRow = ({ item }) => {
       dsrId:        item.dsrId,
       circuitKey:   item.circuitKey || '',
       ledgerName:   'recipt',
+      companyName : item?.company,
     }).toString()
 
   const handleViewBreakdown = () => router.push(`${ROUTES.purchase.ledger.list}?${buildQuery()}`)

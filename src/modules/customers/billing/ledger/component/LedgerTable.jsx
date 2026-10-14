@@ -15,7 +15,7 @@ const fmt = (n) =>
   (n || 0).toLocaleString('en-IN', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-})
+  })
 
 const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -242,7 +242,7 @@ const renderRowCell = (id, item, router, userData) => {
       return (
         <td key={id} className="px-3 py-3 text-right font-extrabold text-rose-600 bg-rose-50/40">
           {/* ₹{fmt(item.runningOutstanding)} */}
-          ₹{fmt(roundUp(item.totalBalance))}
+          ₹{fmt(roundUp(item.totalBalance ?? 0))}
         </td>
       )
 
@@ -259,7 +259,7 @@ const renderRowCell = (id, item, router, userData) => {
             <span className="inline-flex items-center gap-1 font-extrabold text-rose-600">
               <span className="text-rose-400 font-bold">×</span>
               {/* ₹{fmt(item.outstandingAfterAdjustment)} */}
-              ₹{fmt(roundUp(item.remainingAdjustment))}
+              ₹{fmt(roundUp(item.remainingAdj ?? 0))}
             </span>
           )}
         </td>
@@ -335,8 +335,8 @@ const renderFooterCell = (id, t) => {
     case 'tdsConfirm': return <td key={id} className="px-3 py-3 text-right text-indigo-600">₹{fmt(t.tdsConf ?? 0)}</td>
     case 'tdsProvision': return <td key={id} className="px-3 py-3 text-right text-orange-600">₹{fmt(t.tdsProvision ?? 0)}</td>
     // case 'totalBalance': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-rose-50">₹{fmt(t.totalBalance ?? 0)}</td>
-    case 'runningOutstanding': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-rose-50">₹{fmt(roundUp(t.totalBalance))}</td>
-    case 'outstandingAfterAdjustment': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-yellow-50"> ₹{fmt(roundUp(t.remainingAdjustment))}</td>
+    case 'runningOutstanding': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-rose-50">₹{fmt(roundUp(t.totalBalance ?? 0))}</td>
+    case 'outstandingAfterAdjustment': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-yellow-50"> ₹{fmt(roundUp(t.remainingAdjustment ?? 0))}</td>
     // case 'remaining': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-yellow-50">₹{fmt(t.remainingAdjustment ?? 0)}</td>
     case 'actions': return <td key={id} className="px-3 py-3" />
     default: return <td key={id} className="px-3 py-3" />
@@ -411,7 +411,7 @@ const SyncButton = ({ orderId, syncEndpoint, onSynced }) => {
 }
 
 // ─── HEADER BAR ───────────────────────────────────────────────────────────────
-const LedgerHeader = ({ title, meta, chips, onBack, ledgerName, orderId, stateCode, openingAdjustment, circuitKey, syncEndpoint, onRefetch }) => {
+const LedgerHeader = ({ title, meta, chips, onBack, ledgerName, orderId, stateCode, openingAdjustment, circuitKey, syncEndpoint, onRefetch, companyName = "" }) => {
   const router = useRouter()
   const [adjModalOpen, setAdjModalOpen] = useState(false)   // ← new state
 
@@ -438,12 +438,15 @@ const LedgerHeader = ({ title, meta, chips, onBack, ledgerName, orderId, stateCo
       <div className="flex items-center gap-4 flex-wrap flex-1">
         <div className='flex justify-between items-center gap-4'>
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <FileText className="w-5 h-5 shrink-0" />
             {title ?? 'Monthly Billing Breakdown'}
-          </h2>
+          </h2><br/>
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            order ID: {" "}
+            Order Id: {" "}
             {orderId}
+          </h2><br/>
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            Company : {" "}
+            {companyName}
           </h2>
         </div>
 
@@ -539,6 +542,7 @@ const LedgerTable = ({
   const stateCode = searchParams.get('stateCode');
   const circuitKey = searchParams.get('circuitKey');
   const openingAdjustment = totals?.openingAdjustment;
+  const companyName = searchParams?.get('companyName');
 
   const visibleDefs = LEDGER_COLUMNS
     .filter((col) => !hiddenColumns.includes(col.id))
@@ -547,7 +551,7 @@ const LedgerTable = ({
   if (!rows.length) {
     return (
       <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-        {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} ledgerName={ledgerName} orderId={orderId} stateCode={stateCode} openingAdjustment={openingAdjustment} circuitKey={circuitKey} syncEndpoint={syncEndpoint} onRefetch={onRefetch} />}
+        {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} ledgerName={ledgerName} orderId={orderId} stateCode={stateCode} openingAdjustment={openingAdjustment} circuitKey={circuitKey} syncEndpoint={syncEndpoint} onRefetch={onRefetch} companyName = {companyName} />}
         <div className="flex flex-col items-center justify-center py-16 text-slate-400">
           <FileText className="w-10 h-10 mb-3 text-slate-300" />
           <p className="text-sm font-medium">No ledger records found</p>
@@ -558,7 +562,7 @@ const LedgerTable = ({
 
   return (
     <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-      {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} ledgerName={ledgerName} orderId={orderId} stateCode={stateCode} openingAdjustment={openingAdjustment} circuitKey={circuitKey} syncEndpoint={syncEndpoint} onRefetch={onRefetch} />}
+      {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} ledgerName={ledgerName} orderId={orderId} stateCode={stateCode} openingAdjustment={openingAdjustment} circuitKey={circuitKey} syncEndpoint={syncEndpoint} onRefetch={onRefetch} companyName = {companyName}/>}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
