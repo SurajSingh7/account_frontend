@@ -110,23 +110,23 @@ const OrderHistoryModal = () => {
         {versions.map((item, index) => {
           const isLast = index === versions.length - 1;
           return (
-            <div key={item.versionNumber} className="relative flex gap-5 pb-8 last:pb-0">
+            <div key={item?.versionNumber} className="relative flex gap-5 pb-8 last:pb-0">
               {/* Connector rail */}
               <div className="relative flex w-6 flex-none flex-col items-center">
                 <span
-                  className={`z-10 flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-semibold ring-4 ring-white ${item.isCurrent
+                  className={`z-10 flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-semibold ring-4 ring-white ${item?.isCurrent
                     ? "bg-amber-500 text-white"
                     : "bg-slate-200 text-slate-600"
                     }`}
                 >
-                  {item.versionNumber}
+                  {item?.versionNumber}
                 </span>
                 {!isLast && <span className="mt-1 w-px flex-1 bg-slate-200" />}
               </div>
 
               {/* Card */}
               <div
-                className={`min-w-0 flex-1 rounded-xl border bg-white transition-shadow ${item.isCurrent
+                className={`min-w-0 flex-1 rounded-xl border bg-white transition-shadow ${item?.isCurrent
                   ? "border-amber-200 shadow-[0_2px_16px_-4px_rgba(217,119,6,0.18)]"
                   : "border-slate-200 shadow-sm hover:shadow-md"
                   }`}
@@ -134,13 +134,13 @@ const OrderHistoryModal = () => {
                 <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
                   <div>
                     <h3 className="text-[15px] font-semibold text-slate-900">
-                      Version {item.versionNumber}
+                      Version {item?.versionNumber}
                     </h3>
                     <p className="mt-0.5 text-xs font-medium text-slate-400">
-                      {item.orderType}
+                      {item?.orderType}
                     </p>
                   </div>
-                  {item.isCurrent && (
+                  {item?.isCurrent && (
                     <span className="inline-flex flex-none items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-amber-700 ring-1 ring-inset ring-amber-200">
                       <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                       Current
@@ -149,13 +149,13 @@ const OrderHistoryModal = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-x-6 gap-y-5 px-5 py-5 md:grid-cols-3">
-                  <Info label="Rate" value={`₹ ${item.rate}`} emphasize />
-                  <Info label="Capacity" value={`${item.capacity} Mbps`} />
-                  <Info label="PCD date" value={formatDate(item.pcdDate)} />
-                  <Info label="Operational date" value={formatDate(item.operationalDate)} />
-                  <Info label="Created at" value={formatDate(item.createdAt)} />
-                  {item.revisionDate && (
-                    <Info label="Revision date" value={formatDate(item.revisionDate)} />
+                  <Info label="Rate" value={`₹ ${item?.rate}`} emphasize />
+                  <Info label="Capacity" value={`${item?.capacity} Mbps`} />
+                  <Info label="PCD date" value={formatDate(item?.pcdDate)} />
+                  <Info label="Operational date" value={formatDate(item?.operationalDate)} />
+                  <Info label="Created at" value={formatDate(item?.createdAt)} />
+                  {item?.revisionDate && (
+                    <Info label="Revision date" value={formatDate(item?.revisionDate)} />
                   )}
                   <Info label="remarks" value={`${item?.remarks}`} emphasize />
                 </div>

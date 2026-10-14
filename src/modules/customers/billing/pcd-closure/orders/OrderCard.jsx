@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Edit, Eye, History, PlusCircle } from 'lucide-react';
+import { Eye, History, PlusCircle, Pencil, ReceiptIndianRupee } from 'lucide-react';
+import ActionMenu from '@/shared/ui/orderCardActions/ActionMenu';
 import { formatDateDisplay, truncateWithMore } from '../../shared/buildListParams/utils';
 import { usePathname, useRouter } from 'next/navigation';
 import EditPcdModal from '../modal/EditPcdModal';
@@ -35,8 +36,13 @@ const OrderCard = ({ order, onRefetch }) => {
 
   const router = useRouter();
   const [showEndPopup, setShowEndPopup] = useState(null);
+  const [showShiftDetailsPopup, setShowShiftDetailsPopup] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [additionalCompanyNameModalOpen, setAdditionalCompanyNameModalOpen] = useState(false);
+
+  const hasShiftingDetails = !!order?.shiftingDetails && typeof order.shiftingDetails === 'object' && Object.keys(order.shiftingDetails).length > 0;
+  const shiftDetails = order?.shiftingDetails || {};
+  const shiftedChild = shiftDetails.child || {};
 
   // ── Safely resolve fields from the NEW data shape ──────────────────────────
   const billingItems = order.billingItems || [];
@@ -245,6 +251,17 @@ const OrderCard = ({ order, onRefetch }) => {
                   Rate Revision : {formatDateDisplay(order?.revisionDate)}
                 </span>
               }
+
+              {hasShiftingDetails && (
+                <button
+                  type="button"
+                  onClick={() => setShowShiftDetailsPopup(true)}
+                  className="text-sm text-orange-700 font-semibold bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-200 hover:bg-orange-100 transition-colors cursor-pointer"
+                >
+                  Order Shifted
+                </button>
+              )}
+
               <span className="text-sm text-green-700 font-semibold bg-green-50 px-3 py-1.5 rounded-lg border border-green-200">
                 PCD Effective: {pcdDate ? formatDateDisplay(pcdDate) : '-'}
               </span>
@@ -253,46 +270,53 @@ const OrderCard = ({ order, onRefetch }) => {
                 PCD Closing: {operationalDate ? formatDateDisplay(operationalDate) : '-'}
               </span>
 
-              {/* View button */}
-              <button onClick={() => router.push(`${ROUTES.customers.billing.pcdClosure.view}?pcdId=${order._id}`)}>
-                <Eye className='text-blue-600 cursor-pointer' />
-              </button>
+              <ActionMenu
+                label="Order actions"
+                items={[
+                  {
+                    key: 'view',
+                    label: 'View details',
+                    description: 'Open the PCD closure details',
+                    icon: Eye,
+                    iconClassName: 'text-blue-600',
+                    onClick: () => router.push(`${ROUTES.customers.billing.pcdClosure.view}?pcdId=${order._id}`),
+                  },
+                  {
+                    key: 'history',
+                    label: 'Order history',
+                    description: 'See all changes made to this order',
+                    icon: History,
+                    onClick: () => router.push(`${ROUTES.customers.billing.pcdClosure.orderHistory}?orderId=${order.orderId}`),
+                  },
+                  {
+                    key: 'additional-company',
+                    label: 'Add additional company name',
+                    icon: PlusCircle,
+                    iconClassName: 'text-yellow-600',
+                    hidden: !showAdditionalCompanyModal,
+                    onClick: () => setAdditionalCompanyNameModalOpen(true),
+                  },
 
-              <button onClick={() => router.push(`${ROUTES.customers.billing.pcdClosure.orderHistory}?orderId=${order.orderId}`)}>
-                <History className="text-gray-600 cursor-pointer" />
-              </button>
+                  { type: 'divider' },
 
-              {showAdditionalCompanyModal &&
-                <button
-                  className="p-2 hover:bg-blue-50 rounded-lg"
-                  title="Add Additional Company name"
-                  onClick={() => setAdditionalCompanyNameModalOpen(true)}
-                >
-                  <PlusCircle className="w-5 h-5 text-yellow-600 cursor-pointer" />
-                </button>
-              }
-
-              {isAdmin && (
-                <>
-                  <button
-                    className="p-2 hover:bg-blue-50 rounded-lg"
-                    title="Edit"
-                    onClick={() => setEditModalOpen(true)}
-                  >
-                    <Edit className="w-5 h-5 text-red-600 cursor-pointer" />
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      router.push(`${ROUTES.customers.billing.pcdClosure.generateBill}?pcdId=${order._id}`)
-                    }
-                  >
-                    <div className='bg-black text-amber-50 font-bold px-1.5 text-center rounded-full cursor-pointer'>
-                      G
-                    </div>
-                  </button>
-                </>
-              )}
+                  {
+                    key: 'edit',
+                    label: 'Edit PCD',
+                    icon: Pencil,
+                    iconClassName: 'text-red-600',
+                    hidden: !isAdmin,
+                    onClick: () => setEditModalOpen(true),
+                  },
+                  {
+                    key: 'generate-bill',
+                    label: 'Generate bill',
+                    icon: ReceiptIndianRupee,
+                    iconClassName: 'text-gray-900',
+                    hidden: !isAdmin,
+                    onClick: () => router.push(`${ROUTES.customers.billing.pcdClosure.generateBill}?pcdId=${order._id}`),
+                  },
+                ]}
+              />
             </div>
 
             <div className="flex flex-wrap gap-2 justify-end">
@@ -329,6 +353,62 @@ const OrderCard = ({ order, onRefetch }) => {
         </div>
 
       </div>
+
+      {/* ── Order Shifted Details Popup ── */}
+      {showShiftDetailsPopup && hasShiftingDetails && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={() => setShowShiftDetailsPopup(false)}
+        >
+          <div
+            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-5 animate-scaleIn"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="absolute top-3 right-3 text-gray-400 hover:text-red-700 font-bold text-xl"
+              onClick={() => setShowShiftDetailsPopup(false)}
+            >
+              ✕
+            </button>
+
+            <div className="mb-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-orange-600">Order shifted</p>
+              <h4 className="text-xl font-semibold text-gray-900 mt-1">Transfer details</h4>
+            </div>
+
+            <div className="space-y-3 text-sm text-gray-700">
+              <div className="rounded-lg border border-orange-100 bg-orange-50 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-orange-700">Shifted on</p>
+                <p className="mt-1 font-semibold text-gray-900">{shiftDetails.date ? formatDateDisplay(shiftDetails.date) : '-'}</p>
+              </div>
+
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Transferred to</p>
+                <p className="mt-1 font-semibold text-gray-900">
+                  {shiftedChild.name || '—'}
+                  {shiftedChild.orderId ? ` (${shiftedChild.orderId})` : ''}
+                </p>
+              </div>
+
+              {order?.remarks && (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Remarks</p>
+                  <p className="mt-1 text-gray-800 leading-relaxed">{order.remarks}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5 flex justify-end">
+              <button
+                className="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-semibold hover:bg-orange-700 transition"
+                onClick={() => setShowShiftDetailsPopup(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── End Address Popup ── */}
       {showEndPopup && (

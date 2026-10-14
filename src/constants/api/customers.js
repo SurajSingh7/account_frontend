@@ -12,6 +12,7 @@ export const CUSTOMER_API = {
     ledger: {
       monthlyOrder: '/billing/sale/monthly/order',
       transactionsHistory: '/billing/sale/ledger/transactions/history',
+      singleTransactionHistory: '/billing/sale/ledger/transactions/',
       openingAdjustment: '/billing/sale/ledger/opening-adjustment',
       statement: '/billing/sale/ledger/statement',
       entry: '/billing/sale/ledger/entry',

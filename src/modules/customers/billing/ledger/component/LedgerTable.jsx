@@ -1,7 +1,7 @@
 'use client'
 import React, { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Eye, Pencil, FileText, ArrowLeft, CheckCheck, Info, SlidersHorizontal, RefreshCw, Loader2 } from 'lucide-react'
+import { Eye, Pencil, FileText, ArrowLeft, CheckCheck, Info, RefreshCw, Loader2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { enrichOutstandingLedger } from '../helpers/buildOutstandingLedger'
 import AggregatedMonthsModal from './AggregatedMonthsModal'
@@ -9,8 +9,7 @@ import AdjustmentAmountModal from './OpeningAdjustmentModal'
 import { roundUp } from '../../shared/constants'
 import { ROUTES } from '@/constants/routes'
 import { API_BACKEND_URL } from '@/config/getEnvVariables'
-
-
+import { usePermissions } from '@/context/PermissionContext'
 
 const fmt = (n) =>
   (n || 0).toLocaleString('en-IN', {
@@ -18,12 +17,10 @@ const fmt = (n) =>
     maximumFractionDigits: 2,
   })
 
-
 const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ]
-
 
 const normalizeRow = (item) => {
   const monthYear =
@@ -65,8 +62,6 @@ const normalizeRow = (item) => {
   }
 }
 
-
-// ─── DAYS CELL — opens centered modal ────────────────────────────────────────
 const DaysCell = ({ item }) => {
   const [open, setOpen] = useState(false)
   const hasAggregated = item.aggregatedMonths && item.aggregatedMonths.length > 1
@@ -102,8 +97,6 @@ const DaysCell = ({ item }) => {
   )
 }
 
-
-// ─── COLUMN DEFINITIONS ───────────────────────────────────────────────────────
 export const LEDGER_COLUMNS = [
   { id: 'month', label: <> Billing <br /> Month </>, align: 'left', order: 1 },
   { id: 'days', label: 'Days', align: 'center', order: 2 },
@@ -125,9 +118,16 @@ export const LEDGER_COLUMNS = [
   { id: 'actions', label: 'Actions', align: 'center', order: 20 },
 ]
 
+const renderRowCell = (id, item, router, userData) => {
+  const currentLoginEmployee = userData?.employeeCode;
 
-// ─── ROW CELL RENDERER ────────────────────────────────────────────────────────
-const renderRowCell = (id, item, router) => {
+  const EMPLOYEES_EXCLUDED_FROM_EDIT_LEDGER = [
+    "GTEL271",
+    "HWIBRO177"
+  ]
+  
+  const isEmployeeExcluded = EMPLOYEES_EXCLUDED_FROM_EDIT_LEDGER.includes(currentLoginEmployee);
+
   switch (id) {
     case 'month':
       return (
@@ -242,7 +242,7 @@ const renderRowCell = (id, item, router) => {
       return (
         <td key={id} className="px-3 py-3 text-right font-extrabold text-rose-600 bg-rose-50/40">
           {/* ₹{fmt(item.runningOutstanding)} */}
-          ₹{fmt(roundUp(item.totalBalance))}
+          ₹{fmt(roundUp(item.totalBalance ?? 0))}
         </td>
       )
 
@@ -259,7 +259,7 @@ const renderRowCell = (id, item, router) => {
             <span className="inline-flex items-center gap-1 font-extrabold text-rose-600">
               <span className="text-rose-400 font-bold">×</span>
               {/* ₹{fmt(item.outstandingAfterAdjustment)} */}
-              ₹{fmt(roundUp(item.remainingAdjustment))}
+              ₹{fmt(roundUp(item.remainingAdj ?? 0))}
             </span>
           )}
         </td>
@@ -292,18 +292,20 @@ const renderRowCell = (id, item, router) => {
               <Eye className="w-4 h-4" />
             </button>
 
-            <button
-              type="button"
-              title="Edit record"
-              onClick={() =>
-                router.push(
-                  `${ROUTES.customers.billing.ledger.form}?mode=edit&month=${item.monthYear}&billIds=${(item.billIds ?? []).join(',')}`
-                )
-              }
-              className="p-2 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 rounded-lg transition-colors"
-            >
-              <Pencil className="w-4 h-4" />
-            </button>
+            {!isEmployeeExcluded && (
+              <button
+                type="button"
+                title="Edit record"
+                onClick={() =>
+                  router.push(
+                    `${ROUTES.customers.billing.ledger.form}?mode=edit&month=${item.monthYear}&billIds=${(item.billIds ?? []).join(',')}`
+                  )
+                }
+                className="p-2 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 rounded-lg transition-colors"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+            )}
 
           </div>
         </td>
@@ -313,7 +315,6 @@ const renderRowCell = (id, item, router) => {
       return <td key={id} className="px-3 py-3" />
   }
 }
-
 
 // ─── FOOTER CELL RENDERER ─────────────────────────────────────────────────────
 const renderFooterCell = (id, t) => {
@@ -334,17 +335,16 @@ const renderFooterCell = (id, t) => {
     case 'tdsConfirm': return <td key={id} className="px-3 py-3 text-right text-indigo-600">₹{fmt(t.tdsConf ?? 0)}</td>
     case 'tdsProvision': return <td key={id} className="px-3 py-3 text-right text-orange-600">₹{fmt(t.tdsProvision ?? 0)}</td>
     // case 'totalBalance': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-rose-50">₹{fmt(t.totalBalance ?? 0)}</td>
-    case 'runningOutstanding': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-rose-50">₹{fmt(roundUp(t.totalBalance))}</td>
-    case 'outstandingAfterAdjustment': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-yellow-50"> ₹{fmt(roundUp(t.remainingAdjustment))}</td>
+    case 'runningOutstanding': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-rose-50">₹{fmt(roundUp(t.totalBalance ?? 0))}</td>
+    case 'outstandingAfterAdjustment': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-yellow-50"> ₹{fmt(roundUp(t.remainingAdjustment ?? 0))}</td>
     // case 'remaining': return <td key={id} className="px-3 py-3 text-right text-rose-700 bg-yellow-50">₹{fmt(t.remainingAdjustment ?? 0)}</td>
     case 'actions': return <td key={id} className="px-3 py-3" />
     default: return <td key={id} className="px-3 py-3" />
   }
 }
 
-
 // ─── ROW COMPONENT ────────────────────────────────────────────────────────────
-const LedgerRow = ({ item: rawItem, visibleDefs }) => {
+const LedgerRow = ({ item: rawItem, visibleDefs, userData }) => {
   const router = useRouter()
   const item = normalizeRow(rawItem)
 
@@ -352,12 +352,11 @@ const LedgerRow = ({ item: rawItem, visibleDefs }) => {
     <tr className="hover:bg-blue-50/20 transition-colors border-b border-slate-100">
       {visibleDefs.map(({ id }) => {
         if (id === 'days') return <DaysCell key={id} item={item} />
-        return renderRowCell(id, item, router)
+        return renderRowCell(id, item, router, userData)
       })}
     </tr>
   )
 }
-
 
 // ─── FOOTER COMPONENT ─────────────────────────────────────────────────────────
 const LedgerFooter = ({ totals, visibleDefs }) => {
@@ -370,7 +369,6 @@ const LedgerFooter = ({ totals, visibleDefs }) => {
     </tfoot>
   )
 }
-
 
 // ─── SYNC BUTTON ──────────────────────────────────────────────────────────────
 const SyncButton = ({ orderId, syncEndpoint, onSynced }) => {
@@ -412,9 +410,8 @@ const SyncButton = ({ orderId, syncEndpoint, onSynced }) => {
   )
 }
 
-
 // ─── HEADER BAR ───────────────────────────────────────────────────────────────
-const LedgerHeader = ({ title, meta, chips, onBack, ledgerName, orderId, stateCode, openingAdjustment, circuitKey, syncEndpoint, onRefetch }) => {
+const LedgerHeader = ({ title, meta, chips, onBack, ledgerName, orderId, stateCode, openingAdjustment, circuitKey, syncEndpoint, onRefetch, companyName = "" }) => {
   const router = useRouter()
   const [adjModalOpen, setAdjModalOpen] = useState(false)   // ← new state
 
@@ -441,12 +438,15 @@ const LedgerHeader = ({ title, meta, chips, onBack, ledgerName, orderId, stateCo
       <div className="flex items-center gap-4 flex-wrap flex-1">
         <div className='flex justify-between items-center gap-4'>
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <FileText className="w-5 h-5 shrink-0" />
             {title ?? 'Monthly Billing Breakdown'}
-          </h2>
+          </h2><br/>
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            order ID: {" "}
+            Order Id: {" "}
             {orderId}
+          </h2><br/>
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            Company : {" "}
+            {companyName}
           </h2>
         </div>
 
@@ -504,7 +504,7 @@ const LedgerHeader = ({ title, meta, chips, onBack, ledgerName, orderId, stateCo
           </div>
         }
       </div>
-      
+
       {/* ── Modal ── */}
       {adjModalOpen && (
         <AdjustmentAmountModal
@@ -518,7 +518,6 @@ const LedgerHeader = ({ title, meta, chips, onBack, ledgerName, orderId, stateCo
     </div>
   )
 }
-
 
 // ─── MAIN TABLE ───────────────────────────────────────────────────────────────
 const LedgerTable = ({
@@ -536,13 +535,14 @@ const LedgerTable = ({
   const rawRows = data?.data?.data ?? data?.data ?? data ?? []
   const apiTotals = data?.data?.totals ?? data?.totals ?? {}
   const { rows, totals } = enrichOutstandingLedger(rawRows, apiTotals)
+  const { userData } = usePermissions();
 
   const searchParams = useSearchParams();
   const orderId = searchParams.get('orderId');
   const stateCode = searchParams.get('stateCode');
   const circuitKey = searchParams.get('circuitKey');
-  const openingAdjustment = totals?.openingAdjustment
-
+  const openingAdjustment = totals?.openingAdjustment;
+  const companyName = searchParams?.get('companyName');
 
   const visibleDefs = LEDGER_COLUMNS
     .filter((col) => !hiddenColumns.includes(col.id))
@@ -551,7 +551,7 @@ const LedgerTable = ({
   if (!rows.length) {
     return (
       <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-        {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} ledgerName={ledgerName} orderId={orderId} stateCode={stateCode} openingAdjustment={openingAdjustment} circuitKey={circuitKey} syncEndpoint={syncEndpoint} onRefetch={onRefetch} />}
+        {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} ledgerName={ledgerName} orderId={orderId} stateCode={stateCode} openingAdjustment={openingAdjustment} circuitKey={circuitKey} syncEndpoint={syncEndpoint} onRefetch={onRefetch} companyName = {companyName} />}
         <div className="flex flex-col items-center justify-center py-16 text-slate-400">
           <FileText className="w-10 h-10 mb-3 text-slate-300" />
           <p className="text-sm font-medium">No ledger records found</p>
@@ -562,7 +562,7 @@ const LedgerTable = ({
 
   return (
     <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-      {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} ledgerName={ledgerName} orderId={orderId} stateCode={stateCode} openingAdjustment={openingAdjustment} circuitKey={circuitKey} syncEndpoint={syncEndpoint} onRefetch={onRefetch} />}
+      {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} ledgerName={ledgerName} orderId={orderId} stateCode={stateCode} openingAdjustment={openingAdjustment} circuitKey={circuitKey} syncEndpoint={syncEndpoint} onRefetch={onRefetch} companyName = {companyName}/>}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -583,6 +583,7 @@ const LedgerTable = ({
                 key={item._id ?? item.id ?? index}
                 item={item}
                 visibleDefs={visibleDefs}
+                userData = {userData}
               />
             ))}
           </tbody>

@@ -99,12 +99,12 @@ const OrderRow = ({ item, index, showLsi, isAdmin, bulkMode, isSelected, onToggl
             orderId: item.orderId,
             billingReadId: item.billingReadId,
             stateCode: item.currentStateCode,
+            companyName : item?.company,
             circuitKey: item.circuitKey || '',
             ledgerName: 'outstanding',
         }).toString()
 
     const handleViewBreakdown = () => router.push(`${ROUTES.customers.billing.ledger.list}?${buildQuery()}`)
-    const handleGenerate = () => router.push(`${ROUTES.customers.billing.ledger.list}?${buildQuery()}`)
 
     return (
         <tr className="hover:bg-blue-50/30 transition-colors border-b border-slate-100">
@@ -213,7 +213,7 @@ const OrderRow = ({ item, index, showLsi, isAdmin, bulkMode, isSelected, onToggl
             </td>
 
             {/* Actions */}
-            <td className="px-4 py-3 text-center">
+            {/* <td className="px-4 py-3 text-center">
                 <button
                     onClick={handleGenerate}
                     className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-all"
@@ -221,7 +221,7 @@ const OrderRow = ({ item, index, showLsi, isAdmin, bulkMode, isSelected, onToggl
                     <FileSpreadsheet className="w-4 h-4" />
                     Generate
                 </button>
-            </td>
+            </td> */}
 
             {/* Portal popup */}
             {popupText && (
@@ -305,7 +305,7 @@ const OutstandingTable = ({ data, onRefetch, showLsi, syncEndpoint }) => {
         { label: 'Balance', align: 'right' },
         { label: 'Amount Status', align: 'left' },
         { label: 'Split', align: 'center' },
-        { label: 'Actions', align: 'center' },
+        // { label: 'Actions', align: 'center' },
     ]
 
     return (

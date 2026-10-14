@@ -2,8 +2,11 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { History } from 'lucide-react';
 import { API_BACKEND_URL } from '@/config/getEnvVariables';
 import { API_ENDPOINTS } from '@/constants/api';
+import SingleTransactionHistoryModal from '../../component/SingleTransactionHistoryModal';
+import { usePermissions } from '@/context/PermissionContext';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const TRANSACTION_TYPES = [
@@ -67,7 +70,7 @@ const TRANSACTION_TYPES = [
 // Types shown in "Add New Entry" form pills — TDS_CONFIRMED excluded (created only via Move)
 const FORM_TRANSACTION_TYPES = TRANSACTION_TYPES.filter((t) => t.value !== 'TDS_CONFIRMED');
 
-const SUB_TYPES =[
+const SUB_TYPES = [
   { value: 'MANUAL_ADJUSTMENT', label: 'Manual Adjustment' },
   { value: 'ADVANCE', label: 'Advance' },
   { value: 'REVERSAL', label: 'Reversal' },
@@ -301,7 +304,7 @@ function MoveModal({ monthlyBillingId, onClose, onSuccess }) {
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+            className="w-8 cursor-pointer h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
           >
             ✕
           </button>
@@ -413,14 +416,14 @@ function RemarksModal({ initialValue, onClose, onSuccess }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 rounded-lg text-sm font-bold text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors"
+              className="flex-1 px-4 py-2  cursor-pointer rounded-lg text-sm font-bold text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting || !remarks.trim()}
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-white bg-amber-500 hover:bg-amber-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 inline-flex items-cente cursor-pointer justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-white bg-amber-500 hover:bg-amber-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? (
                 <>
@@ -465,6 +468,10 @@ function RemarksBanner({ remarks, onEdit }) {
 // ─── LedgerTable ──────────────────────────────────────────────────────────────
 function LedgerTable({ entries, isEditMode, monthlyBillingId, onRefresh, onEditEntry }) {
   const [showMoveFor, setShowMoveFor] = useState(null);
+  const [historyEntry, setHistoryEntry] = useState(null);
+
+  const { userData } = usePermissions();
+  const isAdmin = userData?.role === 'Admin';
 
   const filteredEntries = entries?.filter(
     (e) =>
@@ -492,6 +499,12 @@ function LedgerTable({ entries, isEditMode, monthlyBillingId, onRefresh, onEditE
           onSuccess={() => { setShowMoveFor(null); onRefresh(); }}
         />
       )}
+      {historyEntry && isAdmin && (
+        <SingleTransactionHistoryModal
+          transaction={historyEntry}
+          onClose={() => setHistoryEntry(null)}
+        />
+      )}
 
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
@@ -504,7 +517,7 @@ function LedgerTable({ entries, isEditMode, monthlyBillingId, onRefresh, onEditE
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
-                {['Date', 'Type', 'Sub Type', 'Basic Amt', 'GST', 'Total Amt', 'Notes', ...(isEditMode ? ['Actions'] : [])].map((h) => (
+                {['Date', 'Type', 'Basic Amt', 'GST', 'Total Amt', 'Submitted By', 'Notes', ...(isEditMode ? ['Actions'] : [])].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                     {h}
                   </th>
@@ -523,15 +536,15 @@ function LedgerTable({ entries, isEditMode, monthlyBillingId, onRefresh, onEditE
                     <td className="px-4 py-3 text-gray-600 text-xs font-medium whitespace-nowrap">{date}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${cfg.badge}`}>
-                        {cfg.icon} {e.type ?? e.transactionType}
+                        {e.type ?? e.transactionType}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{e.subType ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-800 font-bold text-sm tabular-nums">{fmtINR(e.basicAmount ?? e.amount)}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs tabular-nums">  {(e.type === 'OPENING_ADJUSTMENT')
                       ? '—' : gst > 0 ? fmtINR(gst) : '—'}
                     </td>
                     <td className="px-4 py-3 text-gray-800 font-semibold text-sm tabular-nums">{fmtINR(e.totalAmount)}</td>
+                    <td className="px-4 py-3 text-gray-800 text-xs">{e?.createdBy?.name ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-400 text-xs text-wrap">{e.notes ?? '—'}</td>
 
                     {isEditMode && (
@@ -540,16 +553,26 @@ function LedgerTable({ entries, isEditMode, monthlyBillingId, onRefresh, onEditE
                           {(e.type !== 'OPENING_ADJUSTMENT') && (
                             <button
                               onClick={() => onEditEntry(e)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors whitespace-nowrap"
+                              className="inline-flex items-center cursor-pointer gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors whitespace-nowrap"
                             >
                               ✏️ Edit
+                            </button>
+                          )}
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => setHistoryEntry(e)}
+                              className="inline-flex items-center cursor-pointer gap-1 rounded-lg border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-700 transition-colors hover:border-indigo-200 hover:bg-indigo-100 whitespace-nowrap"
+                            >
+                              <History className="h-3.5 w-3.5" />
+                              History
                             </button>
                           )}
 
                           {isTdsProvision && (
                             <button
                               onClick={() => setShowMoveFor(e._id)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-colors whitespace-nowrap"
+                              className="inline-flex items-center cursor-pointer gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-colors whitespace-nowrap"
                             >
                               ✅ Move
                             </button>
@@ -586,7 +609,7 @@ function TransactionTypePills({ selected, onChange, isEditMode }) {
             type="button"
             disabled={isLocked}
             onClick={() => !isLocked && onChange(t.value)}
-            className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-150 ${active
+            className={`inline-flex cursor-pointer items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-150 ${active
               ? t.pillActive
               : isLocked
                 ? t.pillDisabled
@@ -887,7 +910,7 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
             </span>
           )}
           <p className="text-sm font-bold text-gray-700">
-            {isEditing ? 'Update Entry' : 'Add New Entry'}
+            {isEditing ? 'Update Transaction' : 'Add New Transaction'}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -903,7 +926,7 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
             <button
               type="button"
               onClick={onOpenRemarksModal}
-              className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+              className="inline-flex cursor-pointer items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
             >
               {remarks ? '✏️ Edit Remark' : '+ Add Remarks'}
             </button>
@@ -934,8 +957,8 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
 
         {/* Transaction Type Pills */}
         <div>
-          <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2 block">
-            Transaction Type
+          <label className="text-[11px] font-bold text-gray-600 uppercase tracking-widest mb-2 block">
+            Transaction Types
             {isEditing && (
               <span className="ml-2 normal-case font-normal text-amber-400">(locked while editing)</span>
             )}
@@ -1017,8 +1040,8 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
                 required
                 readOnly={isCreditNote && cnData?.amount != null && !isEditing}
                 className={`${inp} pl-7 ${isCreditNote && cnData?.amount != null && !isEditing
-                    ? 'bg-cyan-50 cursor-not-allowed'
-                    : ''
+                  ? 'bg-cyan-50 cursor-not-allowed'
+                  : ''
                   }`}
               />
             </div>
@@ -1086,7 +1109,7 @@ function EntryForm({ monthlyBillingId, isEditMode, onSuccess, monthBounds, editi
           <button
             type="submit"
             disabled={submitting}
-            className={`inline-flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed ${cfg.btnBg}`}
+            className={`inline-flex cursor-pointer items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed ${cfg.btnBg}`}
           >
             {submitting ? (
               <>
@@ -1123,6 +1146,7 @@ function BillPanel({ billId, isEditMode, monthBounds }) {
   const [error, setError] = useState('');
   const [entries, setEntries] = useState([]);
   const [summary, setSummary] = useState(null);
+  const [statementDetails, setStatementDetails] = useState(null);
   const [editingEntry, setEditingEntry] = useState(null); // row being edited
   const [remarks, setRemarks] = useState('');
   const [showRemarksModal, setShowRemarksModal] = useState(false);
@@ -1134,8 +1158,13 @@ function BillPanel({ billId, isEditMode, monthBounds }) {
     setError('');
     try {
       const json = await fetchStatement(billId);
+
       setEntries(extractEntries(json));
       setSummary(extractSummary(json));
+      setStatementDetails({
+        companyName: json?.data?.companyName,
+        orderId: json?.data?.orderId,
+      });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -1201,6 +1230,22 @@ function BillPanel({ billId, isEditMode, monthBounds }) {
           onClose={() => setShowRemarksModal(false)}
           onSuccess={handleSaveRemarks}
         />
+      )}
+      {(statementDetails?.companyName || statementDetails?.orderId) && (
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-gray-200 px-1 pb-3">
+          {statementDetails.companyName && (
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Company</p>
+              <p className="wrap-break-word text-sm text-blue-600 font-bold ">{statementDetails.companyName}</p>
+            </div>
+          )}
+          {statementDetails.orderId && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Order ID</p>
+              <p className="text-sm font-semibold text-blue-600">{statementDetails.orderId}</p>
+            </div>
+          )}
+        </div>
       )}
       <EntryForm
         monthlyBillingId={billId}
@@ -1284,37 +1329,38 @@ const LedgerUpdateEntry = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-5">
 
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-4 ">
+          <div>
             <button
               onClick={() => router.back()}
               aria-label="Go back"
-              className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white shadow-sm text-gray-500 hover:text-gray-800 hover:border-gray-300 transition-all"
+              className="w-fit h-9 p-3 cursor-pointer flex items-center justify-center rounded-lg border border-gray-200 bg-white shadow-sm text-gray-500 hover:text-gray-800 hover:border-gray-300 transition-all"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M15 18l-6-6 6-6" />
               </svg>
+              Back
             </button>
-            <div>
-              <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-widest leading-none mb-0.5">
-                Billing / Ledger
-              </p>
-              <h1 className="text-lg font-extrabold text-gray-800 leading-tight">
-                {month ? `${month} — Ledger Entry` : 'Ledger Entry'}
+          </div>
+          <div className="flex items-center gap-3 ">
+
+            <div className='flex justify-center'>
+              <h1 className="text-lg text-center font-extrabold text-gray-800 leading-tight">
+                {month ? `${month} —  Transactions` : 'Monthly Transactions'}
               </h1>
             </div>
           </div>
 
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${isEditMode ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-gray-100 text-gray-500 border-gray-200'
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${isEditMode ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-gray-100 text-gray-500 border-gray-200'
             }`}>
             <span className="w-1.5 h-1.5 rounded-full inline-block bg-current opacity-80" />
             {isEditMode ? 'Edit Mode' : 'View Mode'}
           </span>
         </div>
 
-        <BillTabs billIds={billIds} activeTab={activeTab} setActiveTab={setActiveTab}/>
+        <BillTabs billIds={billIds} activeTab={activeTab} setActiveTab={setActiveTab} />
 
         <BillPanel
           key={billIds[activeTab]}
