@@ -18,6 +18,7 @@ export const CUSTOMER_ROUTES = {
     bulkTransactions: `${BILLING_BASE}/account/bulk-transactions`,
     billingReport: `${BILLING_BASE}/account/billing-report`,
     outstandingReport: `${BILLING_BASE}/account/outstanding-report`,
+    collectionReport: `${BILLING_BASE}/account/collection-report`,
     receiptReport: `${BILLING_BASE}/account/receipt-report`,
     billingGroupReport: `${BILLING_BASE}/account/billing-group-report`,
     outstandingGroupReport: `${BILLING_BASE}/account/outstanding-group-report`,

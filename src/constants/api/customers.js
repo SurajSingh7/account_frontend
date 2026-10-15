@@ -43,6 +43,7 @@ export const CUSTOMER_API = {
       sell: '/billing/sale/report/sell',
       outstanding: '/billing/sale/report/outstanding/',
       receipt: '/billing/sale/report/receipt/',
+      collectionReport : '/billing/sale/report/collection',
       company: {
         sell: '/billing/sale/report/company/sell',
         outstanding: '/billing/sale/report/company/outstanding',
