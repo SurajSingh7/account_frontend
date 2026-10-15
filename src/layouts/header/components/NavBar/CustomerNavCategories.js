@@ -38,6 +38,13 @@ export const customerNavCategories = [
         url: billingApi.report.receipt,
         action: ["READ"],
       },
+      {
+        name: "Collection Report",
+        path: billing.collectionReport,
+        moduleName: "Collection Report",
+        url: billingApi.report.collectionReport,
+        action: ["READ"],
+      },
     ],
   },
   {
@@ -97,7 +104,7 @@ export const customerNavCategories = [
         action: ["CREATE", "UPDATE", "READ"],
         exceptions: ["canViewAll"],
       },
-       {
+      {
         name: "Outstanding Group Report",
         path: billing.outstandingGroupReport,
         moduleName: "",
@@ -129,7 +136,7 @@ export const customerNavCategories = [
   },
 
   // DEV ONLY MENUS
-  ...( (SHOW_DEV)
+  ...((SHOW_DEV)
     ? [
       {
         category: "AccountD",
