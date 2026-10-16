@@ -41,7 +41,7 @@ const PERIOD_KEYS = new Set(['period', 'dateRange', 'monthRange']);
 const FIELD_RENDERERS = {
 
   search: (ctx) => (
-    <div key="search" className="flex items-center gap-2 flex-1 min-w-[200px] border border-gray-300 rounded-lg px-4 py-3 bg-white focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100">
+    <div key="search" className="flex items-center gap-2 flex-1 min-w-50 border border-gray-300 rounded-lg px-4 py-3 bg-white focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100">
       <Search className="w-5 h-5 text-gray-400 shrink-0" />
       <input
         type="text"
@@ -59,7 +59,7 @@ const FIELD_RENDERERS = {
   ),
 
   stateCode: (ctx) => (
-    <div key="stateCode" className="flex items-center gap-2 flex-1 min-w-[200px] border border-gray-300 rounded-lg px-4 py-3 bg-white">
+    <div key="stateCode" className="flex items-center gap-2 flex-1 min-w-50 border border-gray-300 rounded-lg px-4 py-3 bg-white">
       <Filter className="w-5 h-5 text-gray-400 shrink-0" />
       <select
         className="bg-transparent outline-none text-base font-semibold w-full text-gray-700"
@@ -73,7 +73,7 @@ const FIELD_RENDERERS = {
   ),
 
   orderType: (ctx) => (
-    <div key="orderType" className="flex-1 min-w-[200px]">
+    <div key="orderType" className="flex-1 min-w-50">
       <OrderTypeSelect
         summary={ctx.apiSummary.orderType ?? {}}
         totalCount={ctx.totalCount}
@@ -84,7 +84,7 @@ const FIELD_RENDERERS = {
   ),
 
   productId: (ctx) => (
-    <div key="productId" className="flex-1 min-w-[200px]">
+    <div key="productId" className="flex-1 min-w-50">
       <ProductSelect
         summary={ctx.apiSummary.productCode ?? {}}
         selected={ctx.filters.productId}
@@ -94,7 +94,7 @@ const FIELD_RENDERERS = {
   ),
 
   entityId: (ctx) => (
-    <div key="entityId" className="flex-1 min-w-[200px]">
+    <div key="entityId" className="flex-1 min-w-50">
       <EntitySelect
         summary={ctx.apiSummary.entity ?? {}}
         selected={ctx.filters.entityId}
@@ -104,7 +104,7 @@ const FIELD_RENDERERS = {
   ),
 
   active: (ctx) => (
-    <div key="active" className="flex items-center gap-2 flex-1 min-w-[200px] border border-gray-300 rounded-lg px-4 py-3 bg-white">
+    <div key="active" className="flex items-center gap-2 flex-1 min-w-50 border border-gray-300 rounded-lg px-4 py-3 bg-white">
       <Filter className="w-5 h-5 text-gray-400 shrink-0" />
       <select
         className="bg-transparent outline-none text-base font-semibold w-full text-gray-700"
@@ -119,7 +119,7 @@ const FIELD_RENDERERS = {
   ),
 
   bsoId: (ctx) => (
-    <div key="bsoId" className="flex-1 min-w-[200px]">
+    <div key="bsoId" className="flex-1 min-w-50">
       <SearchableDropdown
         options={ctx.bsoOptions}
         value={ctx.filters.bsoId}
@@ -131,7 +131,7 @@ const FIELD_RENDERERS = {
   ),
 
   companyGroupId: (ctx) => (
-    <div key="companyGroupId" className="flex-1 min-w-[200px]">
+    <div key="companyGroupId" className="flex-1 min-w-50">
       <SearchableDropdown
         options={ctx.entityOptions}
         value={ctx.filters.companyGroupId}
