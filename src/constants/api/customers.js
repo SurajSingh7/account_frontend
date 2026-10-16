@@ -10,7 +10,7 @@ export const CUSTOMER_API = {
       parentAll: '/bso/parent/all/',
     },
     ledger: {
-      monthlyOrder: '/billing/sale/monthly/order',
+      monthlyOrder: '/billing/sale/monthly/order?page=1&limit=50',
       transactionsHistory: '/billing/sale/ledger/transactions/history',
       singleTransactionHistory: '/billing/sale/ledger/transactions/',
       openingAdjustment: '/billing/sale/ledger/opening-adjustment',

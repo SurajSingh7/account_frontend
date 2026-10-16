@@ -12,7 +12,7 @@ export const PURCHASE_API = {
     parentAll: '/bso/parent/all/',
   },
   ledger: {
-    monthlyOrder: '/billing/purchase/monthly/order',
+    monthlyOrder: '/billing/purchase/monthly/order?page=1&limit-50',
     transactionsHistory: '/billing/purchase/ledger/transactions/history',
     openingAdjustment: '/billing/purchase/ledger/opening-adjustment',
     statement: '/billing/purchase/ledger/statement',

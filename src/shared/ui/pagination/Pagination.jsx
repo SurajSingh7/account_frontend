@@ -9,9 +9,9 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 const Pagination = ({
   currentPage,
   totalItems,
-  itemsPerPage,            
+  itemsPerPage,
   onPageChange,
-  onItemsPerPageChange,   
+  onItemsPerPageChange,
   className = '',
 }) => {
 
@@ -31,10 +31,10 @@ const Pagination = ({
       for (let i = 1; i <= totalPages; i++) pages.push(i);
     } else {
       let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-      let end   = start + maxVisible - 1;
+      let end = start + maxVisible - 1;
 
       if (end > totalPages) {
-        end   = totalPages;
+        end = totalPages;
         start = Math.max(1, end - maxVisible + 1);
       }
 

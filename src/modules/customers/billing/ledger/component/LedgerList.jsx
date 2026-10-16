@@ -89,7 +89,8 @@ if (!rows.length) {
         <div className="mt-6">
           <Pagination
             currentPage={pagination.page}
-            totalPages={pagination.totalPages}
+            totalItems={pagination.total}
+            itemsPerPage={pagination.limit ?? pagination.currentPageTotal}
             onPageChange={onPageChange}
           />
         </div>
