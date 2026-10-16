@@ -164,7 +164,7 @@ const SearchableDropdown = ({
       />
 
       {isOpen && (
-        <div className="absolute z-50 mt-1 w-full min-w-[220px] bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+        <div className="absolute z-50 mt-1 w-full min-w-55 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
           <SearchInput value={searchTerm} onChange={setSearchTerm} />
           <div className="max-h-56 overflow-y-auto">
             <OptionList

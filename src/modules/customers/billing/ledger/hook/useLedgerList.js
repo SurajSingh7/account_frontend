@@ -14,6 +14,7 @@ export const useLedgerList = ({
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState(null);
   const [page, setPage]             = useState(initialPage);
+  const payloadKey = JSON.stringify(payload);
 
   const fetchData = useCallback(async (currentPage = page) => {
     setLoading(true);
@@ -27,7 +28,7 @@ export const useLedgerList = ({
         },
         credentials: 'include',
         body: JSON.stringify({
-          ...payload,
+          ...JSON.parse(payloadKey),
           page: currentPage,
           limit,
           // fromMonth:"04-2026",
@@ -52,7 +53,7 @@ export const useLedgerList = ({
     } finally {
       setLoading(false);
     }
-  }, [endpoint, payload, page, limit]);
+  }, [endpoint, payloadKey, page, limit]);
 
   useEffect(() => {
     fetchData(page);

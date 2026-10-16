@@ -125,7 +125,7 @@ const renderRowCell = (id, item, router, userData) => {
     "GTEL271",
     "HWIBRO177"
   ]
-  
+
   const isEmployeeExcluded = EMPLOYEES_EXCLUDED_FROM_EDIT_LEDGER.includes(currentLoginEmployee);
 
   switch (id) {
@@ -362,7 +362,7 @@ const LedgerRow = ({ item: rawItem, visibleDefs, userData }) => {
 const LedgerFooter = ({ totals, visibleDefs }) => {
   const t = totals ?? {}
   return (
-    <tfoot className="bg-gradient-to-r from-gray-100 to-blue-100 border-t-2 border-gray-300">
+    <tfoot className="bg-linear-to-r from-gray-100 to-blue-100 border-t-2 border-gray-300">
       <tr className="font-bold text-sm">
         {visibleDefs.map(({ id }) => renderFooterCell(id, t))}
       </tr>
@@ -421,7 +421,7 @@ const LedgerHeader = ({ title, meta, chips, onBack, ledgerName, orderId, stateCo
     <div className={`flex items-center gap-5 px-1 py-4 rounded-t-xl ${ledgerName?.toLowerCase() === 'receipt' ? 'bg-green-600' :
       ledgerName?.toLowerCase() === 'outstanding' ? 'bg-blue-600' :
         ledgerName?.toLowerCase() === 'bill' ? 'bg-red-600' :
-          'bg-gradient-to-r from-blue-600 to-blue-700'
+          'bg-linear-to-r from-blue-600 to-blue-700'
       }`}>
 
       {/* ── Left: Back button ── */}
@@ -439,11 +439,11 @@ const LedgerHeader = ({ title, meta, chips, onBack, ledgerName, orderId, stateCo
         <div className='flex justify-between items-center gap-4'>
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
             {title ?? 'Monthly Billing Breakdown'}
-          </h2><br/>
+          </h2><br />
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
             Order Id: {" "}
             {orderId}
-          </h2><br/>
+          </h2><br />
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
             Company : {" "}
             {companyName}
@@ -551,7 +551,7 @@ const LedgerTable = ({
   if (!rows.length) {
     return (
       <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-        {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} ledgerName={ledgerName} orderId={orderId} stateCode={stateCode} openingAdjustment={openingAdjustment} circuitKey={circuitKey} syncEndpoint={syncEndpoint} onRefetch={onRefetch} companyName = {companyName} />}
+        {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} ledgerName={ledgerName} orderId={orderId} stateCode={stateCode} openingAdjustment={openingAdjustment} circuitKey={circuitKey} syncEndpoint={syncEndpoint} onRefetch={onRefetch} companyName={companyName} />}
         <div className="flex flex-col items-center justify-center py-16 text-slate-400">
           <FileText className="w-10 h-10 mb-3 text-slate-300" />
           <p className="text-sm font-medium">No ledger records found</p>
@@ -562,11 +562,11 @@ const LedgerTable = ({
 
   return (
     <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-      {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} ledgerName={ledgerName} orderId={orderId} stateCode={stateCode} openingAdjustment={openingAdjustment} circuitKey={circuitKey} syncEndpoint={syncEndpoint} onRefetch={onRefetch} companyName = {companyName}/>}
+      {showHeader && <LedgerHeader title={title} meta={meta} chips={chips} onBack={onBack} ledgerName={ledgerName} orderId={orderId} stateCode={stateCode} openingAdjustment={openingAdjustment} circuitKey={circuitKey} syncEndpoint={syncEndpoint} onRefetch={onRefetch} companyName={companyName} />}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-gradient-to-r from-gray-50 to-blue-50 border-b-2 border-gray-200">
+            <tr className="bg-linear-to-r from-gray-50 to-blue-50 border-b-2 border-gray-200">
               {visibleDefs.map(({ id, label, align }) => (
                 <th
                   key={id}
@@ -583,7 +583,7 @@ const LedgerTable = ({
                 key={item._id ?? item.id ?? index}
                 item={item}
                 visibleDefs={visibleDefs}
-                userData = {userData}
+                userData={userData}
               />
             ))}
           </tbody>

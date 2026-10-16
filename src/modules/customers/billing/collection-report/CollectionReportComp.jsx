@@ -125,7 +125,7 @@ const CollectionReportComp = () => {
                     </div>
 
                     <p className="text-gray-600 text-base font-semibold mt-2">
-                        Manage previous month and net outstanding for collection executives
+                        Orders cumulative details for collection executives
                     </p>
                 </div>
 
